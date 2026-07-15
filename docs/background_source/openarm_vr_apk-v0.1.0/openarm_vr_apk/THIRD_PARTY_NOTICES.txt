@@ -1,0 +1,93 @@
+================================================================================
+THIRD-PARTY SOFTWARE NOTICES AND INFORMATION
+================================================================================
+
+Product: OpenArm Pose Transmitter 
+Publisher: Enactic
+Version: 0.1.0
+
+This application incorporates components from the projects listed below.
+The original copyright notices and the licenses under which Enactic received
+such components are set forth below for informational purposes. Enactic
+licenses these components to you under their original licensing terms.
+
+
+================================================================================
+1. Unity Engine and Unity-provided Packages
+================================================================================
+
+Copyright (c) Unity Technologies
+
+Built with Unity. This software contains components licensed under the
+Unity Companion License, the Unity Software Additional Terms, and/or the
+Unity Terms of Service, depending on the component.
+
+  - Unity Engine
+  - com.unity.render-pipelines.universal (Universal Render Pipeline)
+  - com.unity.inputsystem (Input System)
+  - com.unity.xr.openxr (OpenXR Plugin)
+  - com.unity.ai.navigation
+  - com.unity.collab-proxy
+  - com.unity.ide.rider
+  - com.unity.ide.visualstudio
+  - com.unity.multiplayer.center
+  - com.unity.test-framework
+  - com.unity.timeline
+  - com.unity.ugui
+  - com.unity.visualscripting
+  - Unity standard engine modules (animation, audio, physics, ui, vr, xr, etc.)
+
+Unity Companion License:
+  https://unity.com/legal/licenses/unity-companion-license
+
+Unity Software Additional Terms:
+  https://unity.com/legal/terms-of-service/software
+
+For full per-package license text, see the LICENSE.md file inside each
+package directory under the Library/PackageCache or Packages folder of the
+Unity project source.
+
+
+================================================================================
+2. Meta XR SDK
+================================================================================
+
+Copyright (c) Meta Platforms, Inc. and affiliates. All rights reserved.
+
+  - com.meta.xr.sdk.all          (version 201.0.0)
+  - com.meta.xr.sdk.interaction  (version 85.0.0)
+
+Licensed under the Oculus SDK License Agreement.
+  https://developer.oculus.com/licenses/oculussdk/
+
+Use of the Meta XR SDK is governed by the Oculus SDK License Agreement.
+You may not use the Meta XR SDK except in compliance with that license.
+
+
+================================================================================
+3. TextMesh Pro
+================================================================================
+
+Copyright (c) Unity Technologies
+
+Distributed with Unity. Licensed under the Unity Companion License.
+  https://unity.com/legal/licenses/unity-companion-license
+
+
+================================================================================
+4. Trademarks
+================================================================================
+
+"Unity" and the Unity logo are trademarks or registered trademarks of
+Unity Technologies or its affiliates in the U.S. and elsewhere.
+
+"Meta", "Meta Quest", "Oculus", and related marks are trademarks of
+Meta Platforms, Inc.
+
+All other trademarks are the property of their respective owners. Use of
+these names does not imply endorsement.
+
+
+================================================================================
+END OF THIRD-PARTY NOTICES
+================================================================================

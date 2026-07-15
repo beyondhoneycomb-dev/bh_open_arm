@@ -1,0 +1,72 @@
+# ── Local tooling / session state (never commit) ───────────────
+.remember/
+.serena/
+.claude/
+.impeccable/
+
+# ── Secrets & environment ──────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# ── Python ─────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+uv.lock
+
+# ── Node / Web frontend (web SPA) ──────────────────────────────
+node_modules/
+.next/
+.turbo/
+.vite/
+frontend/dist/
+frontend/build/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── Robot / ML artifacts (large, not source) ──────────────────
+*.ckpt
+*.pt
+*.pth
+*.safetensors
+*.onnx
+*.engine
+wandb/
+outputs/
+checkpoints/
+datasets/
+data/
+*.mcap
+*.bag
+*.rrd
+
+# ── OS / Editor ───────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# ── 대용량 참고 바이너리 (재배포용 아님) ──────────────────────
+# OpenArm VR APK (86MB, enactic 배포). 아래 NOTES.md 안내대로 별도 취득.
+*.apk
