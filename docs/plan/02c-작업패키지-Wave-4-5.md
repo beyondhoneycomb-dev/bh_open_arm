@@ -97,7 +97,7 @@
 |---|---|
 | `registry/traceability.yaml` **전량**(177 WP × `{owns, consumes, produces, gate, stale_on, negative_branch}`) + JSON Schema | §0.3의 "두 축을 한 뷰로 조인" · §0.4의 3개 stale 전파 축 |
 | WP 매니페스트 스키마 + 인덱스 생성기 | 이 문서의 전 WP 등재 |
-| **CI-01~CI-17 검사기 실물** | §0.4의 `CG-*` 이진 강제(CI-05e) · §2.5 계약 회귀 검사 |
+| **CI-01~CI-18 검사기 실물** | §0.4의 `CG-*` 이진 강제(CI-05e) · §2.5 계약 회귀 검사 |
 | 워크플로우 상태 저장소 + 취소 메커니즘 | §0.4의 "미통합 작업 취소" |
 | 계약 해시 등재/동결 잠금(`CONTRACT_FROZEN`) | §0.3.1의 `CTR-*@v<n>` 소비 |
 
