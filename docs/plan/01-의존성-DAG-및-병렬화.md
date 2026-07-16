@@ -252,9 +252,9 @@ GUI 교차스트림 네임스페이스는 `WP-G-*` (`WP-G-00`~`04`, `WP-G-S01`~`
 
 | WP | 내용 | 클래스 | 형상 |
 |---|---|---|---|
-| `WP-N1-01` | 정규화 원장 스키마·판정 절차 확립 | `AI-offline` | `SHAPE-CF` |
-| `WP-N1-02` | 모순 6건 판정 적재 (NORM-001~004, 006~007) | `AI-offline` | `SHAPE-CF` |
-| `WP-N1-03` | 게이트 ID 네임스페이스 분리 · `M-8` 봉인 | `AI-offline` | `SHAPE-CF` |
+| `WP-N1-01` | 정규화 원장 스키마·판정 절차 확립 | `AI-offline` | `SHAPE-IG` |
+| `WP-N1-02` | 모순 6건 판정 적재 (NORM-001~004, 006~007) | `AI-offline` | `SHAPE-IG` |
+| `WP-N1-03` | 게이트 ID 네임스페이스 분리 · `M-8` 봉인 | `AI-offline` | `SHAPE-IG` |
 | `WP-N1-04` | 정규화 해시 발행 · 착수 차단 게이트 | `AI-offline` | `SHAPE-IG` |
 
 **동시성 근거**: `N1-02`(원장 6행 = `ledger/NORM-00n.md` 배타 소유)와 `N1-03`(게이트 네임스페이스 판정)은 서로 다른 원장 네임스페이스를 소유한다 — `N1-02` → `connect_contract`·`mode_contract`·`limit_contract`, `N1-03` → `gate_contract`. 공유 파일 0.
@@ -271,9 +271,9 @@ GUI 교차스트림 네임스페이스는 `WP-G-*` (`WP-G-00`~`04`, `WP-G-S01`~`
 
 | WP | 내용 | 클래스 | 형상 |
 |---|---|---|---|
-| `WP-ENV-01` | LeRobot **v0.6.0 commit SHA 핀** · 유령 0.6.1 차단 | `AI-offline` | `SHAPE-CF` |
-| `WP-ENV-02` | 락파일 · **이기종 플릿 환경 매트릭스**(Nano/Orin/5090/A6000) | `AI-offline` | `SHAPE-CF` |
-| `WP-ENV-03` | CI 파이프라인 골격 | `AI-offline` | `SHAPE-IM` |
+| `WP-ENV-01` | LeRobot **v0.6.0 commit SHA 핀** · 유령 0.6.1 차단 | `AI-offline` | `SHAPE-IG` |
+| `WP-ENV-02` | 락파일 · **이기종 플릿 환경 매트릭스**(Nano/Orin/5090/A6000) | `AI-offline` | `SHAPE-IG` |
+| `WP-ENV-03` | CI 파이프라인 골격 | `AI-offline` | `SHAPE-IG` |
 | `WP-ENV-04` | **계약 회귀 검사기**(상류 심볼·시그니처 핀, §6.4) | `AI-offline` | `SHAPE-IG` |
 
 **동시 fan-out**: **대역 자체가 단독.** 0-A/0-B/0-C/0-Ops 네 배치가 이 대역을 기다린다.
@@ -309,9 +309,9 @@ GUI 교차스트림 네임스페이스는 `WP-G-*` (`WP-G-00`~`04`, `WP-G-S01`~`
 | WP | 내용 | 클래스 | 형상 | 산출 게이트 |
 |---|---|---|---|---|
 | `WP-0B-01` | **flock 배타 락** — SocketCAN은 배타 bind를 제공하지 않는다 | `AI-on-HW` | `SHAPE-IM` | — |
-| `WP-0B-02` | **`ip link` 파싱·검증** — CAN-FD(nominal 1 Mbps / data 5 Mbps)·`ERROR-ACTIVE` | `AI-on-HW` | `SHAPE-MS` | — |
+| `WP-0B-02` | **`ip link` 파싱·검증** — CAN-FD(nominal 1 Mbps / data 5 Mbps)·`ERROR-ACTIVE` | `AI-on-HW` | `SHAPE-IM` | — |
 | `WP-0B-03` | **침입자 탐지** — `/proc/net/can/rcvlist_all` ifindex별 RX 리스너 수 능동검사 | `AI-on-HW` | `SHAPE-IM` | — |
-| `WP-0B-04` | **이중 바인드 능동 검사** — 두 프로세스 bind 시 **둘 다 성공**(`13` F-1) | `AI-on-HW` | `SHAPE-MS` | — |
+| `WP-0B-04` | **이중 바인드 능동 검사** — 두 프로세스 bind 시 **둘 다 성공**(`13` F-1) | `AI-on-HW` | `SHAPE-IM` | — |
 | `WP-0B-05` | **udev 고정 이름** (실물 디스크립터 — `ethtool -i`/`dev_id`) | `AI-on-HW` | `SHAPE-MS` | — |
 | `WP-0B-06` | **USB 토폴로지 · RTT · HOL 실측** | `AI-on-HW` | `SHAPE-MS` | `PG-CAN-001` **증거 공급** |
 | `WP-0B-08` | **카메라 열거** — 타입·모델·시리얼, USB 루트허브/컨트롤러 귀속, USB 2.0 폴백 감지 | `AI-on-HW` | `SHAPE-MS` | **`PG-CAM-001`** |
@@ -341,12 +341,12 @@ GUI 교차스트림 네임스페이스는 `WP-G-*` (`WP-G-00`~`04`, `WP-G-S01`~`
 |---|---|---|---|---|
 | `WP-0C-01` | **MuJoCo 백엔드** (`Robot` ABC) — 1단계 정본 | `AI-offline` | `SHAPE-IM` | — |
 | `WP-0C-05` | **더미 모드** — 하드웨어 없이 파이프라인 전 구간 | `AI-offline` | `SHAPE-IM` | — |
-| `WP-0C-06` | **합성 GIL 부하 하네스** — `15` §2.10 조건 4의 **부하 대역**을 하드웨어 없이 재현(idle / GIL 부하 / 프로세스 분리). 🔴 **조건 4 정본은 아니다** — 실카메라·실라이터는 `PG-RT-001b`가 소유 | `AI-offline` | `SHAPE-IM` | **`PG-RT-001a`** 기준 하네스 **공급**(§2.5a) |
+| `WP-0C-06` | **합성 GIL 부하 하네스** — `15` §2.10 조건 4의 **부하 대역**을 하드웨어 없이 재현(idle / GIL 부하 / 프로세스 분리). 🔴 **조건 4 정본은 아니다** — 실카메라·실라이터는 `PG-RT-001b`가 소유 | `AI-offline` | `SHAPE-CF` | **`PG-RT-001a`** 기준 하네스 **공급**(§2.5a) |
 | `WP-0C-07` | **학습·평가 통계** — 합성 48차원 데이터셋 선행(CAN 무관). 채널별 통계·`std ≈ 0` 검출·stats 내용 해시 | `AI-offline` | `SHAPE-IM` | — |
-| `WP-0C-08` | **정책 호환 매트릭스** — `FR-TRN-064` `[확정]`: 상한 32 정책(SmolVLA·pi0·pi05) → 양완 48차원 초과 → **학습 차단**. GR00T(132) 수용 | `AI-offline` | `SHAPE-CF` | — |
-| `WP-0C-03` | **MJCF v2 자산 검수 + J7 `motor_DM3507` 클래스 수정** — **`tMax` 2배 오차 → 마찰동정 전체 오염** | `AI-offline` | `SHAPE-IM` | **`PG-J7-001` 판정** |
-| `WP-0C-02` | **IK 어댑터** — `jnt_range` 덮어쓰기 **선행**, **무제약 폴백 차단** | `AI-offline` | `SHAPE-IM` | `PG-IK-001` **하네스 공급**(타깃별) |
-| `WP-0C-04` | **FK↔IK 회귀** — `openarm_control.Kinematics.fk_bimanual()` 기준(MJCF 월드, m/rad) | `AI-offline` | `SHAPE-IG` | — |
+| `WP-0C-08` | **정책 호환 매트릭스** — `FR-TRN-064` `[확정]`: 상한 32 정책(SmolVLA·pi0·pi05) → 양완 48차원 초과 → **학습 차단**. GR00T(132) 수용 | `AI-offline` | `SHAPE-IM` | — |
+| `WP-0C-03` | **MJCF v2 자산 검수 + J7 `motor_DM3507` 클래스 수정** — **`tMax` 2배 오차 → 마찰동정 전체 오염** | `AI-offline` | `SHAPE-CF` | **`PG-J7-001` 판정** |
+| `WP-0C-02` | **IK 어댑터** — `jnt_range` 덮어쓰기 **선행**, **무제약 폴백 차단** | `AI-offline` | `SHAPE-CF` | `PG-IK-001` **하네스 공급**(타깃별) |
+| `WP-0C-04` | **FK↔IK 회귀** — `openarm_control.Kinematics.fk_bimanual()` 기준(MJCF 월드, m/rad) | `AI-offline` | `SHAPE-IM` | — |
 | `WP-0C-09` | 🔴 **모드계층 + 드라이런 하드게이트** (B-2 이관: 구 `WP-2A-00`) — `SimBackend` 선택자(기본 MuJoCo 1단계), 드라이런 6검사기(위치·속도·토크·셀충돌·자가충돌·리프터), 실기전송 하드 차단 인터록, 검증 리포트 스키마 | `AI-offline` | `SHAPE-CF` | — |
 
 **동시성 근거**:
