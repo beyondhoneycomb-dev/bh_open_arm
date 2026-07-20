@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wave −2 BOOT — 대역 수용 상태</title>
+<style>
+:root {
+  --panel:  #1b1916;
+  --panel2: #232019;
+  --rule:   #3a352c;
+  --bone:   #ece5d8;
+  --steel:  #948c7d;
+  --amber:  #e0a13c;
+  --signal: #c8492f;
+  --clear:  #7d9a72;
+  --ink:    var(--bone);
+  --bg:     var(--panel);
+  --surface: var(--panel2);
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
+          "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: light) {
+  :root { --bg:#e8e2d5; --surface:#f2ede2; --ink:#1b1916; --rule:#c9c0ad; --steel:#6d6558; }
+}
+:root[data-theme="dark"] {
+  --bg:var(--panel); --surface:var(--panel2); --ink:var(--bone); --rule:#3a352c; --steel:#948c7d;
+}
+:root[data-theme="light"] {
+  --bg:#e8e2d5; --surface:#f2ede2; --ink:#1b1916; --rule:#c9c0ad; --steel:#6d6558;
+}
+* { box-sizing: border-box; }
+body {
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width:60rem; margin:0 auto; padding:clamp(1.25rem,4vw,3.5rem); }
+.eyebrow {
+  font-family:var(--mono); font-size:.7rem; letter-spacing:.22em; text-transform:uppercase;
+  color:var(--steel); display:flex; gap:1.5rem; flex-wrap:wrap;
+  border-bottom:1px solid var(--rule); padding-bottom:.9rem;
+}
+.eyebrow span:first-child { color:var(--amber); }
+
+.verdict { padding:clamp(2rem,6vw,3.5rem) 0 clamp(1.5rem,4vw,2.5rem); }
+.verdict__state {
+  font-family:var(--mono); font-size:.7rem; letter-spacing:.22em; text-transform:uppercase;
+  display:inline-flex; align-items:center; gap:.55rem; color:var(--steel); margin-bottom:1rem;
+}
+.verdict__state::before {
+  content:""; width:.5rem; height:.5rem; border-radius:50%; background:currentColor;
+}
+.verdict--pass .verdict__state { color:var(--clear); }
+.verdict--fail .verdict__state { color:var(--signal); }
+.verdict--absent .verdict__state { color:var(--amber); }
+.verdict__head {
+  font-family:var(--mono); font-weight:600;
+  font-size:clamp(2.6rem,10vw,5.5rem); line-height:.95; letter-spacing:-.045em; margin:0;
+}
+.verdict--pass .verdict__head { color:var(--clear); }
+.verdict--fail .verdict__head { color:var(--signal); }
+.verdict--absent .verdict__head { color:var(--amber); }
+.verdict__reason { margin:1.1rem 0 0; max-width:44rem; color:var(--ink); opacity:.86; }
+
+.readouts {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));
+  gap:1px; background:var(--rule); border:1px solid var(--rule); margin:0 0 2.75rem;
+}
+.readout { background:var(--surface); padding:1.1rem 1.2rem; }
+.readout__value {
+  font-family:var(--mono); font-size:clamp(1.7rem,5vw,2.4rem);
+  letter-spacing:-.03em; line-height:1;
+}
+.readout--fail .readout__value { color:var(--signal); }
+.readout--absent .readout__value { color:var(--amber); }
+.readout__unit { font-size:.55em; color:var(--steel); letter-spacing:0; }
+.readout__label {
+  font-family:var(--mono); font-size:.65rem; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--steel); margin-top:.5rem;
+}
+
+h2 {
+  font-family:var(--mono); font-size:.72rem; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--steel); font-weight:500;
+  border-bottom:1px solid var(--rule); padding-bottom:.65rem; margin:0 0 1.25rem;
+}
+section { margin-bottom:2.75rem; }
+
+.strip { display:flex; gap:2px; align-items:flex-end; overflow-x:auto; padding-bottom:.4rem; }
+.mark {
+  flex:1 0 auto; min-width:1.1rem; background:none; border:0; padding:0;
+  display:flex; flex-direction:column; align-items:center; gap:.4rem;
+  cursor:default; font:inherit; color:inherit;
+}
+.mark__bar { display:block; width:100%; height:2.6rem; }
+.mark--pass   .mark__bar { background:var(--clear); }
+.mark--fail   .mark__bar { background:var(--signal); }
+.mark--absent .mark__bar {
+  background:repeating-linear-gradient(
+    -45deg, transparent, transparent 3px, var(--rule) 3px, var(--rule) 4px);
+  border:1px solid var(--rule);
+}
+.mark__id {
+  font-family:var(--mono); font-size:.55rem; color:var(--steel); letter-spacing:.02em;
+}
+.mark:focus-visible { outline:2px solid var(--amber); outline-offset:2px; }
+.mark--static { min-width:0; width:.85rem; display:inline-flex; vertical-align:middle; }
+.mark--static .mark__bar { height:.85rem; }
+
+.legend { list-style:none; padding:0; margin:1.4rem 0 0; display:grid; gap:.55rem; }
+.legend__item {
+  display:flex; align-items:center; gap:.7rem; font-size:.85rem; color:var(--ink); opacity:.8;
+}
+
+.note {
+  border-left:2px solid var(--amber); padding:.15rem 0 .15rem 1rem;
+  margin:1.4rem 0 0; color:var(--ink); opacity:.82; font-size:.9rem;
+}
+
+.tablewrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:.9rem; }
+th, td { text-align:left; padding:.7rem .5rem; border-bottom:1px solid var(--rule); }
+th {
+  font-family:var(--mono); font-size:.65rem; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--steel); font-weight:500;
+}
+td.num { font-family:var(--mono); text-align:right; white-space:nowrap; color:var(--amber); }
+
+footer {
+  font-family:var(--mono); font-size:.65rem; letter-spacing:.1em; color:var(--steel);
+  border-top:1px solid var(--rule); padding-top:1.1rem; margin-top:1rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation:none !important; transition:none !important; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">
+    <span>Wave −2 · BOOT</span>
+    <span>대역 수용 게이트</span>
+    <span>9b521ad</span>
+    <span>2026-07-20 10:33 UTC</span>
+  </div>
+
+  <div class="verdict verdict--absent">
+    <div class="verdict__state">미확인</div>
+    <h1 class="verdict__head">판정 보류</h1>
+    <p class="verdict__reason">조건 ①은 통과했다. 조건 ②는 34개 규칙이 아직 자기 코퍼스에서 돌지 않아 판정할 수 없다 — 통과가 아니라 미확인이다.</p>
+  </div>
+
+  <div class="readouts">
+<div class="readout readout--pass"><div class="readout__value">177<span class="readout__unit">/177</span></div><div class="readout__label">작업 패키지 등재</div></div>
+<div class="readout readout--pass"><div class="readout__value">1215<span class="readout__unit"></span></div><div class="readout__label">레지스트리 레코드</div></div>
+<div class="readout readout--absent"><div class="readout__value">831<span class="readout__unit"></span></div><div class="readout__label">소유 WP 미배정</div></div>
+  </div>
+
+  <section>
+    <h2>CI 규칙 35개 — 실행체 유무</h2>
+    <div class="strip">
+<button class="mark mark--absent" type="button" aria-label="CI-01: absent 미실행"><span class="mark__bar"></span><span class="mark__id">01</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-01b: absent 미실행"><span class="mark__bar"></span><span class="mark__id">01b</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-02: absent 미실행"><span class="mark__bar"></span><span class="mark__id">02</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-02b: absent 미실행"><span class="mark__bar"></span><span class="mark__id">02b</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-03: absent 미실행"><span class="mark__bar"></span><span class="mark__id">03</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-03b: absent 미실행"><span class="mark__bar"></span><span class="mark__id">03b</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-03c: absent 미실행"><span class="mark__bar"></span><span class="mark__id">03c</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-03d: absent 미실행"><span class="mark__bar"></span><span class="mark__id">03d</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-04: absent 미실행"><span class="mark__bar"></span><span class="mark__id">04</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-04b: absent 미실행"><span class="mark__bar"></span><span class="mark__id">04b</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-04c: absent 미실행"><span class="mark__bar"></span><span class="mark__id">04c</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-04d: absent 미실행"><span class="mark__bar"></span><span class="mark__id">04d</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-05: absent 미실행"><span class="mark__bar"></span><span class="mark__id">05</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-05b: absent 미실행"><span class="mark__bar"></span><span class="mark__id">05b</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-05c: absent 미실행"><span class="mark__bar"></span><span class="mark__id">05c</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-05d: absent 미실행"><span class="mark__bar"></span><span class="mark__id">05d</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-05e: absent 미실행"><span class="mark__bar"></span><span class="mark__id">05e</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-06: absent 미실행"><span class="mark__bar"></span><span class="mark__id">06</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-07: absent 미실행"><span class="mark__bar"></span><span class="mark__id">07</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-08: absent 미실행"><span class="mark__bar"></span><span class="mark__id">08</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-09: absent 미실행"><span class="mark__bar"></span><span class="mark__id">09</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-10: absent 미실행"><span class="mark__bar"></span><span class="mark__id">10</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-11: absent 미실행"><span class="mark__bar"></span><span class="mark__id">11</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-11b: absent 미실행"><span class="mark__bar"></span><span class="mark__id">11b</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-11b-자기적용: absent 실행체 없음"><span class="mark__bar"></span><span class="mark__id">11b-자기적용</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-11c: absent 미실행"><span class="mark__bar"></span><span class="mark__id">11c</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-12: absent 미실행"><span class="mark__bar"></span><span class="mark__id">12</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-13: absent 미실행"><span class="mark__bar"></span><span class="mark__id">13</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-14: absent 미실행"><span class="mark__bar"></span><span class="mark__id">14</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-14b: absent 미실행"><span class="mark__bar"></span><span class="mark__id">14b</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-14c: absent 미실행"><span class="mark__bar"></span><span class="mark__id">14c</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-15: absent 미실행"><span class="mark__bar"></span><span class="mark__id">15</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-16: absent 미실행"><span class="mark__bar"></span><span class="mark__id">16</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-17: absent 미실행"><span class="mark__bar"></span><span class="mark__id">17</span></button>
+<button class="mark mark--absent" type="button" aria-label="CI-18: absent 미실행"><span class="mark__bar"></span><span class="mark__id">18</span></button>
+    </div>
+    <ul class="legend">
+<li class="legend__item"><span class="mark mark--pass mark--static"><span class="mark__bar"></span></span>실행체가 있고, 위반 픽스처가 실제로 실패한다</li>
+<li class="legend__item"><span class="mark mark--fail mark--static"><span class="mark__bar"></span></span>돌았고, 위반을 잡았다</li>
+<li class="legend__item"><span class="mark mark--absent mark--static"><span class="mark__bar"></span></span>돌지 않았다 — 통과가 아니라 미확인</li>
+    </ul>
+    <p class="note">
+      판정 범위는 <strong>CI-17까지</strong>(34개)다.
+      CI-18은 짓되 판정에는 넣지 않는다 — 그 술어가 이 게이트를 참조하므로
+      판정에 넣으면 게이트가 자기를 참조한다. 짓는 범위와 판정 범위가 다른 것은 의도다.
+    </p>
+  </section>
+
+  <section>
+    <h2>산문이 남긴 결함 — 사람이 고쳐야 하는 것</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>항목</th><th style="text-align:right">건수</th></tr></thead>
+        <tbody>
+<tr><td>3.1 코드 스팬 안 이스케이프 누락 파이프</td><td class='num'>9건</td></tr>
+<tr><td>3.2 우선순위가 `M`/`S`/`C`가 아닌 요구사항</td><td class='num'>6건</td></tr>
+<tr><td>3.3 태그가 어휘 밖이거나 없는 요구사항</td><td class='num'>101건</td></tr>
+<tr><td>3.4 번호 매긴 수용 항목이 0개인 WP</td><td class='num'>2건</td></tr>
+<tr><td>3.5 카탈로그가 다단계로 선언한 WP</td><td class='num'>24건</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    미확인 34/34 · 이 페이지는 디스크의 실제 파일에서 생성된다 ·
+    python -m dashboard.render
+  </footer>
+</div>
+<script>
+  // The rule strip is keyboard-reachable, so the detail must reach a screen
+  // reader too: aria-label carries it, and title makes it visible on hover.
+  for (const mark of document.querySelectorAll('.mark[aria-label]')) {
+    mark.title = mark.getAttribute('aria-label');
+  }
+</script>
+</body>
+</html>

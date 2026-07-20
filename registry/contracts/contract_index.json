@@ -1,0 +1,167 @@
+{
+  "version": 1,
+  "namespace": "CTR-<NAME>@v<n>",
+  "canonical_source": "docs/plan/01-의존성-DAG-및-병렬화.md",
+  "ledger_head": "0000000000000000000000000000000000000000000000000000000000000000",
+  "contracts": [
+    {
+      "contract_id": "CTR-ACT@v1",
+      "version": 1,
+      "canonical_hash": null,
+      "status": "DRAFT",
+      "owner_wp": "WP-0A-02",
+      "consumer_wps": [
+        "WP-0A-01",
+        "WP-0C-02",
+        "WP-2A-05",
+        "WP-3A-00",
+        "WP-G-01"
+      ]
+    },
+    {
+      "contract_id": "CTR-CAL@v1",
+      "version": 1,
+      "canonical_hash": null,
+      "status": "DRAFT",
+      "owner_wp": "WP-1-02",
+      "consumer_wps": [
+        "WP-G-S02"
+      ]
+    },
+    {
+      "contract_id": "CTR-CAM@v1",
+      "version": 1,
+      "canonical_hash": null,
+      "status": "DRAFT",
+      "owner_wp": "WP-3A-01",
+      "consumer_wps": [
+        "WP-3A-06",
+        "WP-G-S06"
+      ]
+    },
+    {
+      "contract_id": "CTR-CAP@v1",
+      "version": 1,
+      "canonical_hash": null,
+      "status": "DRAFT",
+      "owner_wp": "WP-3A-02",
+      "consumer_wps": [
+        "WP-3A-06",
+        "WP-G-S06"
+      ]
+    },
+    {
+      "contract_id": "CTR-ERR@v1",
+      "version": 1,
+      "canonical_hash": null,
+      "status": "DRAFT",
+      "owner_wp": "WP-OPS-06",
+      "consumer_wps": [
+        "WP-3A-00",
+        "WP-G-01",
+        "WP-G-03"
+      ]
+    },
+    {
+      "contract_id": "CTR-GW@v1",
+      "version": 1,
+      "canonical_hash": null,
+      "status": "DRAFT",
+      "owner_wp": "WP-1-03",
+      "consumer_wps": [
+        "WP-G-04"
+      ]
+    },
+    {
+      "contract_id": "CTR-OWN@v1",
+      "version": 1,
+      "canonical_hash": null,
+      "status": "DRAFT",
+      "owner_wp": "WP-0A-03",
+      "consumer_wps": [
+        "WP-G-00"
+      ]
+    },
+    {
+      "contract_id": "CTR-PLUG@v1",
+      "version": 1,
+      "canonical_hash": null,
+      "status": "DRAFT",
+      "owner_wp": "WP-0A-02",
+      "consumer_wps": []
+    },
+    {
+      "contract_id": "CTR-PRIM@v1",
+      "version": 1,
+      "canonical_hash": null,
+      "status": "DRAFT",
+      "owner_wp": "WP-3A-00",
+      "consumer_wps": [
+        "WP-3A-01",
+        "WP-3A-02",
+        "WP-3A-03",
+        "WP-3A-04",
+        "WP-3A-05",
+        "WP-3A-06"
+      ]
+    },
+    {
+      "contract_id": "CTR-REC@v1",
+      "version": 1,
+      "canonical_hash": null,
+      "status": "DRAFT",
+      "owner_wp": "WP-3A-05",
+      "consumer_wps": [
+        "WP-3A-06",
+        "WP-G-S07"
+      ]
+    },
+    {
+      "contract_id": "CTR-TEL@v1",
+      "version": 1,
+      "canonical_hash": null,
+      "status": "DRAFT",
+      "owner_wp": "WP-3A-03",
+      "consumer_wps": [
+        "WP-3A-06",
+        "WP-G-S05"
+      ]
+    },
+    {
+      "contract_id": "CTR-UNIT@v1",
+      "version": 1,
+      "canonical_hash": null,
+      "status": "DRAFT",
+      "owner_wp": "WP-0A-04",
+      "consumer_wps": [
+        "WP-0A-01",
+        "WP-0A-02",
+        "WP-0C-02",
+        "WP-0C-09",
+        "WP-3A-00",
+        "WP-G-02"
+      ]
+    },
+    {
+      "contract_id": "CTR-WS@v1",
+      "version": 1,
+      "canonical_hash": null,
+      "status": "DRAFT",
+      "owner_wp": "WP-3A-04",
+      "consumer_wps": [
+        "WP-3A-06",
+        "WP-3B-06",
+        "WP-3B-15",
+        "WP-3D-08",
+        "WP-4A-G1",
+        "WP-4C-G1",
+        "WP-G-00",
+        "WP-G-01",
+        "WP-G-02",
+        "WP-G-03",
+        "WP-G-04"
+      ]
+    }
+  ],
+  "reverification_triggers": []
+}

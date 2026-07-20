@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bh-open-arm/registry/schema/traceability.schema.json",
+  "title": "OpenArm traceability registry",
+  "description": "Field definitions are owned by docs/plan/06-추적성-레지스트리.md §2.2. This schema is the executable form of that table; where the two disagree, §2.2 is canonical and this file is the defect.",
+  "type": "object",
+  "required": ["version", "spine_ref", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "spine_ref": {
+      "type": "string",
+      "description": "Canonical spine document and commit. CI-17 rejects a bare 'SPINE vN' with no file path.",
+      "pattern": "^docs/plan/[^@]+@[0-9a-f]{7,40}$"
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "req_id": {
+      "type": "string",
+      "description": "FR/NFR come from docs/spec. PLAN-* is the plan-internal axis for the execution machinery, exempt from CI-01/CI-01b (00 §8.2a).",
+      "pattern": "^(?:(?:FR|NFR)-[A-Z]{2,4}-\\d{3}|PLAN-[A-Z0-9]+-\\d{2})$"
+    },
+    "wp_id": {
+      "type": "string",
+      "pattern": "^WP-(?:BOOT|N1|ENV|0A|0B|0C|OPS|[1-5][A-D]?|G)-[SG]?\\d{1,2}[a-z]?$"
+    },
+    "gate_id": {
+      "type": "string",
+      "description": "PG-RT-001 without an a/b suffix is not a gate id; CI-11b rejects it in this position (06 §2.3b).",
+      "anyOf": [
+        { "pattern": "^PG-(?!RT-001$)[A-Z0-9]+-\\d{3}[ab]?$" },
+        { "pattern": "^CG-(?:BOOT|N1|ENV|0A|0B|0C|OPS|[1-5][A-D]?|G)-[SG]?\\d{1,2}[a-z]$" }
+      ]
+    },
+    "contract_id": {
+      "type": "string",
+      "description": "Single namespace CTR-<NAME>@v<n>. Semver is rejected: two schemas may never share one version token (CR-2).",
+      "pattern": "^CTR-[A-Z]+@v\\d+$"
+    },
+    "own_mode": {
+      "type": "string",
+      "enum": ["EXCLUSIVE", "CONTRACT_FROZEN", "SHARED_APPEND", "GENERATED"]
+    },
+    "exec_class": {
+      "type": "string",
+      "enum": ["AI-offline", "AI-on-HW", "Human-assisted-HW", "Human-judgment"]
+    },
+    "workflow": {
+      "type": "string",
+      "enum": ["SHAPE-CF", "SHAPE-IM", "SHAPE-IG", "SHAPE-MS", "SHAPE-HG"]
+    },
+    "cancel_policy": {
+      "type": "string",
+      "description": "latch-to-hold is mandatory for any stage touching the rig: the arm has no holding brake, so finishing the current step means the arm keeps moving.",
+      "enum": ["finish-step", "latch-to-hold"]
+    },
+    "hash": {
+      "type": ["string", "null"],
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "owns_item": {
+      "type": "object",
+      "required": ["glob", "mode"],
+      "additionalProperties": false,
+      "properties": {
+        "glob": { "type": "string", "minLength": 1 },
+        "mode": { "$ref": "#/$defs/own_mode" }
+      }
+    },
+    "artifact_item": {
+      "type": "object",
+      "required": ["id", "kind", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^ART-[A-Z0-9-]+$" },
+        "kind": {
+          "type": "string",
+          "enum": ["code", "schema", "config", "harness", "dataset", "report", "doc"]
+        },
+        "path": { "type": "string", "minLength": 1 }
+      }
+    },
+    "phase_item": {
+      "type": "object",
+      "description": "A stage of a multi-stage WP. Scalar workflow/exec_class and phases[] are mutually exclusive (00 §3.2a).",
+      "required": ["workflow", "exec_class", "owns", "cancel_policy"],
+      "additionalProperties": false,
+      "properties": {
+        "workflow": { "$ref": "#/$defs/workflow" },
+        "exec_class": { "$ref": "#/$defs/exec_class" },
+        "owns": { "type": "array", "items": { "$ref": "#/$defs/owns_item" } },
+        "cancel_policy": { "$ref": "#/$defs/cancel_policy" },
+        "after": {
+          "type": ["integer", "string", "null"],
+          "description": "Preceding stage: an index within this WP, or another WP id."
+        }
+      }
+    },
+    "negative_branch_item": {
+      "type": "object",
+      "required": ["gate", "on", "action"],
+      "additionalProperties": false,
+      "properties": {
+        "gate": { "$ref": "#/$defs/gate_id" },
+        "on": {
+          "type": "string",
+          "description": "CG-* is PASS/FAIL binary; the five-state machine belongs to PG-* alone (00 §8.0a). CI-05e enforces the split, which this schema cannot express without conditioning on the sibling gate value.",
+          "enum": ["FAIL", "RETRY_WITH_VARIANT", "DEGRADED_ACCEPTED", "FAIL_BLOCKING", "SUPERSEDED"]
+        },
+        "action": { "type": "string", "minLength": 1 },
+        "spawns": { "$ref": "#/$defs/wp_id" },
+        "note": { "type": "string" }
+      }
+    },
+    "stale_trigger": {
+      "type": "string",
+      "pattern": "^(?:PG-[A-Z0-9]+-\\d{3}[ab]?:(?:PASS|RETRY_WITH_VARIANT|DEGRADED_ACCEPTED|FAIL_BLOCKING|SUPERSEDED)|CTR-[A-Z]+:MAJOR_BUMP|env_hash:CHANGED)$"
+    },
+    "entry": {
+      "type": "object",
+      "required": [
+        "req", "spec_ref", "priority", "tag", "wp",
+        "artifact", "owns", "contract", "gate",
+        "negative_branch", "downstream", "stale_on", "env_hash"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "req": { "$ref": "#/$defs/req_id" },
+        "spec_ref": { "type": "string", "pattern": "^\\d{2}#.+$" },
+        "priority": { "type": "string", "enum": ["M", "S", "C"] },
+        "tag": { "type": "string", "enum": ["확정", "미확인", "결정필요", "신규구현"] },
+        "normalization": { "$ref": "#/$defs/hash" },
+        "wp": {
+          "anyOf": [
+            { "$ref": "#/$defs/wp_id" },
+            { "type": "string", "enum": ["OUT", "DEFERRED"] }
+          ]
+        },
+        "artifact": { "type": "array", "items": { "$ref": "#/$defs/artifact_item" } },
+        "workflow": { "$ref": "#/$defs/workflow" },
+        "exec_class": { "$ref": "#/$defs/exec_class" },
+        "phases": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/phase_item" } },
+        "owns": { "type": "array", "items": { "$ref": "#/$defs/owns_item" } },
+        "contract": {
+          "type": "object",
+          "required": ["consumes", "produces"],
+          "additionalProperties": false,
+          "properties": {
+            "consumes": { "type": "array", "items": { "$ref": "#/$defs/contract_id" } },
+            "produces": { "type": "array", "items": { "$ref": "#/$defs/contract_id" } }
+          }
+        },
+        "gate": { "type": "array", "items": { "$ref": "#/$defs/gate_id" } },
+        "negative_branch": { "type": "array", "items": { "$ref": "#/$defs/negative_branch_item" } },
+        "downstream": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(?:WP-(?:BOOT|N1|ENV|0A|0B|0C|OPS|[1-5][A-D]?|G)-[SG]?\\d{1,2}[a-z]?|CTR-[A-Z]+@v\\d+|ART-[A-Z0-9-]+)$"
+          }
+        },
+        "stale_on": { "type": "array", "items": { "$ref": "#/$defs/stale_trigger" } },
+        "env_hash": { "$ref": "#/$defs/hash" },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["jetson_nano", "jetson_orin", "rtx_5090", "rtx_a6000"]
+          }
+        },
+        "terminal": { "const": true },
+        "planned": { "const": true },
+        "justification": { "type": "string" },
+        "out_reason": { "type": "string", "minLength": 1 },
+        "provenance": {
+          "type": "object",
+          "description": "How the bootstrap seeded this record. Not part of §2.2; carried so the prose-to-registry reconciliation report can be regenerated and audited after the registry becomes canonical.",
+          "additionalProperties": false,
+          "properties": {
+            "wp_rule": {
+              "type": "string",
+              "enum": ["doc06-section6", "sole-citation", "coverage-fill", "ambiguous-citation", "uncited", "plan-axis"]
+            },
+            "wp_candidates": { "type": "array", "items": { "$ref": "#/$defs/wp_id" } },
+            "source": { "type": "string" }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "description": "Scalar stage fields and phases[] are mutually exclusive. A requirement with no owning work package has no stage at all, so OUT and DEFERRED are exempt rather than carrying an invented shape (§2.2 marks both fields conditional).",
+          "if": {
+            "properties": { "wp": { "not": { "enum": ["OUT", "DEFERRED"] } } },
+            "required": ["wp"]
+          },
+          "then": {
+            "oneOf": [
+              { "required": ["workflow", "exec_class"], "not": { "required": ["phases"] } },
+              { "required": ["phases"], "not": { "anyOf": [{ "required": ["workflow"] }, { "required": ["exec_class"] }] } }
+            ]
+          },
+          "else": {
+            "not": { "anyOf": [{ "required": ["workflow"] }, { "required": ["exec_class"] }, { "required": ["phases"] }] }
+          }
+        },
+        {
+          "description": "An empty downstream[] must say so explicitly rather than by omission (§2.2).",
+          "if": { "properties": { "downstream": { "maxItems": 0 } }, "required": ["downstream"] },
+          "then": { "required": ["terminal"] }
+        },
+        {
+          "description": "wp: OUT requires a reason naming the deciding U-* or the specification's own retirement (CI-04d).",
+          "if": { "properties": { "wp": { "const": "OUT" } }, "required": ["wp"] },
+          "then": { "required": ["out_reason"] }
+        },
+        {
+          "description": "A gate carries at least one negative branch; a gate with no designed failure path is not a gate (CI-05).",
+          "if": { "properties": { "gate": { "minItems": 1 } }, "required": ["gate"] },
+          "then": { "properties": { "negative_branch": { "minItems": 1 } } }
+        }
+      ]
+    }
+  }
+}

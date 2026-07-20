@@ -70,3 +70,8 @@ Thumbs.db
 # ── 대용량 참고 바이너리 (재배포용 아님) ──────────────────────
 # OpenArm VR APK (86MB, enactic 배포). 아래 NOTES.md 안내대로 별도 취득.
 *.apk
+
+# ── Session tooling artifacts (browser automation, screenshots) ─────
+.playwright-mcp/
+*.png
+!docs/**/*.png

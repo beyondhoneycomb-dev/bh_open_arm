@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bh-open-arm/registry/generate/manifest.schema.json",
+  "title": "OpenArm work-package manifest",
+  "description": "One manifest per work package, machine-read by the workflow that executes it. Field definitions are owned by docs/plan/06-추적성-레지스트리.md §2.2 and the WP-BOOT-02 contract cell of docs/plan/02a §−2.3; where this file disagrees with them, they are canonical and this file is the defect. contract_refs[] is deliberately absent: it is a derived view of consumes[] ∪ produces[] computed by the index generator, not a stored field, and unevaluatedProperties rejects it here.",
+  "type": "object",
+  "required": [
+    "wp_id",
+    "owns",
+    "consumes",
+    "produces",
+    "gates",
+    "normalization_hash",
+    "env_hash"
+  ],
+  "properties": {
+    "wp_id": { "$ref": "#/$defs/wp_id" },
+    "exec_class": { "$ref": "#/$defs/exec_class" },
+    "workflow": { "$ref": "#/$defs/workflow" },
+    "phases": { "$ref": "#/$defs/phases" },
+    "owns": { "$ref": "#/$defs/owns" },
+    "consumes": { "$ref": "#/$defs/contract_list" },
+    "produces": { "$ref": "#/$defs/contract_list" },
+    "gates": { "$ref": "#/$defs/gate_list" },
+    "exit_gates": { "$ref": "#/$defs/gate_list" },
+    "requires_gates": { "$ref": "#/$defs/gate_list" },
+    "normalization_hash": { "$ref": "#/$defs/declared_hash" },
+    "env_hash": { "$ref": "#/$defs/declared_hash" }
+  },
+  "oneOf": [
+    {
+      "title": "single-stage",
+      "required": ["exec_class", "workflow"],
+      "properties": { "phases": false }
+    },
+    {
+      "title": "multi-stage",
+      "required": ["phases"],
+      "properties": { "exec_class": false, "workflow": false }
+    }
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "wp_id": {
+      "type": "string",
+      "pattern": "^WP-(?:BOOT|N1|ENV|0A|0B|0C|OPS|[1-5][A-D]?|G)-[SG]?\\d{1,2}[a-z]?$"
+    },
+    "exec_class": {
+      "description": "Closed value space (02a §0.2). Derived from workflow (00 §4.0, CI-14); only SHAPE-HG admits two values. A cell holding two tokens ('AI-offline -> AI-on-HW') is not a member of this enum and is rejected here — multi-stage belongs in phases[].",
+      "type": "string",
+      "enum": ["AI-offline", "AI-on-HW", "Human-assisted-HW", "Human-judgment"]
+    },
+    "workflow": {
+      "description": "Closed value space (02a §0.3, vocabulary owned by 05 §1.1). Exactly one token per cell: 'SHAPE-IM + SHAPE-HG' and 'SHAPE-IM -> SHAPE-MS' are not members and are rejected — multi-stage belongs in phases[] (00 §3.2a). A sixth shape code is an error, not a translation target.",
+      "type": "string",
+      "enum": ["SHAPE-CF", "SHAPE-IM", "SHAPE-IG", "SHAPE-MS", "SHAPE-HG"]
+    },
+    "cancel_policy": {
+      "description": "latch-to-hold is mandatory for any stage holding rig resources: the arm has no holding brake, so 'finish the current step' means the arm keeps moving (02a §−2.3 WP-BOOT-04).",
+      "type": "string",
+      "enum": ["finish-step", "latch-to-hold"]
+    },
+    "own_mode": {
+      "type": "string",
+      "enum": ["EXCLUSIVE", "CONTRACT_FROZEN", "SHARED_APPEND", "GENERATED"]
+    },
+    "owns_item": {
+      "type": "object",
+      "required": ["glob", "mode"],
+      "additionalProperties": false,
+      "properties": {
+        "glob": { "type": "string", "minLength": 1 },
+        "mode": { "$ref": "#/$defs/own_mode" }
+      }
+    },
+    "owns": {
+      "description": "For a multi-stage package this is the union of phases[].owns; the per-stage lists are canonical (06 §2.2).",
+      "type": "array",
+      "items": { "$ref": "#/$defs/owns_item" }
+    },
+    "gate_id": {
+      "description": "PG-RT-001 carries no meaning without its a/b suffix and is not a gate id in a value position (06 §2.3b, CI-11b); M-8 is sealed in gate-declaring positions (CI-10). Neither matches these patterns, so both are rejected wherever a gate id is a value. The seal binds field values, never prose.",
+      "type": "string",
+      "anyOf": [
+        { "pattern": "^PG-(?!RT-001$)[A-Z0-9]+-\\d{3}[ab]?$" },
+        { "pattern": "^CG-(?:BOOT|N1|ENV|0A|0B|0C|OPS|[1-5][A-D]?|G)-[SG]?\\d{1,2}[a-z]$" }
+      ]
+    },
+    "gate_list": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/gate_id" }
+    },
+    "contract_id": {
+      "description": "Single namespace CTR-<NAME>@v<n>. Semver digits are rejected: two schemas may never share one frozen generation token (CR-2, 06 §4.3).",
+      "type": "string",
+      "pattern": "^CTR-[A-Z]+@v\\d+$"
+    },
+    "contract_list": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/contract_id" }
+    },
+    "declared_hash": {
+      "description": "Declared here, filled downstream by WP-N1-04 (normalization) and WP-ENV-04 (env). null means not yet issued; omitting the key entirely is rejected, because the slot has to exist before the wave that fills it can be enforced (02a §−2.3 acceptance ⑦).",
+      "type": ["string", "null"],
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "phases": {
+      "description": "Multi-stage packages only — execution class, shape, resource claim and cancel policy change mid-package (00 §3.2a). Two stages is the minimum: a one-element phases[] describes a package whose execution meaning never changes, which is a single-stage package written the wrong way.",
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["workflow", "exec_class", "owns", "cancel_policy", "after"],
+        "additionalProperties": false,
+        "properties": {
+          "workflow": { "$ref": "#/$defs/workflow" },
+          "exec_class": { "$ref": "#/$defs/exec_class" },
+          "owns": { "$ref": "#/$defs/owns" },
+          "cancel_policy": { "$ref": "#/$defs/cancel_policy" },
+          "after": {
+            "description": "Predecessor stage: an index within this package, or another WP id, or null for the first stage.",
+            "anyOf": [
+              { "type": "integer", "minimum": 0 },
+              { "$ref": "#/$defs/wp_id" },
+              { "type": "null" }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,61 @@
+[project]
+name = "bh-open-arm"
+version = "0.0.0"
+description = "OpenArm v2.0 physical-AI platform — Wave -2 BOOT execution bootstrap"
+requires-python = ">=3.11"
+dependencies = [
+    "pyyaml>=6.0",
+    "jsonschema>=4.10",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "types-PyYAML>=6.0",
+]
+
+[project.scripts]
+oa-check = "registry.check:main"
+oa-registry = "registry.ingest.cli:main"
+oa-index = "registry.generate.cli:main"
+oa-state = "ops.launch.cli:main"
+oa-contracts = "registry.contracts.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["registry*", "ops*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "PTH", "RET", "ARG", "C4"]
+# PLAN-BOOT: fixtures deliberately contain malformed records; they are data, not logic.
+exclude = ["registry/fixtures/**"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ARG"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+exclude = ["registry/fixtures/", "registry/build/"]
+
+[[tool.mypy.overrides]]
+module = ["jsonschema.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+    "fixture_corpus: exercises the violation/pass fixture corpora required by WP-BOOT-03",
+]
