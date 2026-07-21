@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from registry.env.env_hash import read_issued
 from registry.ingest.catalog import CONTRACT_ID, PG_ID, WP_ID, CatalogEntry
 from registry.ingest.catalog import parse_all as parse_catalogs
 from registry.ingest.markdown import all_tables, find_pipe_defects, plain_text, read_sections
@@ -40,6 +41,14 @@ from registry.normalization.seed import ledger_seed
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_VERSION = 1
 BOOT_BAND = "BOOT"
+
+# WP-ENV-04 issues the environment hash; every package that declares it as an
+# input is downstream of it and stamps the issued value into its manifest, where a
+# mismatch refuses start (02a WP-ENV-04, registry/env/barrier.py). The stamp is
+# derived from the package's own declared consumes, not invented here — a package
+# that does not consume WP-ENV-04 keeps `env_hash: null`, where WP-ENV-04 has not
+# yet reached it.
+ENV_HASH_PRODUCER = "WP-ENV-04"
 
 # Shape determines execution class for every shape but SHAPE-HG, where the
 # residual (holding the arm vs judging a result) is real because the two carry
@@ -439,12 +448,26 @@ def _downstream_for(wp_id: str, entries: list[CatalogEntry]) -> list[str]:
     )
 
 
+def _consumes_env_hash(entry: CatalogEntry) -> bool:
+    """Report whether a package declares WP-ENV-04 as an input.
+
+    Args:
+        entry: The catalogue entry under seeding.
+
+    Returns:
+        (bool) True when the package is downstream of the env-hash producer and
+        must therefore stamp the issued hash into its manifest.
+    """
+    return ENV_HASH_PRODUCER in WP_ID.findall(entry.consumes_text)
+
+
 def _package_axes(
     entry: CatalogEntry,
     entries: list[CatalogEntry],
     ownership: dict[str, list[dict[str, str]]],
     producers: dict[str, str],
     bindings: dict[str, list[str]],
+    issued_env_hash: str | None,
 ) -> dict[str, Any]:
     """Compute the axes CI-14c requires to be identical across a package's records."""
     gates = _gates_for(entry, bindings)
@@ -461,7 +484,7 @@ def _package_axes(
         "negative_branch": _negative_branches_for(entry, gates),
         "downstream": _downstream_for(entry.wp_id, entries),
         "stale_on": [],
-        "env_hash": None,
+        "env_hash": issued_env_hash if _consumes_env_hash(entry) else None,
     }
     if entry.is_multi_stage:
         axes["phases"] = _phases_for(entry)
@@ -626,8 +649,12 @@ def build(plan_dir: Path, spec_dir: Path, spine_ref: str) -> tuple[dict[str, Any
         ),
         entries,
     )
+    # A missing publication file stamps nothing (bootstrap ordering), the same
+    # honesty the normalization ledger uses: no issued hash means the slot stays
+    # null rather than citing a value that was never published.
+    issued_env_hash = read_issued()
     axes_cache = {
-        entry.wp_id: _package_axes(entry, entries, ownership, producers, bindings)
+        entry.wp_id: _package_axes(entry, entries, ownership, producers, bindings, issued_env_hash)
         for entry in entries
     }
 

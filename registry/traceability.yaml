@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@e8b0912
+spine_ref: docs/plan/00-실행계획-개요.md@5d307bc
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -33806,7 +33806,11 @@ entries:
   - id: ART-EVIDENCE-0A03E
     kind: report
     path: registry/build/evidence/CG-0A-03e/
-  owns: []
+  owns:
+  - glob: ownership/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0a03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces:
@@ -33852,9 +33856,11 @@ entries:
   - WP-0B-01
   - WP-1-01
   stale_on: []
-  env_hash: null
+  env_hash: sha256:a01951d6d9a030b8869e8ad2ee90ab90c4e90c1b65ed560975d133a4ecdb944f
   workflow: SHAPE-CF
   exec_class: AI-offline
+  justification: 하류 소비자(WP-0B-01·WP-1-01)는 CTR-OWN@v1 소유 레지스트리를 데이터로 소비한다(소유 규율에 종속) — ownership/ 파이썬을
+    import하지 않으므로 정적 참조 그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: coverage-fill
@@ -41190,7 +41196,7 @@ entries:
   downstream:
   - WP-1-02
   stale_on: []
-  env_hash: null
+  env_hash: sha256:a01951d6d9a030b8869e8ad2ee90ab90c4e90c1b65ed560975d133a4ecdb944f
   workflow: SHAPE-CF
   exec_class: AI-offline
   planned: true
@@ -41946,6 +41952,7 @@ entries:
   downstream:
   - WP-0A-01
   - WP-0A-02
+  - WP-0A-03
   - WP-0A-04
   - WP-0C-08
   - WP-1-01
@@ -41953,6 +41960,8 @@ entries:
   env_hash: null
   workflow: SHAPE-IG
   exec_class: AI-offline
+  justification: ENV-04의 하류 에지(env_hash 소비자 — Wave 0-A 등)는 코드 import가 아니라 데이터 산출물 조인이다(하류 WP가 매니페스트에 env_hash를
+    선언해 소비) — 정적 import 그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: coverage-fill
@@ -41989,7 +41998,15 @@ entries:
   - id: ART-EVIDENCE-0A02H
     kind: report
     path: registry/build/evidence/CG-0A-02h/
-  owns: []
+  owns:
+  - glob: contracts/action_observation.yaml
+    mode: EXCLUSIVE
+  - glob: contracts/action/**
+    mode: EXCLUSIVE
+  - glob: contracts/plugin/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0a02/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-UNIT@v1
@@ -42056,7 +42073,6 @@ entries:
       = 48 어서트 ⑧ 스키마 변경 시 계약버전 bump 강제(bump 없는 변경 → CI 거부)
   downstream:
   - WP-0A-01
-  - WP-0A-03
   - WP-0C-01
   - WP-0C-02
   - WP-0C-05
@@ -42067,7 +42083,7 @@ entries:
   - WP-OPS-06
   stale_on:
   - CTR-UNIT:MAJOR_BUMP
-  env_hash: null
+  env_hash: sha256:a01951d6d9a030b8869e8ad2ee90ab90c4e90c1b65ed560975d133a4ecdb944f
   workflow: SHAPE-CF
   exec_class: AI-offline
   planned: true
@@ -42151,6 +42167,10 @@ entries:
   owns:
   - glob: contracts/unit_tags.yaml
     mode: CONTRACT_FROZEN
+  - glob: contracts/units/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0a04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces:
@@ -42232,11 +42252,10 @@ entries:
   downstream:
   - WP-0A-01
   - WP-0A-02
-  - WP-0A-03
   - WP-0C-02
   - WP-0C-09
   stale_on: []
-  env_hash: null
+  env_hash: sha256:a01951d6d9a030b8869e8ad2ee90ab90c4e90c1b65ed560975d133a4ecdb944f
   workflow: SHAPE-CF
   exec_class: AI-offline
   planned: true
@@ -42685,99 +42704,7 @@ entries:
   owns:
   - glob: backend/actuation/**
     mode: EXCLUSIVE
-  contract:
-    consumes:
-    - CTR-ACT@v1
-    - CTR-UNIT@v1
-    produces: []
-  gate:
-  - CG-0A-01a
-  - CG-0A-01b
-  - CG-0A-01c
-  - CG-0A-01d
-  - CG-0A-01e
-  - CG-0A-01f
-  - CG-0A-01g
-  - CG-0A-01h
-  - CG-0A-01i
-  negative_branch:
-  - gate: CG-0A-01a
-    'on': FAIL
-    action: WP-0A-01 acceptance item unmet; re-run the package.
-  - gate: CG-0A-01b
-    'on': FAIL
-    action: WP-0A-01 acceptance item unmet; re-run the package.
-  - gate: CG-0A-01c
-    'on': FAIL
-    action: WP-0A-01 acceptance item unmet; re-run the package.
-  - gate: CG-0A-01d
-    'on': FAIL
-    action: WP-0A-01 acceptance item unmet; re-run the package.
-  - gate: CG-0A-01e
-    'on': FAIL
-    action: WP-0A-01 acceptance item unmet; re-run the package.
-  - gate: CG-0A-01f
-    'on': FAIL
-    action: WP-0A-01 acceptance item unmet; re-run the package.
-  - gate: CG-0A-01g
-    'on': FAIL
-    action: WP-0A-01 acceptance item unmet; re-run the package.
-  - gate: CG-0A-01h
-    'on': FAIL
-    action: WP-0A-01 acceptance item unmet; re-run the package.
-  - gate: CG-0A-01i
-    'on': FAIL
-    action: WP-0A-01 acceptance item unmet; re-run the package.
-  downstream:
-  - WP-0A-02
-  - WP-0A-03
-  - WP-0C-05
-  - WP-1-03
-  - WP-OPS-05
-  stale_on:
-  - CTR-ACT:MAJOR_BUMP
-  - CTR-UNIT:MAJOR_BUMP
-  env_hash: null
-  workflow: SHAPE-CF
-  exec_class: AI-offline
-  planned: true
-  provenance:
-    wp_rule: sole-citation
-- req: FR-SYS-020
-  spec_ref: 01#3.4
-  priority: M
-  tag: 신규구현
-  wp: WP-0A-01
-  artifact:
-  - id: ART-EVIDENCE-0A01A
-    kind: report
-    path: registry/build/evidence/CG-0A-01a/
-  - id: ART-EVIDENCE-0A01B
-    kind: report
-    path: registry/build/evidence/CG-0A-01b/
-  - id: ART-EVIDENCE-0A01C
-    kind: report
-    path: registry/build/evidence/CG-0A-01c/
-  - id: ART-EVIDENCE-0A01D
-    kind: report
-    path: registry/build/evidence/CG-0A-01d/
-  - id: ART-EVIDENCE-0A01E
-    kind: report
-    path: registry/build/evidence/CG-0A-01e/
-  - id: ART-EVIDENCE-0A01F
-    kind: report
-    path: registry/build/evidence/CG-0A-01f/
-  - id: ART-EVIDENCE-0A01G
-    kind: report
-    path: registry/build/evidence/CG-0A-01g/
-  - id: ART-EVIDENCE-0A01H
-    kind: report
-    path: registry/build/evidence/CG-0A-01h/
-  - id: ART-EVIDENCE-0A01I
-    kind: report
-    path: registry/build/evidence/CG-0A-01i/
-  owns:
-  - glob: backend/actuation/**
+  - glob: tests/wp0a01/**
     mode: EXCLUSIVE
   contract:
     consumes:
@@ -42824,16 +42751,118 @@ entries:
     action: WP-0A-01 acceptance item unmet; re-run the package.
   downstream:
   - WP-0A-02
-  - WP-0A-03
   - WP-0C-05
   - WP-1-03
   - WP-OPS-05
   stale_on:
   - CTR-ACT:MAJOR_BUMP
   - CTR-UNIT:MAJOR_BUMP
-  env_hash: null
+  env_hash: sha256:a01951d6d9a030b8869e8ad2ee90ab90c4e90c1b65ed560975d133a4ecdb944f
   workflow: SHAPE-CF
   exec_class: AI-offline
+  justification: 도출된 하류 에지 WP-0A-02는 정적 import가 아니라 계약 조인이다 — 메일박스 타입(TargetMailbox/TimestampedTarget
+    페이로드)은 CTR-ACT@v1(WP-0A-02 동결)의 일부이고 스케줄러가 이를 소비한다. 실제 코드 의존은 반대 방향(backend/actuation이 contracts/action을
+    import)이라 contracts/action 트리에서 backend/actuation으로의 import는 존재하지 않는다(06 §5.6 계약 조인 — CONTRACT_FROZEN+CI-09로
+    상쇄)
+  planned: true
+  provenance:
+    wp_rule: sole-citation
+- req: FR-SYS-020
+  spec_ref: 01#3.4
+  priority: M
+  tag: 신규구현
+  wp: WP-0A-01
+  artifact:
+  - id: ART-EVIDENCE-0A01A
+    kind: report
+    path: registry/build/evidence/CG-0A-01a/
+  - id: ART-EVIDENCE-0A01B
+    kind: report
+    path: registry/build/evidence/CG-0A-01b/
+  - id: ART-EVIDENCE-0A01C
+    kind: report
+    path: registry/build/evidence/CG-0A-01c/
+  - id: ART-EVIDENCE-0A01D
+    kind: report
+    path: registry/build/evidence/CG-0A-01d/
+  - id: ART-EVIDENCE-0A01E
+    kind: report
+    path: registry/build/evidence/CG-0A-01e/
+  - id: ART-EVIDENCE-0A01F
+    kind: report
+    path: registry/build/evidence/CG-0A-01f/
+  - id: ART-EVIDENCE-0A01G
+    kind: report
+    path: registry/build/evidence/CG-0A-01g/
+  - id: ART-EVIDENCE-0A01H
+    kind: report
+    path: registry/build/evidence/CG-0A-01h/
+  - id: ART-EVIDENCE-0A01I
+    kind: report
+    path: registry/build/evidence/CG-0A-01i/
+  owns:
+  - glob: backend/actuation/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0a01/**
+    mode: EXCLUSIVE
+  contract:
+    consumes:
+    - CTR-ACT@v1
+    - CTR-UNIT@v1
+    produces: []
+  gate:
+  - CG-0A-01a
+  - CG-0A-01b
+  - CG-0A-01c
+  - CG-0A-01d
+  - CG-0A-01e
+  - CG-0A-01f
+  - CG-0A-01g
+  - CG-0A-01h
+  - CG-0A-01i
+  negative_branch:
+  - gate: CG-0A-01a
+    'on': FAIL
+    action: WP-0A-01 acceptance item unmet; re-run the package.
+  - gate: CG-0A-01b
+    'on': FAIL
+    action: WP-0A-01 acceptance item unmet; re-run the package.
+  - gate: CG-0A-01c
+    'on': FAIL
+    action: WP-0A-01 acceptance item unmet; re-run the package.
+  - gate: CG-0A-01d
+    'on': FAIL
+    action: WP-0A-01 acceptance item unmet; re-run the package.
+  - gate: CG-0A-01e
+    'on': FAIL
+    action: WP-0A-01 acceptance item unmet; re-run the package.
+  - gate: CG-0A-01f
+    'on': FAIL
+    action: WP-0A-01 acceptance item unmet; re-run the package.
+  - gate: CG-0A-01g
+    'on': FAIL
+    action: WP-0A-01 acceptance item unmet; re-run the package.
+  - gate: CG-0A-01h
+    'on': FAIL
+    action: WP-0A-01 acceptance item unmet; re-run the package.
+  - gate: CG-0A-01i
+    'on': FAIL
+    action: WP-0A-01 acceptance item unmet; re-run the package.
+  downstream:
+  - WP-0A-02
+  - WP-0C-05
+  - WP-1-03
+  - WP-OPS-05
+  stale_on:
+  - CTR-ACT:MAJOR_BUMP
+  - CTR-UNIT:MAJOR_BUMP
+  env_hash: sha256:a01951d6d9a030b8869e8ad2ee90ab90c4e90c1b65ed560975d133a4ecdb944f
+  workflow: SHAPE-CF
+  exec_class: AI-offline
+  justification: 도출된 하류 에지 WP-0A-02는 정적 import가 아니라 계약 조인이다 — 메일박스 타입(TargetMailbox/TimestampedTarget
+    페이로드)은 CTR-ACT@v1(WP-0A-02 동결)의 일부이고 스케줄러가 이를 소비한다. 실제 코드 의존은 반대 방향(backend/actuation이 contracts/action을
+    import)이라 contracts/action 트리에서 backend/actuation으로의 import는 존재하지 않는다(06 §5.6 계약 조인 — CONTRACT_FROZEN+CI-09로
+    상쇄)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -47808,7 +47837,7 @@ entries:
   downstream: []
   terminal: true
   stale_on: []
-  env_hash: null
+  env_hash: sha256:a01951d6d9a030b8869e8ad2ee90ab90c4e90c1b65ed560975d133a4ecdb944f
   workflow: SHAPE-IM
   exec_class: AI-offline
   planned: true
@@ -47865,7 +47894,15 @@ entries:
   - id: ART-EVIDENCE-0A02H
     kind: report
     path: registry/build/evidence/CG-0A-02h/
-  owns: []
+  owns:
+  - glob: contracts/action_observation.yaml
+    mode: EXCLUSIVE
+  - glob: contracts/action/**
+    mode: EXCLUSIVE
+  - glob: contracts/plugin/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0a02/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-UNIT@v1
@@ -47932,7 +47969,6 @@ entries:
       = 48 어서트 ⑧ 스키마 변경 시 계약버전 bump 강제(bump 없는 변경 → CI 거부)
   downstream:
   - WP-0A-01
-  - WP-0A-03
   - WP-0C-01
   - WP-0C-02
   - WP-0C-05
@@ -47943,7 +47979,7 @@ entries:
   - WP-OPS-06
   stale_on:
   - CTR-UNIT:MAJOR_BUMP
-  env_hash: null
+  env_hash: sha256:a01951d6d9a030b8869e8ad2ee90ab90c4e90c1b65ed560975d133a4ecdb944f
   workflow: SHAPE-CF
   exec_class: AI-offline
   planned: true
@@ -54270,6 +54306,7 @@ entries:
       축 값에 M-8 0건(NORM-003 봉인 — 검사기는 축 값을 파싱하며 산문에 정규식을 돌리지 않는다) ⑦ stale_on이 최소 1개 트리거 선언 — 무조건 유효한 레코드
       0건 ⑧ 스키마 위반 픽스처 5종 전부 거부 ⑨ 자기적용: 이 대역 5개 WP 자신도 레코드를 보유'
   downstream:
+  - WP-0A-03
   - WP-BOOT-02
   - WP-BOOT-03
   - WP-BOOT-04

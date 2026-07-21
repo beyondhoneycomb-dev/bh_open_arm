@@ -1,0 +1,63 @@
+# CTR-OWN@v1 — the file/module ownership contract (WP-0A-03).
+#
+# This is the FROZEN CONTRACT, not a second copy of the ownership data. It pins
+# the record shape, the span model, and the canonical sources, so that every
+# fan-out worker reads one definition of what "owned" and "concurrent" mean. The
+# data it operates on is never restated here:
+#
+#   - who owns which glob  -> registry/traceability.yaml, the owns[] axis
+#   - the handover order   -> docs/plan/06-추적성-레지스트리.md §3.2, 소유 WP column
+#
+# ownership.prover derives the live claim view from those two sources; the
+# handover_chains block below is the one thing this contract adds — the arrows of
+# §3.2 written as ordinal spans — and ownership.contract.check_drift binds it back
+# to §3.2 so the two can never disagree in silence.
+contract: CTR-OWN@v1
+
+# The five fields 02a §3.2 names for a registry row. concurrent_edit_forbidden is
+# a relation between two rows, not a column, so it is materialised as conflicts
+# rather than stored per row.
+record_schema:
+  - path_glob                  # the ownership glob, verbatim from owns[]
+  - owner_wp                   # the WP-* that owns it during the span
+  - exclusive                  # true when the mode forbids concurrent ownership
+  - ownership_span             # the half-open interval [start, end) it is owned for
+  - concurrent_edit_forbidden  # the pairs whose globs and spans overlap at once
+
+# The authoritative inputs. This contract is a view over them, never a fork.
+sources:
+  ownership_truth: registry/traceability.yaml    # owns[] axis: glob -> owner_wp, mode
+  handover_order: docs/plan/06-추적성-레지스트리.md §3.2   # 소유 WP column, arrows
+
+span_model:
+  kind: half-open-ordinal-interval
+  origin: 0
+  unit: 1
+  # A single owner holds [0, 1). A handover chain lays its members end to end,
+  # one unit each, so member i owns [i, i+1). Adjacent spans share only their
+  # boundary point, which a half-open interval excludes — so a sequential
+  # handover is not an overlap. Two owners with no declared chain both claim the
+  # origin interval and therefore overlap, which is the forbidden state.
+  rule: >-
+    Two exclusive claims conflict when their path_globs expand to a common real
+    file AND their ownership_spans overlap. Concurrent ownership is forbidden;
+    sequential handover (adjacent, non-overlapping spans) is permitted (02 §2.0.4).
+
+# The ordered spans this contract formalises from the arrows in 06 §3.2. Kept in
+# lockstep with §3.2 by ownership.contract.check_drift — this is an encoding of
+# that column, not an independent claim of who owns what.
+handover_chains:
+  - glob: packages/lerobot_robot_openarm/openarm_follower_oa.py
+    exclusive: true
+    spans:
+      # WP-1-02 (connect_readonly + explicit zero) hands the subclass to WP-1-03
+      # (scheduler + integration gateway). Never both at once (02 §2.0.4).
+      - {owner_wp: WP-1-02, span: [0, 1]}
+      - {owner_wp: WP-1-03, span: [1, 2]}
+  - glob: backend/actuation/**
+    exclusive: true
+    spans:
+      # WP-0A-01 creates the sole CAN writer; WP-1-03 integrates it. One writer at
+      # a time, or "every tick emits one of four" is unprovable (SPINE §2-1).
+      - {owner_wp: WP-0A-01, span: [0, 1]}
+      - {owner_wp: WP-1-03, span: [1, 2]}

@@ -14,17 +14,25 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from registry.checks.ci_09 import frozen_content_hash
+from registry.checks.corpus import Corpus
 from registry.contracts.canonical import load_schema
 from registry.contracts.index import (
     ContractStore,
+    FreezeOutcome,
     build_index,
     check_wp_start,
     freeze_contract,
+    freeze_with_content_hash,
     retire_contract,
     verify_index,
     write_index,
 )
-from registry.contracts.violations import ContractViolationError, Violation
+from registry.contracts.violations import (
+    SEVERITY_BLOCKING,
+    ContractViolationError,
+    Violation,
+)
 
 EXIT_OK = 0
 EXIT_VIOLATION = 1
@@ -75,7 +83,10 @@ def _dispatch(args: argparse.Namespace, store: ContractStore) -> int:
         return _finish(verify_index(store), "contract index verified against its sources")
 
     if args.command == "freeze":
-        outcome = freeze_contract(store, args.contract_id, load_schema(Path(args.schema)))
+        if args.from_frozen_glob:
+            outcome = _freeze_from_glob(args.repo_root, store, args.contract_id)
+        else:
+            outcome = freeze_contract(store, args.contract_id, load_schema(Path(args.schema)))
         if outcome.already_frozen:
             print(f"{outcome.record.contract_id} already frozen at identical content")
             return EXIT_OK
@@ -98,6 +109,41 @@ def _dispatch(args: argparse.Namespace, store: ContractStore) -> int:
     return _finish(
         check_wp_start(store, args.wp_id), f"{args.wp_id} may start — consumed contracts are frozen"
     )
+
+
+def _freeze_from_glob(repo_root: str, store: ContractStore, contract_id: str) -> FreezeOutcome:
+    """Freeze a CONTRACT_FROZEN glob contract by the content hash of its files.
+
+    A glob contract (`06` §3.2) is not a schema: what is frozen is the byte-exact
+    content of the files its `CONTRACT_FROZEN` `owns[]` glob covers. The hash is
+    computed by the CI-09 check itself (`frozen_content_hash`), so the value the
+    ledger locks is exactly the value the check later recomputes and compares — a
+    separate hasher here would be free to drift and turn the lock into a forge.
+
+    Args:
+        repo_root: Repository root the registry and file tree live under.
+        store: Contract store the freeze is recorded in.
+        contract_id: Glob contract generation to freeze.
+
+    Returns:
+        FreezeOutcome: The recorded generation.
+
+    Raises:
+        ContractViolationError: If the contract declares no CONTRACT_FROZEN glob
+            with files on disk, so there is no content to freeze.
+    """
+    content_hash = frozen_content_hash(Corpus(Path(repo_root)), contract_id)
+    if content_hash is None:
+        raise ContractViolationError(
+            Violation(
+                rule="CI-09",
+                severity=SEVERITY_BLOCKING,
+                location=contract_id,
+                expected="a CONTRACT_FROZEN glob with files on disk to freeze",
+                actual=f"{contract_id} declares no frozen glob content in the registry",
+            )
+        )
+    return freeze_with_content_hash(store, contract_id, content_hash)
 
 
 def _finish(violations: list[Violation], success_message: str) -> int:
@@ -149,7 +195,13 @@ def _build_parser() -> argparse.ArgumentParser:
         "freeze", help="Freeze a contract generation, or issue the next one."
     )
     freeze.add_argument("contract_id", help="Contract id in CTR-<NAME>@v<n> form.")
-    freeze.add_argument("--schema", required=True, help="Path to the contract schema JSON.")
+    source = freeze.add_mutually_exclusive_group(required=True)
+    source.add_argument("--schema", help="Path to the contract schema JSON.")
+    source.add_argument(
+        "--from-frozen-glob",
+        action="store_true",
+        help="Freeze a CONTRACT_FROZEN glob contract by the content hash of its files.",
+    )
 
     retire = subcommands.add_parser(
         "retire", help="Retire a superseded generation once its replacements have landed."

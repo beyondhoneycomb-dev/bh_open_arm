@@ -1,0 +1,97 @@
+# CTR-UNIT@v1 — unit tag types and the single conversion site per rad-deg boundary.
+#
+# Owner: WP-0A-04 (06 §3.2). This file is the frozen declaration; the enforcing
+# Python types live in contracts/units/ and read this table. Consumers
+# (CTR-ACT / WP-0A-02, CTR-GW / WP-1-03, IK adapter / WP-0C-02, dry-run torque
+# check / WP-0C-09) are consumers of this contract, never owners.
+#
+# The invariant this table exists to hold: a physical quantity is a type, not a
+# comment, and every rad<->deg crossing happens at exactly one named site. Two
+# sites for one boundary is the origin of the double-conversion bug (FR-SIM-082).
+contract: CTR-UNIT@v1
+
+# The five required tag types plus the packet-scale torque axis. Each is a real
+# distinct type in contracts/units/tags.py, not an alias: assigning one where
+# another is expected, or mixing them in arithmetic, is a static type error.
+tag_types:
+  - name: Deg
+    dimension: angle
+    si_unit: degree
+  - name: Rad
+    dimension: angle
+    si_unit: radian
+  - name: DegPerSec
+    dimension: angular_velocity
+    si_unit: degree_per_second
+  - name: RadPerSec
+    dimension: angular_velocity
+    si_unit: radian_per_second
+  - name: Nm
+    dimension: torque
+    si_unit: newton_metre
+  - name: PacketTorque
+    dimension: torque_packet_scale
+    si_unit: dm_t_max_count
+    note: >-
+      Wire representation of torque (DM T_MAX axis, 03 FR-MOT-037). Not a physical
+      quantity; crossing to Nm requires the explicit packet_to_nm conversion with
+      a per-motor scale. A physical-torque clamp must never receive this type.
+
+# The only sanctioned crossings between degree and radian units. Nothing outside
+# this list may change a value's unit.
+conversions:
+  - name: deg_to_rad
+    from: Deg
+    to: Rad
+  - name: rad_to_deg
+    from: Rad
+    to: Deg
+  - name: deg_per_sec_to_rad_per_sec
+    from: DegPerSec
+    to: RadPerSec
+  - name: rad_per_sec_to_deg_per_sec
+    from: RadPerSec
+    to: DegPerSec
+
+# Every rad<->deg boundary the plan names, each owned by exactly one conversion
+# site. The conversion_site is the fully-qualified function that is the sole place
+# the crossing may occur; contracts/units/checker.py rejects a conversion called
+# anywhere else, and a boundary declared with two sites is rejected on load.
+boundaries:
+  - boundary: lerobot<->openarm_control
+    conversion_site: packages.lerobot_robot_openarm.units_adapter.to_openarm
+    spec_ref: "01#FR-SYS-016"
+    crossings:
+      - {conversion: deg_to_rad, from: Deg, to: Rad}
+      - {conversion: deg_per_sec_to_rad_per_sec, from: DegPerSec, to: RadPerSec}
+  - boundary: lerobot<->mjcf
+    conversion_site: sim.mujoco.sim_sync.lerobot_to_mjcf
+    spec_ref: "09#3.4"
+    crossings:
+      - {conversion: deg_to_rad, from: Deg, to: Rad}
+  - boundary: vr<->ik
+    conversion_site: backend.ik.ik_adapter.ik_to_lerobot
+    spec_ref: "01#FR-SYS-016"
+    crossings:
+      - {conversion: rad_to_deg, from: Rad, to: Deg}
+  - boundary: can<->gateway
+    conversion_site: backend.actuation.gateway.can_to_gateway
+    spec_ref: "12#2.7"
+    crossings:
+      - {conversion: rad_to_deg, from: Rad, to: Deg}
+      - {conversion: rad_per_sec_to_deg_per_sec, from: RadPerSec, to: DegPerSec}
+
+# The flattened observation.state layout, so every index carries a unit tag
+# (16 D-8: a mixed deg/deg-s/Nm vector whose normalisation statistics can only be
+# split by channel group if each index's unit is known). Expansion is arm-major,
+# motor-order, pos/vel/torque — the LeRobot flattening order (10 §2.3).
+observation_state:
+  order: arm_major
+  arms: [left, right]
+  motors: [joint_1, joint_2, joint_3, joint_4, joint_5, joint_6, joint_7, gripper]
+  channels:
+    - {suffix: pos, unit: Deg}
+    - {suffix: vel, unit: DegPerSec}
+    - {suffix: torque, unit: Nm}
+  single_arm_dim: 24
+  bimanual_dim: 48

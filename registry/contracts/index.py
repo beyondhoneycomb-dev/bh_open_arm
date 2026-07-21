@@ -349,7 +349,7 @@ def verify_index(store: ContractStore) -> list[Violation]:
 def freeze_contract(
     store: ContractStore, contract_id: str, schema: Mapping[str, Any]
 ) -> FreezeOutcome:
-    """Freeze a contract generation, or issue the next one.
+    """Freeze a schema contract, or issue the next generation.
 
     Issuing `@v(n+1)` is the same operation as an initial freeze — `06` §4.3
     defines a change as the publication of a new generation, not as a separate
@@ -357,10 +357,41 @@ def freeze_contract(
     whose version is one above a currently frozen generation, and it is the
     only path that emits re-verification triggers.
 
+    The value locked is the schema's canonical projection hash (`canonical.py`),
+    which is deliberately blind to documentation-only edits. A `CONTRACT_FROZEN`
+    *glob* contract (`06` §3.2) is not a schema and is frozen by its byte-exact
+    content hash instead — see `freeze_with_content_hash`.
+
     Args:
         store: Locations to read from and write to.
         contract_id: Contract generation to freeze.
         schema: Parsed contract schema whose canonical hash is being locked.
+
+    Returns:
+        FreezeOutcome: The recorded generation and any triggers it emitted.
+
+    Raises:
+        ContractViolationError: If the id is malformed, outside the namespace, would
+            change an already-frozen generation, or skips the issuing order.
+    """
+    return freeze_with_content_hash(store, contract_id, canonical_hash(schema))
+
+
+def freeze_with_content_hash(
+    store: ContractStore, contract_id: str, content_hash: str
+) -> FreezeOutcome:
+    """Freeze a generation at an already-computed content hash.
+
+    The freeze machinery — ledger append, index rewrite, trigger fan-out — does
+    not care how the hash was derived, only that it is recorded once and never
+    re-derived under the same generation. Both a schema's canonical hash
+    (`freeze_contract`) and the byte-exact content hash of a `CONTRACT_FROZEN`
+    glob converge here, so the ledger keeps one writer and one event shape.
+
+    Args:
+        store: Locations to read from and write to.
+        contract_id: Contract generation to freeze.
+        content_hash: The value to lock as this generation's `canonical_hash`.
 
     Returns:
         FreezeOutcome: The recorded generation and any triggers it emitted.
@@ -379,7 +410,6 @@ def freeze_contract(
         raise ContractViolationError(chain_violations[0])
 
     state = fold_state(events)
-    content_hash = canonical_hash(schema)
     pending = _plan_freeze(ref, content_hash, state)
 
     superseded = str(ref.at_version(ref.version - 1)) if ref.version > 1 else None

@@ -1,0 +1,132 @@
+# CTR-ACT@v1 — the frozen action/observation channel schema (SPINE §6 = 00 §8.3).
+#
+# Owner: WP-0A-02 (06 §3.2 band map: contracts/** carries the action schema and
+# plugin API). This file is the frozen declaration; the enforcing Python lives in
+# contracts/action/ and reads this table. Consumers (the ActuationScheduler /
+# WP-0A-01 via the TargetMailbox, the gateway / WP-1-03, training / Wave 2, sim /
+# WP-0C) import the contract implementation; they never own it.
+#
+# The invariant this table exists to hold: the six channels are separate on
+# purpose. Pre-clamp request and post-clamp accepted are BOTH recorded (dropping
+# the request makes intervention and saturation undebuggable, 00 §8.3). The
+# executed MIT command is an AUDIT channel and never a training target — safety
+# and gravity torque must not leak into what a policy learns to imitate. Every
+# physical-quantity field is a CTR-UNIT tag type (contracts/unit_tags.yaml), not a
+# bare float: a position action is Deg, an executed MIT torque is Nm, and the two
+# cannot be mixed without a static type error.
+contract: CTR-ACT@v1
+
+# Content hash of the frozen core (channels, dims, units, roles, projection
+# policy), computed by contracts.action.version.schema_digest over this document
+# with `frozen_digest` itself excluded. Acceptance ⑧: a schema change that does
+# not bump the contract version leaves this digest stale, and CI rejects it. A
+# real freeze registry (CI-09, WP-BOOT-05) is not yet standing; until it is, this
+# self-pinned digest is what gives "no silent schema drift" teeth.
+frozen_digest: sha256:9d455cdd1d8f107e9e3afcc2433d972506b8b97f913a888b21c70e22e7eda70c
+
+# The bimanual joint layout the position channels index: 8 motors per arm, two
+# arms, arm-major (left then right). This is the LeRobot flattening order shared
+# with the observation vector (10 §2.3), so action index i and the position
+# indices of observation channel i name the same joint.
+joints:
+  order: arm_major
+  arms: [left, right]
+  motors: [joint_1, joint_2, joint_3, joint_4, joint_5, joint_6, joint_7, gripper]
+  bimanual_dim: 16
+  single_arm_dim: 8
+
+# The six channels SPINE §6 freezes. `role` fixes what each channel is FOR, and is
+# what keeps audit and training apart: exactly one channel is `training_target`
+# and it is position-only; `executedMitCommand` is `audit` and is forbidden from
+# every training projection.
+channels:
+  - name: requestedPositionAction
+    role: action_request
+    quantity: position
+    unit: Deg
+    dim: 16
+    position_only: true
+    training_target: false
+    note: >-
+      The producer's pre-clamp position request (10 FR-TRN-066 position-only).
+      Recorded alongside the accepted action so intervention and clamp saturation
+      stay debuggable (00 §8.3). Not the dataset action.
+
+  - name: acceptedPositionAction
+    role: action_accepted
+    quantity: position
+    unit: Deg
+    dim: 16
+    position_only: true
+    training_target: true
+    note: >-
+      The post-clamp position actually admitted, after the LeRobot joint_limits
+      clamp (01 FR-SYS-016). This IS the dataset `action` (10 FR-TRN-066/074) and
+      the sole training target among the action channels — position-only.
+
+  - name: executedMitCommand
+    role: audit
+    quantity: mit_command
+    dim: 5
+    position_only: false
+    training_target: false
+    fields:
+      - {name: kp, type: gain}
+      - {name: kd, type: gain}
+      - {name: q, unit: Rad}
+      - {name: dq, unit: RadPerSec}
+      - {name: tau, unit: Nm}
+    note: >-
+      The MIT frame the scheduler actually emitted (12 §2.7: q=rad, dq=rad/s,
+      tau=Nm at the CAN boundary). AUDIT ONLY — never a training input (00 §8.3).
+      Its torque (tau) and any gravity/safety component must not reach an action
+      target; contracts.action.checker rejects that statically.
+
+  - name: safetyOverride
+    role: safety
+    quantity: safety_flags
+    position_only: false
+    training_target: false
+    fields:
+      - {name: override_active, type: bool}
+      - {name: clamp_reason, type: enum, values: [none, joint_limit, torque_limit, stale_source, safety_latch]}
+      - {name: stale, type: bool}
+      - {name: latched, type: bool}
+    note: >-
+      Why the accepted action differs from the request: the clamp reason plus the
+      stale-source and safety-latch flags (12 FR-SAF-074). Diagnostic metadata,
+      not a training target.
+
+  - name: rawObservation
+    role: observation
+    quantity: observation_state
+    dim: 48
+    position_only: false
+    training_target: false
+    preserve_all: true
+    drop_counter_meta: true
+    note: >-
+      The named 48-dim observation.state, every channel preserved (16 D-8). Its
+      per-index units come from contracts/unit_tags.yaml observation_state (mixed
+      Deg / DegPerSec / Nm). Carries the CAN packet drop counter as observation
+      meta (01 FR-SYS-018), which LeRobot does not export as a feature.
+
+  - name: trainingFeatureProjection
+    role: projection
+    quantity: projection
+    position_only: false
+    training_target: false
+    note: >-
+      Which of the 48 observation channels feed each policy, and which action
+      channel is the target. The target is always `acceptedPositionAction`;
+      `executedMitCommand` and `safetyOverride` are never selectable as a target.
+      A projection referencing an audit channel as target is rejected on load.
+
+# The channel that carries the training action target, named once so no consumer
+# has to re-decide it. Position-only, post-clamp.
+training_target_channel: acceptedPositionAction
+
+# Channels a training projection may never name as its target: the audit MIT
+# command and the safety metadata. This is the machine-checkable half of the
+# audit-vs-training separation (00 §8.3).
+audit_only_channels: [executedMitCommand, safetyOverride]

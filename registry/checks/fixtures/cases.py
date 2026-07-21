@@ -8,6 +8,7 @@ the rule it is filed under.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from registry.checks.corpus import Corpus
@@ -323,12 +324,15 @@ _FROZEN_GLOB = "contracts/unit_tags.yaml"
 
 def _ci09_corpus(root: Path, registered_hash: str | None) -> Corpus:
     _write(root, _FROZEN_GLOB, "Deg: rad\n")
-    index = (
-        f'{{"contracts": {{"CTR-UNIT@v1": {{"hash": "{registered_hash}"}}}}}}'
+    # The freeze authority (`registry/contracts/`, WP-BOOT-05), not the BOOT-02
+    # build index: `contracts[]` is a list and a lock is a FROZEN row carrying a
+    # `canonical_hash`.
+    contracts = (
+        [{"contract_id": "CTR-UNIT@v1", "canonical_hash": registered_hash, "status": "FROZEN"}]
         if registered_hash
-        else '{"contracts": {}}'
+        else []
     )
-    _write(root, "registry/build/contract_index.json", index)
+    _write(root, "registry/contracts/contract_index.json", json.dumps({"contracts": contracts}))
     entries = (
         record(
             wp="WP-0A-04",
