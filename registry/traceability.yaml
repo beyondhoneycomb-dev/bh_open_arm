@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@4b5d489
+spine_ref: docs/plan/00-실행계획-개요.md@b2e2ee6
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -7197,6 +7197,11 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -7309,6 +7314,11 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -11708,6 +11718,11 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -11797,6 +11812,11 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -12271,6 +12291,11 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -13726,6 +13751,11 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -13807,6 +13837,11 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -13888,6 +13923,11 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -16313,6 +16353,11 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -16413,6 +16458,11 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -17147,6 +17197,11 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -17335,16 +17390,40 @@ entries:
   priority: M
   tag: 확정
   wp: WP-2A-06
-  artifact: []
+  artifact:
+  - id: ART-EVIDENCE-2A06A
+    kind: report
+    path: registry/build/evidence/CG-2A-06a/
+  - id: ART-EVIDENCE-2A06B
+    kind: report
+    path: registry/build/evidence/CG-2A-06b/
+  - id: ART-EVIDENCE-2A06C
+    kind: report
+    path: registry/build/evidence/CG-2A-06c/
   owns: []
   contract:
     consumes: []
     produces: []
   gate:
   - PG-STOP-001
+  - CG-2A-06a
+  - CG-2A-06b
+  - CG-2A-06c
   negative_branch:
   - gate: PG-STOP-001
     'on': RETRY_WITH_VARIANT
+    action: '목표 초과 → RETRY_WITH_VARIANT: ① 리스 갱신주기 단축 ② Cat-2 홀드프레임 경로(단일 _mit_control_batch) 확인. 그래도
+      초과 → DEGRADED_ACCEPTED(정지 지연을 UI 상시 표시 + 조그 속도 상한 하향)'
+  - gate: CG-2A-06a
+    'on': FAIL
+    action: '목표 초과 → RETRY_WITH_VARIANT: ① 리스 갱신주기 단축 ② Cat-2 홀드프레임 경로(단일 _mit_control_batch) 확인. 그래도
+      초과 → DEGRADED_ACCEPTED(정지 지연을 UI 상시 표시 + 조그 속도 상한 하향)'
+  - gate: CG-2A-06b
+    'on': FAIL
+    action: '목표 초과 → RETRY_WITH_VARIANT: ① 리스 갱신주기 단축 ② Cat-2 홀드프레임 경로(단일 _mit_control_batch) 확인. 그래도
+      초과 → DEGRADED_ACCEPTED(정지 지연을 UI 상시 표시 + 조그 속도 상한 하향)'
+  - gate: CG-2A-06c
+    'on': FAIL
     action: '목표 초과 → RETRY_WITH_VARIANT: ① 리스 갱신주기 단축 ② Cat-2 홀드프레임 경로(단일 _mit_control_batch) 확인. 그래도
       초과 → DEGRADED_ACCEPTED(정지 지연을 UI 상시 표시 + 조그 속도 상한 하향)'
   downstream: []
@@ -17353,6 +17432,7 @@ entries:
   env_hash: null
   workflow: SHAPE-MS
   exec_class: AI-on-HW
+  planned: true
   provenance:
     wp_rule: sole-citation
 - req: FR-MAN-053
@@ -24682,6 +24762,11 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: coverage-fill
@@ -32934,16 +33019,30 @@ entries:
   priority: M
   tag: 신규구현
   wp: WP-2C-06
-  artifact: []
+  artifact:
+  - id: ART-EVIDENCE-2C06A
+    kind: report
+    path: registry/build/evidence/CG-2C-06a/
+  - id: ART-EVIDENCE-2C06B
+    kind: report
+    path: registry/build/evidence/CG-2C-06b/
   owns: []
   contract:
     consumes: []
     produces: []
   gate:
   - PG-SAFE-001
+  - CG-2C-06a
+  - CG-2C-06b
   negative_branch:
   - gate: PG-SAFE-001
     'on': RETRY_WITH_VARIANT
+    action: 목표 초과 → RETRY_WITH_VARIANT(관측기 이득 재조정 / 반응 경로 단축). 지속 초과 → DEGRADED_ACCEPTED(실효 지연 UI 상시 표시)
+  - gate: CG-2C-06a
+    'on': FAIL
+    action: 목표 초과 → RETRY_WITH_VARIANT(관측기 이득 재조정 / 반응 경로 단축). 지속 초과 → DEGRADED_ACCEPTED(실효 지연 UI 상시 표시)
+  - gate: CG-2C-06b
+    'on': FAIL
     action: 목표 초과 → RETRY_WITH_VARIANT(관측기 이득 재조정 / 반응 경로 단축). 지속 초과 → DEGRADED_ACCEPTED(실효 지연 UI 상시 표시)
   downstream: []
   terminal: true
@@ -32951,6 +33050,7 @@ entries:
   env_hash: null
   workflow: SHAPE-MS
   exec_class: AI-on-HW
+  planned: true
   provenance:
     wp_rule: sole-citation
 - req: FR-SAF-045
@@ -36186,6 +36286,11 @@ entries:
   env_hash: null
   workflow: SHAPE-HG
   exec_class: Human-assisted-HW
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -36434,6 +36539,11 @@ entries:
   env_hash: null
   workflow: SHAPE-CF
   exec_class: AI-offline
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: doc06-section6
@@ -36698,6 +36808,11 @@ entries:
   env_hash: null
   workflow: SHAPE-CF
   exec_class: AI-offline
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: doc06-section6
@@ -43370,6 +43485,11 @@ entries:
   env_hash: null
   workflow: SHAPE-CF
   exec_class: AI-offline
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -44289,6 +44409,11 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -45146,6 +45271,11 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -45492,6 +45622,11 @@ entries:
   env_hash: null
   workflow: SHAPE-HG
   exec_class: Human-assisted-HW
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -52780,16 +52915,30 @@ entries:
   priority: S
   tag: 결정필요
   wp: WP-2C-06
-  artifact: []
+  artifact:
+  - id: ART-EVIDENCE-2C06A
+    kind: report
+    path: registry/build/evidence/CG-2C-06a/
+  - id: ART-EVIDENCE-2C06B
+    kind: report
+    path: registry/build/evidence/CG-2C-06b/
   owns: []
   contract:
     consumes: []
     produces: []
   gate:
   - PG-SAFE-001
+  - CG-2C-06a
+  - CG-2C-06b
   negative_branch:
   - gate: PG-SAFE-001
     'on': RETRY_WITH_VARIANT
+    action: 목표 초과 → RETRY_WITH_VARIANT(관측기 이득 재조정 / 반응 경로 단축). 지속 초과 → DEGRADED_ACCEPTED(실효 지연 UI 상시 표시)
+  - gate: CG-2C-06a
+    'on': FAIL
+    action: 목표 초과 → RETRY_WITH_VARIANT(관측기 이득 재조정 / 반응 경로 단축). 지속 초과 → DEGRADED_ACCEPTED(실효 지연 UI 상시 표시)
+  - gate: CG-2C-06b
+    'on': FAIL
     action: 목표 초과 → RETRY_WITH_VARIANT(관측기 이득 재조정 / 반응 경로 단축). 지속 초과 → DEGRADED_ACCEPTED(실효 지연 UI 상시 표시)
   downstream: []
   terminal: true
@@ -52797,6 +52946,7 @@ entries:
   env_hash: null
   workflow: SHAPE-MS
   exec_class: AI-on-HW
+  planned: true
   provenance:
     wp_rule: sole-citation
 - req: NFR-SAF-003
@@ -53560,6 +53710,11 @@ entries:
   env_hash: null
   workflow: SHAPE-HG
   exec_class: Human-assisted-HW
+  targets:
+  - jetson_nano
+  - jetson_orin
+  - rtx_5090
+  - rtx_a6000
   planned: true
   provenance:
     wp_rule: sole-citation
