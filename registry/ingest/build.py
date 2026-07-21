@@ -340,6 +340,35 @@ def _consumed_contracts(entry: CatalogEntry) -> list[str]:
     return sorted(dict.fromkeys(CONTRACT_ID.findall(entry.consumes_text)))
 
 
+# A contract names a generation, so a major bump is the trigger that supersedes
+# every consumer of it: `CTR-PRIM@v1` -> `CTR-PRIM:MAJOR_BUMP` (`06` §4.3, §4.4).
+CONTRACT_MAJOR_BUMP = "MAJOR_BUMP"
+
+
+def _contract_bump_trigger(contract_id: str) -> str:
+    """Return the staleness trigger a consumed contract implies.
+
+    Args:
+        contract_id: Consumed contract id with its generation, e.g. `CTR-PRIM@v1`.
+
+    Returns:
+        (str) The generation-scoped major-bump trigger, e.g. `CTR-PRIM:MAJOR_BUMP`.
+    """
+    return f"{contract_id.split('@')[0]}:{CONTRACT_MAJOR_BUMP}"
+
+
+def _declared_stale_triggers(entry: CatalogEntry) -> set[str]:
+    """Return the staleness triggers a package declares in its catalogue row.
+
+    Args:
+        entry: The catalogue entry under seeding.
+
+    Returns:
+        (set[str]) Author-declared gate and environment triggers, deduplicated.
+    """
+    return set(entry.declared_stale_triggers())
+
+
 def _evidence_artifacts(gates: list[str]) -> list[dict[str, str]]:
     """Give every derived acceptance check its evidence path.
 
@@ -444,12 +473,16 @@ def _package_axes(
         )
     axes["evidence"] = _evidence_artifacts(gates)
     axes["consumes"] = _consumed_contracts(entry)
-    # `stale_on` is read from the corpus and never derived, even where the
-    # derivation would be sound. CI-03d and CI-11c exist to detect that a
-    # package failed to declare a trigger it owes; a seeder that supplies the
-    # trigger satisfies those rules by construction and they stop being able to
-    # fail. The registry is the artifact under test, so a field a rule judges
-    # must come from the declaration that rule is judging.
+    # `stale_on` has two sources with opposite provenance, kept apart on purpose.
+    # Contract major-bump triggers are a function of the consumes axis (`06` §4.3:
+    # a bump supersedes every consumer), so they are derived — and CI-03d still
+    # bites, because it judges the consumes axis this does not derive. Gate
+    # re-derivation triggers are NOT derived: they name a provisional->final
+    # dependency (e.g. `PG-RT-001b:PASS`) the author must declare, and CI-11c
+    # exists to catch a package that forgot to, so deriving them would blind it.
+    declared_triggers = _declared_stale_triggers(entry)
+    contract_bumps = {_contract_bump_trigger(contract) for contract in axes["consumes"]}
+    axes["stale_on"] = sorted(declared_triggers | contract_bumps)
     axes["produces"] = sorted(
         contract for contract, owner in producers.items() if owner == entry.wp_id
     )

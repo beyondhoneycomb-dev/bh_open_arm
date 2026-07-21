@@ -216,6 +216,30 @@ def test_plan_axis_records_carry_no_invented_requirement(document: dict[str, Any
         assert entry["req"] in declared, entry["req"]
 
 
+# stale_on has two provenances that must stay distinct: contract major bumps are
+# derived from the consumes axis, gate re-derivation triggers are declared by the
+# author. Deriving the second would blind CI-11c; not deriving the first would make
+# every consumer of a bumped contract silently survive.
+
+
+def test_contract_bump_trigger_is_derived_from_consumes(document: dict[str, Any]) -> None:
+    """A consumer of `CTR-PRIM@v1` goes stale on its major bump (`06` §4.3)."""
+    record = next(entry for entry in document["entries"] if entry["wp"] == "WP-3A-01")
+    assert "CTR-PRIM@v1" in record["contract"]["consumes"]
+    assert "CTR-PRIM:MAJOR_BUMP" in record["stale_on"]
+
+
+def test_provisional_re_derivation_trigger_is_declared(document: dict[str, Any]) -> None:
+    """Consumers of the provisional gate declare the final gate's trigger (CI-11c).
+
+    The trigger is read from the catalogue `재도출 =` clause, never derived from the
+    gate axis, so a package that drops the declaration re-fails CI-11c.
+    """
+    for wp_id in ("WP-1-04", "WP-1-05", "WP-1-06"):
+        record = next(entry for entry in document["entries"] if entry["wp"] == wp_id)
+        assert "PG-RT-001b:PASS" in record["stale_on"], wp_id
+
+
 # Determinism, and the committed artefact matching what the seeder produces.
 
 

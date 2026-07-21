@@ -55,6 +55,13 @@ OWNS_CLAUSE = re.compile(r"소유 경로\s*=\s*(.*)$")
 # A mode applies to the whole comma-separated group that precedes it, and the
 # parenthesis may carry trailing prose ("(GENERATED — 손으로 편집하면 거부)").
 OWNS_MODE_GROUP = re.compile(r"\(\s*(EXCLUSIVE|GENERATED|CONTRACT_FROZEN|SHARED_APPEND)[^)]*\)")
+
+# `재도출 = <gate>:<state>[, ...]` declares the staleness triggers that cannot be
+# derived — a provisional gate's final re-derivation and an environment rebuild.
+# Contract major bumps are excluded on purpose: the seeder derives those from the
+# consumes axis (`06` §4.3), so a trigger form starting with `CTR-` is not matched.
+STALE_CLAUSE = re.compile(r"재도출\s*=\s*(.*)$")
+STALE_TRIGGER = re.compile(r"(?:PG-[A-Za-z0-9]+-\d{3}[ab]?|env_hash):[A-Z_]+")
 OWNS_PATH = re.compile(r"^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.*-]+)*/?\*{0,2}$")
 ENUM_MARKERS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
 
@@ -178,6 +185,23 @@ class CatalogEntry:
                     owned.append((path, group.group(1)))
             position = group.end()
         return tuple(owned)
+
+    def declared_stale_triggers(self) -> tuple[str, ...]:
+        """Parse the non-derivable staleness triggers this row declares.
+
+        These name dependencies a checker cannot infer from any other axis: a
+        provisional gate's final re-derivation (`PG-RT-001b:PASS`) and an
+        environment rebuild (`env_hash:CHANGED`). CI-11c exists to catch a package
+        that consumes a provisional figure and forgets the trigger, so the trigger
+        must be a declaration the author writes, not a value the seeder supplies.
+
+        Returns:
+            (tuple) Trigger tokens declared in this row, deduplicated, in order.
+        """
+        clause = STALE_CLAUSE.search(self.contract_text)
+        if not clause:
+            return ()
+        return tuple(dict.fromkeys(STALE_TRIGGER.findall(clause.group(1))))
 
 
 def _cell(row: tuple[str, ...], index: int | None) -> str:
