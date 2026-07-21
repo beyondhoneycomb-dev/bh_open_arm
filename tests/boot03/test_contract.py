@@ -83,17 +83,20 @@ def test_build_range_covers_ci_01_through_ci_18() -> None:
     assert len(BUILD_RANGE) == len(set(RULE_IDS)) == len(RULE_IDS)
 
 
-def test_judge_range_stops_at_ci_17() -> None:
-    """The judge range excludes CI-18, and the difference is deliberate.
+def test_judge_range_excludes_the_two_uncheckable_at_landing() -> None:
+    """The judge range excludes CI-18 and CI-07, for different reasons.
 
-    `06` §5 and `02a` §−2.3 both warn against making the two numbers match: CI-18's
+    `06` §5 and `02a` §−2.3 warn against making build and judge ranges match. CI-18's
     predicate cites the band acceptance gate, so judging by it would make the gate
-    reference itself.
+    reference itself. CI-07 judges the Wave −1 normalisation hash, which cannot exist
+    at BOOT landing; the same circularity, resolved by exclusion rather than in the
+    predicate.
     """
     judged = {module.RULE_ID for module in JUDGE_RANGE}
     assert "CI-18" not in judged
+    assert "CI-07" not in judged
     assert set(RULE_IDS) - judged == set(JUDGE_EXCLUDED)
-    assert len(JUDGE_RANGE) == len(BUILD_RANGE) - 1
+    assert len(JUDGE_RANGE) == len(BUILD_RANGE) - len(JUDGE_EXCLUDED)
 
 
 @pytest.mark.parametrize("module", BUILD_RANGE, ids=[m.RULE_ID for m in BUILD_RANGE])

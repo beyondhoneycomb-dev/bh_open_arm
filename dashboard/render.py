@@ -22,6 +22,8 @@ from typing import Any
 
 import yaml
 
+from registry.checks import JUDGE_EXCLUDED
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = REPO_ROOT / "registry" / "traceability.yaml"
 REPORT_PATH = REPO_ROOT / "registry" / "build" / "check-report.json"
@@ -42,9 +44,10 @@ ISSUED_PACKAGE_COUNT = 177
 #   proving both that the violation fixture fails and that the prose exceptions
 #   pass — the checker that checks the checker.
 #
-# The judged range stops at CI-17: CI-18's predicate references the band
-# acceptance gate, so judging it here would make the gate reference itself
-# (`02a` §-2.2). It is still built, and still shown.
+# Which of them are judged is `JUDGE_EXCLUDED`, imported so this page and the
+# checker cannot disagree. Two are excluded and both are still built and shown:
+# CI-18 (its predicate references this gate) and CI-07 (it judges a Wave −1 hash
+# that cannot exist at BOOT landing — see registry/checks/__init__.py).
 CI_RULES = [
     "CI-01",
     "CI-01b",
@@ -82,7 +85,6 @@ CI_RULES = [
     "CI-17",
     "CI-18",
 ]
-JUDGED_THROUGH = "CI-17"
 
 STATE_PASS = "pass"
 STATE_FAIL = "fail"
@@ -136,8 +138,7 @@ def _load_rule_statuses() -> list[RuleStatus]:
                 ran[rule_id] = entry
 
     statuses: list[RuleStatus] = []
-    judged_limit = CI_RULES.index(JUDGED_THROUGH)
-    for index, rule_id in enumerate(CI_RULES):
+    for rule_id in CI_RULES:
         entry = ran.get(rule_id)
         if entry is None:
             module = CHECKS_DIR / f"ci_{rule_id[3:].lower().replace('-', '_')}.py"
@@ -156,7 +157,9 @@ def _load_rule_statuses() -> list[RuleStatus]:
             state = STATE_PASS
             detail = f"판정 대상 {entry.get('sites', 0)}건"
         statuses.append(
-            RuleStatus(rule_id=rule_id, state=state, detail=detail, judged=index <= judged_limit)
+            RuleStatus(
+                rule_id=rule_id, state=state, detail=detail, judged=rule_id not in JUDGE_EXCLUDED
+            )
         )
     return statuses
 
@@ -460,9 +463,10 @@ footer {{
 {legend}
     </ul>
     <p class="note">
-      판정 범위는 <strong>{escape(JUDGED_THROUGH)}까지</strong>({judged_total}개)다.
-      CI-18은 짓되 판정에는 넣지 않는다 — 그 술어가 이 게이트를 참조하므로
-      판정에 넣으면 게이트가 자기를 참조한다. 짓는 범위와 판정 범위가 다른 것은 의도다.
+      판정 대상은 <strong>{judged_total}개 규칙</strong>이다. CI-18·CI-07은 짓되
+      판정에는 넣지 않는다 — CI-18은 술어가 이 게이트를 참조해 자기참조가 되고,
+      CI-07은 Wave −1이 발행하는 정규화 해시를 검사하는데 그 해시는 BOOT 착지
+      시점엔 존재할 수 없다. 짓는 범위와 판정 범위가 다른 것은 의도다.
     </p>
   </section>
 

@@ -69,6 +69,13 @@ STALE_TRIGGER = re.compile(r"(?:PG-[A-Za-z0-9]+-\d{3}[ab]?|env_hash):[A-Z_]+")
 # supplied the full set would make every carrier pass by construction.
 TARGETS_CLAUSE = re.compile(r"타깃\s*=\s*(.*)$")
 DEPLOY_TARGET = re.compile(r"jetson_nano|jetson_orin|rtx_5090|rtx_a6000")
+
+# `참조근거 = <prose>` records why a declared downstream edge has no import-graph
+# reference — a data-file join (a package reads the manifests another generates),
+# which no static Python graph can see (`06` §5.6). CI-16 requires it for exactly
+# those edges; without it a real-but-invisible dependency and a phantom edge look
+# identical. Placed last in the cell so its `.*$` capture is the justification alone.
+JUSTIFICATION_CLAUSE = re.compile(r"참조근거\s*=\s*(.*)$")
 OWNS_PATH = re.compile(r"^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.*-]+)*/?\*{0,2}$")
 ENUM_MARKERS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
 
@@ -225,6 +232,19 @@ class CatalogEntry:
         if not clause:
             return ()
         return tuple(dict.fromkeys(DEPLOY_TARGET.findall(clause.group(1))))
+
+    def declared_justification(self) -> str:
+        """Return the prose justifying this package's invisible downstream edges.
+
+        A declared `downstream` edge with no static reference needs a recorded
+        reason (CI-16); the author writes it once for the package, covering every
+        such edge the package has.
+
+        Returns:
+            (str) The justification text, or empty when none is declared.
+        """
+        clause = JUSTIFICATION_CLAUSE.search(self.contract_text)
+        return clause.group(1).strip() if clause else ""
 
 
 def _cell(row: tuple[str, ...], index: int | None) -> str:

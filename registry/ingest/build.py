@@ -486,6 +486,9 @@ def _package_axes(
     targets = entry.declared_targets()
     if targets:
         axes["targets"] = sorted(targets)
+    justification = entry.declared_justification()
+    if justification:
+        axes["justification"] = justification
     axes["produces"] = sorted(
         contract for contract, owner in producers.items() if owner == entry.wp_id
     )

@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@b2e2ee6
+spine_ref: docs/plan/00-실행계획-개요.md@fc47ecc
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -54382,11 +54382,12 @@ entries:
   downstream:
   - WP-BOOT-03
   - WP-BOOT-04
-  - WP-BOOT-05
   stale_on: []
   env_hash: null
   workflow: SHAPE-CF
   exec_class: AI-offline
+  justification: '하류 BOOT-03·04는 이 WP가 생성한 registry/build/manifests/**를 데이터로 읽는다(BOOT-03: registry/checks/corpus.py,
+    BOOT-04: ops/launch/manifest.py) — 정적 import 그래프에 안 보이는 파일 조인(06 §5.6)'
   planned: true
 - req: PLAN-BOOT-03
   spec_ref: 00#3.5

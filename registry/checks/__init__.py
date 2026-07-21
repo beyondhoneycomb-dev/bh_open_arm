@@ -8,9 +8,20 @@ Two ranges, and the difference between them is deliberate — `02a` §−2.3 exp
 warns against "correcting" the two numbers to match:
 
 * `BUILD_RANGE` — `CI-01`..`CI-18`. Every rule in `06` §5 has an executable.
-* `JUDGE_RANGE` — `CI-01`..`CI-17`. What the BOOT band's own acceptance is decided
-  by. `CI-18` is excluded because its predicate cites that very acceptance gate,
-  so including it would make the gate reference itself.
+* `JUDGE_RANGE` — `BUILD_RANGE` minus `JUDGE_EXCLUDED`. What the BOOT band's own
+  acceptance is decided by.
+
+Two rules are excluded, for reasons that do not generalise to each other:
+
+* `CI-18` — **permanent.** Its predicate cites this very acceptance gate, so
+  judging it would make the gate reference itself.
+* `CI-07` — **temporal, lift after Wave −1.** It judges the normalisation hash,
+  which `WP-N1-04` mints in Wave −1. At BOOT landing every contested record has a
+  null hash because Wave −1 has not run, and Wave −1 cannot run until this gate
+  passes — the same circularity `CI-18` has, but resolved by exclusion rather than
+  built into the predicate. Once Wave −1 lands the hashes and the registry
+  re-seeds, `CI-07` goes green on its own; remove it from `JUDGE_EXCLUDED` then, so
+  a later missing hash fails the build.
 """
 
 from __future__ import annotations
@@ -93,7 +104,13 @@ BUILD_RANGE: tuple[ModuleType, ...] = (
     ci_18,
 )
 
-JUDGE_EXCLUDED = ("CI-18",)
+JUDGE_EXCLUDED = ("CI-07", "CI-18")
+
+# Rules whose predicate references the band gate's own pass/fail state, and which
+# therefore receive the running judged-finding tally as a second argument. This is
+# a narrower set than `JUDGE_EXCLUDED`: `CI-07` is excluded from judging but does
+# not read the gate state, so it takes the corpus alone.
+GATE_STATE_RULES = ("CI-18",)
 
 JUDGE_RANGE: tuple[ModuleType, ...] = tuple(
     module for module in BUILD_RANGE if module.RULE_ID not in JUDGE_EXCLUDED

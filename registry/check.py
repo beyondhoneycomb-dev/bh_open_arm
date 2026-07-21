@@ -25,14 +25,20 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-from registry.checks import BUILD_RANGE, JUDGE_EXCLUDED, JUDGE_RANGE, module_for
+from registry.checks import (
+    BUILD_RANGE,
+    GATE_STATE_RULES,
+    JUDGE_EXCLUDED,
+    JUDGE_RANGE,
+    module_for,
+)
 from registry.checks.corpus import Corpus
 from registry.checks.model import RuleResult
 
 EXIT_OK = 0
 EXIT_VIOLATIONS = 1
 
-_JUDGE_RANGE_LABEL = "CI-01..CI-17"
+_JUDGE_RANGE_LABEL = "CI-01..CI-17 (−CI-07)"
 _BUILD_RANGE_LABEL = "CI-01..CI-18"
 
 # Generated output, resolved against `--root`. `registry/build` is written by
@@ -56,7 +62,7 @@ def run_rules(corpus: Corpus, modules: tuple[ModuleType, ...]) -> list[RuleResul
     """
     results: list[RuleResult] = []
     for module in modules:
-        if module.RULE_ID in JUDGE_EXCLUDED:
+        if module.RULE_ID in GATE_STATE_RULES:
             judged = sum(
                 len(result.findings) for result in results if result.rule_id not in JUDGE_EXCLUDED
             )
