@@ -43,6 +43,14 @@ CG_ID = re.compile(r"\bCG-[A-Z0-9]+-\d{2}[a-z]\b")
 CONTRACT_ID = re.compile(r"\bCTR-[A-Z]+@v\d+\b")
 SHAPE_TOKEN = re.compile(r"\bSHAPE-(?:CF|IM|IG|MS|HG)\b")
 EXEC_CLASS = re.compile(r"\b(?:AI-offline|AI-on-HW|Human-assisted-HW|Human-judgment)\b")
+# A shape cell may carry a parenthetical gloss that repeats the very tokens it
+# explains ("SHAPE-CF → SHAPE-IM(6) (phase1 … = SHAPE-CF / phase2 … = SHAPE-IM)").
+# The gloss is prose about the assignment, not the assignment, so counting every
+# token in the cell reads a two-stage sequence as four. The assignment is the
+# token run outside the parentheses — the same reading `06` CI-14b applies when
+# it compares the registry back against this cell. The fan-out-width parentheses
+# ("(6)") carry no shape token, so stripping them is a no-op for those.
+SHAPE_GLOSS = re.compile(r"\([^()]*\)")
 OWNS_CLAUSE = re.compile(r"소유 경로\s*=\s*(.*)$")
 # A mode applies to the whole comma-separated group that precedes it, and the
 # parenthesis may carry trailing prose ("(GENERATED — 손으로 편집하면 거부)").
@@ -189,6 +197,16 @@ def _first(pattern: re.Pattern[str], text: str) -> str:
     return found.group(0) if found else ""
 
 
+def _shape_tokens(text: str) -> tuple[str, ...]:
+    """Return the shape tokens a cell assigns, dropping any parenthetical gloss.
+
+    The gloss restates the stage tokens as prose; reading it as assignment
+    double-counts the sequence. Only the tokens outside the parentheses are the
+    assignment (`06` §5 CI-14b).
+    """
+    return tuple(SHAPE_TOKEN.findall(SHAPE_GLOSS.sub(" ", text)))
+
+
 def _field(fields: dict[str, str], *candidates: str) -> str:
     """Look up a card field by label prefix rather than exact equality.
 
@@ -274,7 +292,7 @@ def _extract_wide(sections: list[Section], path: Path) -> list[CatalogEntry]:
                         acceptance_text=acceptance,
                         negative_text=acceptance,
                         exec_classes=tuple(EXEC_CLASS.findall(_cell(row, columns["exec"]))),
-                        workflows=tuple(SHAPE_TOKEN.findall(_cell(row, columns["shape"]))),
+                        workflows=_shape_tokens(_cell(row, columns["shape"])),
                     )
                 )
     return entries
@@ -331,7 +349,7 @@ def _extract_split(sections: list[Section], path: Path) -> list[CatalogEntry]:
                 exec_classes=tuple(
                     EXEC_CLASS.findall(_cell(row, table.column_index("실행클래스")))
                 ),
-                workflows=tuple(SHAPE_TOKEN.findall(_cell(row, table.column_index("형상")))),
+                workflows=_shape_tokens(_cell(row, table.column_index("형상"))),
             )
         )
     return entries
@@ -375,7 +393,7 @@ def _extract_cards(sections: list[Section], path: Path) -> list[CatalogEntry]:
                 acceptance_text=_field(fields, "수용 게이트", "수용 검사", "수용"),
                 negative_text=_field(fields, "음성 분기"),
                 exec_classes=tuple(EXEC_CLASS.findall(_field(fields, "실행 클래스"))),
-                workflows=tuple(SHAPE_TOKEN.findall(_field(fields, "워크플로우 형상", "형상"))),
+                workflows=_shape_tokens(_field(fields, "워크플로우 형상", "형상")),
             )
         )
     return entries

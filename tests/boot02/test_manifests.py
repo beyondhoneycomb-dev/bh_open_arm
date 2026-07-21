@@ -123,7 +123,8 @@ def test_shape_swap_is_rejected(packages: list[WorkPackage]) -> None:
 
 def test_multi_stage_manifest_may_not_carry_scalars(packages: list[WorkPackage]) -> None:
     """A multi-stage manifest that also declares the scalars is rejected."""
-    package = _package(packages, "WP-1-03")
+    package = next((candidate for candidate in packages if candidate.is_multi_stage), None)
+    assert package is not None, "fixture needs at least one multi-stage package"
     manifest = build_manifest(package)
     manifest["workflow"] = "SHAPE-CF"
     assert verify_manifest(manifest, package) != []

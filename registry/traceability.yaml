@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@97a9e4a
+spine_ref: docs/plan/00-실행계획-개요.md@d6431b4
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -1855,7 +1855,7 @@ entries:
     owns: []
     cancel_policy: finish-step
     after: null
-  - workflow: SHAPE-IM
+  - workflow: SHAPE-MS
     exec_class: AI-on-HW
     owns: []
     cancel_policy: latch-to-hold
@@ -15594,9 +15594,9 @@ entries:
   env_hash: null
   phases:
   - workflow: SHAPE-IM
-    exec_class: AI-on-HW
+    exec_class: AI-offline
     owns: []
-    cancel_policy: latch-to-hold
+    cancel_policy: finish-step
     after: null
   - workflow: SHAPE-MS
     exec_class: AI-on-HW
@@ -18047,7 +18047,7 @@ entries:
   stale_on: []
   env_hash: null
   workflow: SHAPE-IM
-  exec_class: AI-on-HW
+  exec_class: AI-offline
   planned: true
   provenance:
     wp_rule: coverage-fill
@@ -18832,17 +18832,8 @@ entries:
   - WP-G-04
   stale_on: []
   env_hash: null
-  phases:
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: null
-  - workflow: SHAPE-CF
-    exec_class: AI-on-HW
-    owns: []
-    cancel_policy: latch-to-hold
-    after: 0
+  workflow: SHAPE-CF
+  exec_class: AI-offline
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -19691,17 +19682,8 @@ entries:
   - WP-G-04
   stale_on: []
   env_hash: null
-  phases:
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: null
-  - workflow: SHAPE-CF
-    exec_class: AI-on-HW
-    owns: []
-    cancel_policy: latch-to-hold
-    after: 0
+  workflow: SHAPE-CF
+  exec_class: AI-offline
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -20167,17 +20149,8 @@ entries:
   - WP-G-04
   stale_on: []
   env_hash: null
-  phases:
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: null
-  - workflow: SHAPE-CF
-    exec_class: AI-on-HW
-    owns: []
-    cancel_policy: latch-to-hold
-    after: 0
+  workflow: SHAPE-CF
+  exec_class: AI-offline
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -20615,17 +20588,8 @@ entries:
   - WP-G-04
   stale_on: []
   env_hash: null
-  phases:
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: null
-  - workflow: SHAPE-CF
-    exec_class: AI-on-HW
-    owns: []
-    cancel_policy: latch-to-hold
-    after: 0
+  workflow: SHAPE-CF
+  exec_class: AI-offline
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -21030,17 +20994,8 @@ entries:
   - WP-G-04
   stale_on: []
   env_hash: null
-  phases:
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: null
-  - workflow: SHAPE-CF
-    exec_class: AI-on-HW
-    owns: []
-    cancel_policy: latch-to-hold
-    after: 0
+  workflow: SHAPE-CF
+  exec_class: AI-offline
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -21560,17 +21515,8 @@ entries:
   - WP-G-04
   stale_on: []
   env_hash: null
-  phases:
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: null
-  - workflow: SHAPE-CF
-    exec_class: AI-on-HW
-    owns: []
-    cancel_policy: latch-to-hold
-    after: 0
+  workflow: SHAPE-CF
+  exec_class: AI-offline
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -21954,17 +21900,8 @@ entries:
   - WP-G-04
   stale_on: []
   env_hash: null
-  phases:
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: null
-  - workflow: SHAPE-CF
-    exec_class: AI-on-HW
-    owns: []
-    cancel_policy: latch-to-hold
-    after: 0
+  workflow: SHAPE-CF
+  exec_class: AI-offline
   planned: true
   provenance:
     wp_rule: doc06-section6
@@ -23034,17 +22971,8 @@ entries:
   - WP-G-04
   stale_on: []
   env_hash: null
-  phases:
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: null
-  - workflow: SHAPE-CF
-    exec_class: AI-on-HW
-    owns: []
-    cancel_policy: latch-to-hold
-    after: 0
+  workflow: SHAPE-CF
+  exec_class: AI-offline
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -24517,17 +24445,8 @@ entries:
   - WP-G-04
   stale_on: []
   env_hash: null
-  phases:
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: null
-  - workflow: SHAPE-CF
-    exec_class: AI-on-HW
-    owns: []
-    cancel_policy: latch-to-hold
-    after: 0
+  workflow: SHAPE-CF
+  exec_class: AI-offline
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -29900,7 +29819,7 @@ entries:
     owns: []
     cancel_policy: finish-step
     after: null
-  - workflow: SHAPE-IM
+  - workflow: SHAPE-MS
     exec_class: AI-on-HW
     owns: []
     cancel_policy: latch-to-hold
@@ -30062,9 +29981,9 @@ entries:
   env_hash: null
   phases:
   - workflow: SHAPE-IM
-    exec_class: AI-on-HW
+    exec_class: AI-offline
     owns: []
-    cancel_policy: latch-to-hold
+    cancel_policy: finish-step
     after: null
   - workflow: SHAPE-MS
     exec_class: AI-on-HW
@@ -34834,16 +34753,6 @@ entries:
     owns: []
     cancel_policy: finish-step
     after: 0
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: 1
-  - workflow: SHAPE-IM
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: 2
   planned: true
   provenance:
     wp_rule: doc06-section6
@@ -37346,16 +37255,6 @@ entries:
     owns: []
     cancel_policy: finish-step
     after: 0
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: 1
-  - workflow: SHAPE-IM
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: 2
   planned: true
   provenance:
     wp_rule: doc06-section6
@@ -37719,16 +37618,6 @@ entries:
     owns: []
     cancel_policy: finish-step
     after: 0
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: 1
-  - workflow: SHAPE-IM
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: 2
   planned: true
   provenance:
     wp_rule: doc06-section6
@@ -38087,16 +37976,6 @@ entries:
     owns: []
     cancel_policy: finish-step
     after: 0
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: 1
-  - workflow: SHAPE-IM
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: 2
   planned: true
   provenance:
     wp_rule: doc06-section6
@@ -39170,16 +39049,6 @@ entries:
     owns: []
     cancel_policy: finish-step
     after: 0
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: 1
-  - workflow: SHAPE-IM
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: 2
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -39456,16 +39325,6 @@ entries:
     owns: []
     cancel_policy: finish-step
     after: 0
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: 1
-  - workflow: SHAPE-IM
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: 2
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -42486,17 +42345,8 @@ entries:
   - WP-G-04
   stale_on: []
   env_hash: null
-  phases:
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: null
-  - workflow: SHAPE-CF
-    exec_class: AI-on-HW
-    owns: []
-    cancel_policy: latch-to-hold
-    after: 0
+  workflow: SHAPE-CF
+  exec_class: AI-offline
   planned: true
   provenance:
     wp_rule: sole-citation
