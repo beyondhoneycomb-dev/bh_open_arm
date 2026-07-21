@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@0bc56b3
+spine_ref: docs/plan/00-실행계획-개요.md@29adc93
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -24719,7 +24719,11 @@ entries:
   - id: ART-EVIDENCE-0C04F
     kind: report
     path: registry/build/evidence/CG-0C-04f/
-  owns: []
+  owns:
+  - glob: sim/fkik/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0c04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -34822,7 +34826,11 @@ entries:
   - id: ART-EVIDENCE-0C09O
     kind: report
     path: registry/build/evidence/CG-0C-09o/
-  owns: []
+  owns:
+  - glob: sim/dryrun/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0c09/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-UNIT@v1
@@ -36505,7 +36513,11 @@ entries:
   - id: ART-EVIDENCE-0C02H
     kind: report
     path: registry/build/evidence/CG-0C-02h/
-  owns: []
+  owns:
+  - glob: sim/ik/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0c02/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ACT@v1
@@ -36774,7 +36786,11 @@ entries:
   - id: ART-EVIDENCE-0C02H
     kind: report
     path: registry/build/evidence/CG-0C-02h/
-  owns: []
+  owns:
+  - glob: sim/ik/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0c02/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ACT@v1
@@ -37346,7 +37362,11 @@ entries:
   - id: ART-EVIDENCE-0C09O
     kind: report
     path: registry/build/evidence/CG-0C-09o/
-  owns: []
+  owns:
+  - glob: sim/dryrun/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0c09/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-UNIT@v1
@@ -37716,7 +37736,11 @@ entries:
   - id: ART-EVIDENCE-0C09O
     kind: report
     path: registry/build/evidence/CG-0C-09o/
-  owns: []
+  owns:
+  - glob: sim/dryrun/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0c09/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-UNIT@v1
@@ -38075,7 +38099,11 @@ entries:
   - id: ART-EVIDENCE-0C09O
     kind: report
     path: registry/build/evidence/CG-0C-09o/
-  owns: []
+  owns:
+  - glob: sim/dryrun/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0c09/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-UNIT@v1
@@ -39149,7 +39177,11 @@ entries:
   - id: ART-EVIDENCE-0C09O
     kind: report
     path: registry/build/evidence/CG-0C-09o/
-  owns: []
+  owns:
+  - glob: sim/dryrun/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0c09/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-UNIT@v1
@@ -39426,7 +39458,11 @@ entries:
   - id: ART-EVIDENCE-0C09O
     kind: report
     path: registry/build/evidence/CG-0C-09o/
-  owns: []
+  owns:
+  - glob: sim/dryrun/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0c09/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-UNIT@v1
@@ -47763,7 +47799,13 @@ entries:
   - id: ART-EVIDENCE-0C08K
     kind: report
     path: registry/build/evidence/CG-0C-08k/
-  owns: []
+  owns:
+  - glob: contracts/policy_compat.yaml
+    mode: EXCLUSIVE
+  - glob: backend/policy_matrix/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0c08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -51781,7 +51823,11 @@ entries:
   - id: ART-EVIDENCE-0C06H
     kind: report
     path: registry/build/evidence/CG-0C-06h/
-  owns: []
+  owns:
+  - glob: sim/harness/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0c06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -52609,7 +52655,11 @@ entries:
   - id: ART-EVIDENCE-0C06H
     kind: report
     path: registry/build/evidence/CG-0C-06h/
-  owns: []
+  owns:
+  - glob: sim/harness/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0c06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []

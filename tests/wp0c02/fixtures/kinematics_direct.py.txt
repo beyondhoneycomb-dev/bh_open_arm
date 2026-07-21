@@ -1,0 +1,11 @@
+# Order-violation fixture (data, not importable code — see the .txt suffix).
+# It constructs openarm_control's Kinematics directly, bypassing the sim.ik
+# OrderedIkBuild that forces the jnt_range override to run first (09 FR-SIM-080).
+# sim.ik.staticcheck must flag every reference below.
+from openarm_control.kinematics import IKParams, Kinematics
+
+
+def build(setup):
+    # Kinematics before any jnt_range override: mink snapshots the un-overridden
+    # MJCF limits and the override is then void.
+    return Kinematics(setup, IKParams())

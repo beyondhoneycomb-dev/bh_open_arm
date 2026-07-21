@@ -1,0 +1,14 @@
+"""Clean fixture: a consumer that resolves every joint index by name.
+
+Kept as .py.txt so it is data for the AST scan. The index into qpos is a variable
+produced by name resolution, and the resolution table itself (jnt_qposadr) is not a
+state array, so the scan must leave this file untouched (no over-reach).
+"""
+
+import mujoco
+
+
+def read_joint(model, data, joint_name):
+    jid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint_name)
+    adr = model.jnt_qposadr[jid]
+    return data.qpos[adr]

@@ -1,0 +1,16 @@
+"""Violation fixture: a consumer that hard-codes qpos/ctrl indices.
+
+Kept as .py.txt so it is data for the AST scan, not a collected or linted module.
+Every subscript here binds to a specific qpos/actuator layout and would read the
+wrong joint once the layout shifts; the index static check must flag all of them.
+"""
+
+
+def read_right_arm(data):
+    arm = data.qpos[0:7]
+    gripper = data.qpos[7]
+    return arm, gripper
+
+
+def command_left(data, values):
+    data.ctrl[:8] = values

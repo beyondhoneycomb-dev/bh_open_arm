@@ -1,0 +1,83 @@
+# WP-0C-08 — policy compatibility registry (`10` FR-TRN-064/065, `11` FR-INF-033/034).
+#
+# This is a WORK-PACKAGE OUTPUT ARTIFACT, not one of the 13 frozen CTR-* contracts:
+# it carries no `@vN` tag and no bump discipline. It is the declarative half of the
+# three-axis compatibility matrix — {dataset observation config} x {policy dimension
+# ceiling} x {deploy-target capability} — and the calculator/enforcer in
+# `backend.policy_matrix` is the executable half.
+#
+# The dimension ceilings below MIRROR the installed policy configs; they are never
+# the source of truth. `backend.policy_matrix.registry.verify_against_introspection`
+# imports each `config_module:config_class` and asserts the recorded ceiling equals
+# the dataclass default (acceptance ⑪) — a hand-drifted number is rejected, never
+# trusted. Likewise every `blocked_paths[].predicate` must resolve to a real callable
+# in `targets.guards` (the same requirement WP-ENV-02 acceptance ③ puts on
+# `targets/matrix.yaml`), and every `supported_targets` entry must be a real fleet
+# target. The block is a BLOCK, not a warning: FR-TRN-064 is `[확정]` M.
+
+version: 1
+
+policies:
+  - policy: smolvla
+    config_module: lerobot.policies.smolvla.configuration_smolvla
+    config_class: SmolVLAConfig
+    max_state_dim: 32
+    max_action_dim: 32
+    supported_targets: [jetson_nano, jetson_orin, rtx_5090, rtx_a6000]
+    blocked_paths: []
+    block_reason:
+      code: STATE_DIM_OVER_CAP
+      human: >-
+        observation.state width exceeds this policy's max_state_dim ceiling —
+        a bimanual + use_velocity_and_torque (48-dim) recording does not fit a
+        32-dim policy; drop velocity/torque (24-dim) or pick an uncapped policy.
+
+  - policy: pi0
+    config_module: lerobot.policies.pi0.configuration_pi0
+    config_class: PI0Config
+    max_state_dim: 32
+    max_action_dim: 32
+    supported_targets: [jetson_nano, jetson_orin, rtx_5090, rtx_a6000]
+    blocked_paths: []
+    block_reason:
+      code: STATE_DIM_OVER_CAP
+      human: >-
+        observation.state width exceeds this policy's max_state_dim ceiling —
+        a bimanual + use_velocity_and_torque (48-dim) recording does not fit a
+        32-dim policy; drop velocity/torque (24-dim) or pick an uncapped policy.
+
+  - policy: pi05
+    config_module: lerobot.policies.pi05.configuration_pi05
+    config_class: PI05Config
+    max_state_dim: 32
+    max_action_dim: 32
+    supported_targets: [jetson_nano, jetson_orin, rtx_5090, rtx_a6000]
+    blocked_paths: []
+    block_reason:
+      code: STATE_DIM_OVER_CAP
+      human: >-
+        observation.state width exceeds this policy's max_state_dim ceiling —
+        a bimanual + use_velocity_and_torque (48-dim) recording does not fit a
+        32-dim policy; drop velocity/torque (24-dim) or pick an uncapped policy.
+
+  # GR00T's 132-dim ceiling clears the 48-dim bimanual state, so it carries no
+  # dimension block; its constraint is the FR-INF-034 onboard frequency ceiling on
+  # Jetson (4.6 Hz), which the deploy-target axis enforces through the guard named
+  # here — the same guard `targets/matrix.yaml` names on the Jetson rows.
+  - policy: groot
+    config_module: lerobot.policies.groot.configuration_groot
+    config_class: GrootConfig
+    max_state_dim: 132
+    max_action_dim: 132
+    supported_targets: [jetson_nano, jetson_orin, rtx_5090, rtx_a6000]
+    blocked_paths:
+      - name: groot_sync_over_ceiling
+        predicate: targets.guards.sync_over_inference_ceiling
+        rationale: >-
+          FR-INF-034 — GR00T onboard tops out at 4.6 Hz on Jetson (`11` §2.6);
+          synchronous inference above that ceiling is blocked, RTC/async chunking
+          is forced.
+    block_reason:
+      code: STATE_DIM_OVER_CAP
+      human: >-
+        observation.state width exceeds this policy's max_state_dim ceiling.
