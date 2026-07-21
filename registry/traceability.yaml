@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@5d307bc
+spine_ref: docs/plan/00-실행계획-개요.md@0bc56b3
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -27251,7 +27251,11 @@ entries:
   - id: ART-EVIDENCE-0C05F
     kind: report
     path: registry/build/evidence/CG-0C-05f/
-  owns: []
+  owns:
+  - glob: packages/lerobot_robot_openarm_dummy/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0c05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -27301,6 +27305,10 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 에지 WP-1-03은 코드 import가 아니라 계약/드롭인 조인이다 — 더미와 실기 팔로워가 같은 Robot ABC(CTR-PLUG@v1)·관측/액션
+    스키마(WP-0A-02 CTR-ACT@v1)를 구현하고 양쪽 다 contracts/plugin·contracts/action을 import하므로 실기→더미 방향의 정적 import는
+    존재하지 않는다(실코드 의존은 반대 방향). WP-0C-06(합성 GIL 부하 하네스)은 더미를 벤치 의존으로 소비하나 착지 전이라 그래프에 아직 없다(06 §5.6 계약 조인
+    — CONTRACT_FROZEN+CI-09로 상쇄)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -27331,7 +27339,11 @@ entries:
   - id: ART-EVIDENCE-0C07G
     kind: report
     path: registry/build/evidence/CG-0C-07g/
-  owns: []
+  owns:
+  - glob: backend/learning/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0c07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -28579,7 +28591,11 @@ entries:
   - id: ART-EVIDENCE-0C05F
     kind: report
     path: registry/build/evidence/CG-0C-05f/
-  owns: []
+  owns:
+  - glob: packages/lerobot_robot_openarm_dummy/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0c05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -28629,6 +28645,10 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 에지 WP-1-03은 코드 import가 아니라 계약/드롭인 조인이다 — 더미와 실기 팔로워가 같은 Robot ABC(CTR-PLUG@v1)·관측/액션
+    스키마(WP-0A-02 CTR-ACT@v1)를 구현하고 양쪽 다 contracts/plugin·contracts/action을 import하므로 실기→더미 방향의 정적 import는
+    존재하지 않는다(실코드 의존은 반대 방향). WP-0C-06(합성 GIL 부하 하네스)은 더미를 벤치 의존으로 소비하나 착지 전이라 그래프에 아직 없다(06 §5.6 계약 조인
+    — CONTRACT_FROZEN+CI-09로 상쇄)
   planned: true
   provenance:
     wp_rule: doc06-section6
@@ -34017,7 +34037,11 @@ entries:
   - id: ART-EVIDENCE-0C03I
     kind: report
     path: registry/build/evidence/CG-0C-03i/
-  owns: []
+  owns:
+  - glob: sim/mjcf/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0c03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -34171,7 +34195,11 @@ entries:
   - id: ART-EVIDENCE-0C03I
     kind: report
     path: registry/build/evidence/CG-0C-03i/
-  owns: []
+  owns:
+  - glob: sim/mjcf/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0c03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -37548,7 +37576,13 @@ entries:
   - id: ART-EVIDENCE-0C01F
     kind: report
     path: registry/build/evidence/CG-0C-01f/
-  owns: []
+  owns:
+  - glob: packages/lerobot_robot_openarm_mujoco/**
+    mode: EXCLUSIVE
+  - glob: sim/mujoco/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0c01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
