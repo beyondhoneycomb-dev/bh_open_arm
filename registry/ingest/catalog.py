@@ -62,6 +62,13 @@ OWNS_MODE_GROUP = re.compile(r"\(\s*(EXCLUSIVE|GENERATED|CONTRACT_FROZEN|SHARED_
 # consumes axis (`06` §4.3), so a trigger form starting with `CTR-` is not matched.
 STALE_CLAUSE = re.compile(r"재도출\s*=\s*(.*)$")
 STALE_TRIGGER = re.compile(r"(?:PG-[A-Za-z0-9]+-\d{3}[ab]?|env_hash):[A-Z_]+")
+
+# `타깃 = <target>[, ...]` declares which of the four deployment targets (`00`
+# §2.1 P-2) a per-target-gated package renders a verdict for. It cannot be derived:
+# CI-12 exists to catch a carrier that dropped a target silently, so a seeder that
+# supplied the full set would make every carrier pass by construction.
+TARGETS_CLAUSE = re.compile(r"타깃\s*=\s*(.*)$")
+DEPLOY_TARGET = re.compile(r"jetson_nano|jetson_orin|rtx_5090|rtx_a6000")
 OWNS_PATH = re.compile(r"^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.*-]+)*/?\*{0,2}$")
 ENUM_MARKERS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
 
@@ -202,6 +209,22 @@ class CatalogEntry:
         if not clause:
             return ()
         return tuple(dict.fromkeys(STALE_TRIGGER.findall(clause.group(1))))
+
+    def declared_targets(self) -> tuple[str, ...]:
+        """Parse the deployment targets this row commits to covering.
+
+        A per-target-gated package must state which of the four targets it renders
+        a verdict for (CI-12). The set can shrink — a target may be dropped by a
+        `DEGRADED_ACCEPTED` outcome — so it is a declaration, not a constant, and
+        the seeder must not supply it.
+
+        Returns:
+            (tuple) Declared target tokens, deduplicated, in source order.
+        """
+        clause = TARGETS_CLAUSE.search(self.contract_text)
+        if not clause:
+            return ()
+        return tuple(dict.fromkeys(DEPLOY_TARGET.findall(clause.group(1))))
 
 
 def _cell(row: tuple[str, ...], index: int | None) -> str:

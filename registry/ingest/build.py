@@ -483,6 +483,9 @@ def _package_axes(
     declared_triggers = _declared_stale_triggers(entry)
     contract_bumps = {_contract_bump_trigger(contract) for contract in axes["consumes"]}
     axes["stale_on"] = sorted(declared_triggers | contract_bumps)
+    targets = entry.declared_targets()
+    if targets:
+        axes["targets"] = sorted(targets)
     axes["produces"] = sorted(
         contract for contract, owner in producers.items() if owner == entry.wp_id
     )
