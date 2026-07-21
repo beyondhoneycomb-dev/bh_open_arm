@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@fc47ecc
+spine_ref: docs/plan/00-실행계획-개요.md@a429979
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -4473,6 +4473,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
+  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
 - req: FR-CON-062
   spec_ref: 02#3.4
   priority: M
@@ -4684,6 +4685,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
+  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
 - req: FR-CON-063
   spec_ref: 02#3.4
   priority: M
@@ -4705,6 +4707,7 @@ entries:
     wp_candidates:
     - WP-1-02
     - WP-G-S02
+  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
 - req: FR-CON-064
   spec_ref: 02#3.4
   priority: M
@@ -8907,6 +8910,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
+  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
 - req: FR-GUI-061
   spec_ref: 13#3.5
   priority: M
@@ -9198,6 +9202,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
+  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
 - req: FR-GUI-064
   spec_ref: 13#3.5
   priority: M
@@ -9392,6 +9397,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
+  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
 - req: FR-GUI-066
   spec_ref: 13#3.5
   priority: M
@@ -9586,6 +9592,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
+  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
 - req: FR-GUI-068
   spec_ref: 13#3.5
   priority: M
@@ -12047,6 +12054,7 @@ entries:
     wp_candidates:
     - WP-2C-07
     - WP-G-S12
+  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
 - req: FR-GUI-112
   spec_ref: 13#3.8
   priority: M
@@ -19891,7 +19899,9 @@ entries:
   - id: ART-EVIDENCE-N102F
     kind: report
     path: registry/build/evidence/CG-N1-02f/
-  owns: []
+  owns:
+  - glob: docs/plan/normalization/ledger.yaml
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -19949,6 +19959,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
+  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
 - req: FR-MOT-032
   spec_ref: 03#3.5
   priority: M
@@ -33071,7 +33082,11 @@ entries:
   - id: ART-EVIDENCE-N101D
     kind: report
     path: registry/build/evidence/CG-N1-01d/
-  owns: []
+  owns:
+  - glob: registry/normalization/**
+    mode: EXCLUSIVE
+  - glob: tests/n1/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -33106,6 +33121,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
+  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
 - req: FR-SAF-046
   spec_ref: 12#3.6
   priority: M
@@ -33865,6 +33881,7 @@ entries:
     - WP-1-05
     - WP-G-S02
     - WP-N1-02
+  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
 - req: FR-SIM-001
   spec_ref: 09#3.1
   priority: M
@@ -49372,6 +49389,7 @@ entries:
     - WP-2A-06
     - WP-5-05
     - WP-N1-02
+  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
 - req: NFR-GUI-008
   spec_ref: 13#3.9
   priority: M
@@ -50980,7 +50998,9 @@ entries:
   - id: ART-EVIDENCE-N103F
     kind: report
     path: registry/build/evidence/CG-N1-03f/
-  owns: []
+  owns:
+  - glob: docs/plan/normalization/gate_spec_map.yaml
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -53157,6 +53177,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
+  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
 - req: NFR-SAF-008
   spec_ref: 12#3.9
   priority: S
@@ -53217,6 +53238,7 @@ entries:
     - WP-N1-02
     - WP-OPS-05
     source: 'tag as written: (none)'
+  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
 - req: NFR-SIM-001
   spec_ref: 09#3.12
   priority: M
@@ -55068,7 +55090,9 @@ entries:
   provenance:
     wp_rule: plan-axis
     source: 02a-작업패키지-Wave-minus1-to-1.md:149
-  owns: []
+  owns:
+  - glob: docs/plan/normalization/normalization_hash
+    mode: EXCLUSIVE
   gate:
   - CG-N1-04a
   - CG-N1-04b

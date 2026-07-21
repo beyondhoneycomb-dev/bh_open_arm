@@ -1,0 +1,11 @@
+# Violation fixture: a downstream WP manifest that declares no normalization_hash.
+# The start-blocking barrier (02a §1.5 WP-N1-04 ②) must refuse it: without the
+# hash the package would start against an unknown normalization.
+wp_id: WP-FIXTURE-NOHASH
+exec_class: AI-offline
+workflow: SHAPE-CF
+owns: []
+consumes: []
+produces: []
+gates: []
+env_hash: null

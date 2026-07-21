@@ -35,6 +35,7 @@ from registry.ingest.resolve import (
 )
 from registry.ingest.spec import Requirement
 from registry.ingest.spec import parse_all as parse_spec
+from registry.normalization.seed import ledger_seed
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_VERSION = 1
@@ -646,6 +647,19 @@ def build(plan_dir: Path, spec_dir: Path, spine_ref: str) -> tuple[dict[str, Any
         entry = by_id[wp_id]
         per_band[entry.band] = per_band.get(entry.band, 0) + 1
         records.append(_plan_axis_record(entry, axes_cache[wp_id], per_band[entry.band]))
+
+    # Stamp the normalization hash onto records the Wave -1 ledger settles, so
+    # CI-07 stops firing on them. Records the ledger does not settle stay null,
+    # where CI-07 should still fire. The hash is the canonical content hash of
+    # the ledger and gate map (`WP-N1-04`); a missing ledger (bootstrap ordering)
+    # stamps nothing.
+    seed = ledger_seed(plan_dir)
+    if seed.digest is not None:
+        for record in records:
+            settled = seed.normalization_for(str(record["req"]))
+            if settled is not None:
+                record["normalization"] = settled
+
     records.sort(key=lambda record: record["req"])
 
     rules: dict[str, int] = {}

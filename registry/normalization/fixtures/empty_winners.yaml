@@ -1,0 +1,17 @@
+# Rejected by the schema: winners is a non-empty list; a ruling that discards
+# text but names no surviving id has decided nothing.
+version: 1
+rows:
+  - norm_id: NORM-001
+    winners: []
+    discarded:
+      - file: "01"
+        section: "4.2"
+        quote: "rest 자세 확인 모달"
+    contract: "CTR-CAL@v1"
+    rationale: "placeholder"
+    enforcement:
+      - type: ci_static
+        predicate: "placeholder"
+        check: "CI-10"
+        status: active

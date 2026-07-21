@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bh-open-arm/registry/normalization/ledger.schema.json",
+  "title": "OpenArm Wave -1 normalization ledger",
+  "description": "One executable row per resolved specification contradiction (02a §1.3), plus reference-integrity notes (02a §1.4). Field set is owned by 02a §1.2; where the two disagree, §1.2 is canonical and this file is the defect. The winner field is a NON-EMPTY LIST: §1.2 says '1개', but four of the six §1.3 rulings win a gate pair, an invariant carried by two NFRs, or several D/M entries, so a single value cannot carry them.",
+  "type": "object",
+  "required": ["version", "rows"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "rows": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/row" }
+    },
+    "notes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/note" }
+    }
+  },
+  "$defs": {
+    "norm_id": {
+      "type": "string",
+      "pattern": "^NORM-\\d{3}$"
+    },
+    "winner_id": {
+      "type": "string",
+      "description": "A canonical surviving id. FR/NFR are defined in docs/spec tables, D-n/M-n in docs/spec/16, PG-* in docs/plan/03. Bare PG-RT-001 is rejected: it is not a gate id (06 CI-11b).",
+      "anyOf": [
+        { "pattern": "^(?:FR|NFR)-[A-Z]{2,4}-\\d{3}$" },
+        { "pattern": "^[DM]-\\d+$" },
+        { "pattern": "^PG-(?!RT-001$)[A-Z0-9]+-\\d{3}[ab]?$" }
+      ]
+    },
+    "spec_file": {
+      "type": "string",
+      "description": "Two-digit specification document number, e.g. '13'.",
+      "pattern": "^\\d{2}$"
+    },
+    "section": {
+      "type": "string",
+      "description": "Numbered section addressable in the source document, e.g. '3.5' or '2.10'.",
+      "pattern": "^\\d+(?:\\.\\d+)*[a-z]?$"
+    },
+    "discarded_item": {
+      "type": "object",
+      "description": "One invalidated span. `quote` is verbatim source content (emphasis markers and run-of-whitespace excepted); `req` names the requirement whose reading is discarded, when the span belongs to one.",
+      "required": ["file", "section", "quote"],
+      "additionalProperties": false,
+      "properties": {
+        "file": { "$ref": "#/$defs/spec_file" },
+        "section": { "$ref": "#/$defs/section" },
+        "quote": { "type": "string", "minLength": 1 },
+        "req": { "$ref": "#/$defs/winner_id" }
+      }
+    },
+    "contract": {
+      "type": "string",
+      "description": "The namespace that owns the ruling. A frozen contract generation (CTR-<NAME>@v<n>), or the gate-registry owner for NORM-003, whose ruling lives on the gate axis rather than a contract axis (02a §1.3).",
+      "anyOf": [
+        { "pattern": "^CTR-[A-Z]+@v\\d+$" },
+        { "pattern": "^gate-registry:WP-(?:BOOT|N1|ENV|0A|0B|0C|OPS|[1-5][A-D]?|G)-[SG]?\\d{1,2}[a-z]?$" }
+      ]
+    },
+    "enforcement_item": {
+      "type": "object",
+      "description": "One executable check that enforces the ruling. `check` resolves to an existing CI executable (status active) or to the issued work package that implements it (status planned); a name that resolves to neither is name-only and rejected (02a §1.5 WP-N1-02 acceptance ③).",
+      "required": ["type", "predicate", "check"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["ci_static", "runtime_assert"] },
+        "predicate": { "type": "string", "minLength": 1 },
+        "check": {
+          "type": "string",
+          "anyOf": [
+            { "pattern": "^CI-\\d+[a-z]?$" },
+            { "pattern": "^WP-(?:BOOT|N1|ENV|0A|0B|0C|OPS|[1-5][A-D]?|G)-[SG]?\\d{1,2}[a-z]?$" }
+          ]
+        },
+        "status": { "type": "string", "enum": ["active", "planned"] }
+      }
+    },
+    "row": {
+      "type": "object",
+      "required": ["norm_id", "winners", "discarded", "contract", "rationale", "enforcement"],
+      "additionalProperties": false,
+      "properties": {
+        "norm_id": { "$ref": "#/$defs/norm_id" },
+        "contradiction": { "type": "string", "minLength": 1 },
+        "winners": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/winner_id" }
+        },
+        "discarded": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/discarded_item" }
+        },
+        "contract": { "$ref": "#/$defs/contract" },
+        "rationale": { "type": "string", "minLength": 1 },
+        "enforcement": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/enforcement_item" }
+        }
+      }
+    },
+    "note": {
+      "type": "object",
+      "description": "A reference-integrity finding that is not a contradiction (02a §1.4). It carries no winner or contract; it records a dangling citation and its correction.",
+      "required": ["norm_id", "finding", "resolution"],
+      "additionalProperties": false,
+      "properties": {
+        "norm_id": { "$ref": "#/$defs/norm_id" },
+        "finding": { "type": "string", "minLength": 1 },
+        "resolution": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

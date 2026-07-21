@@ -1,0 +1,19 @@
+# Rejected by the semantic validator: CI-99 matches the check shape but has no
+# executable in registry/checks, so the enforcement is name-only.
+version: 1
+rows:
+  - norm_id: NORM-003
+    winners:
+      - PG-RT-001a
+      - PG-RT-001b
+    discarded:
+      - file: "15"
+        section: "2.8"
+        quote: "NFR-PRF-054 / M-8"
+    contract: "gate-registry:WP-N1-03"
+    rationale: "placeholder"
+    enforcement:
+      - type: ci_static
+        predicate: "placeholder"
+        check: "CI-99"
+        status: active

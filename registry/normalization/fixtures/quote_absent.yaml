@@ -1,0 +1,18 @@
+# Rejected by the semantic validator: the quote is not present at 13#3.5, so the
+# discarded span points at nothing — the failure mode a safety ledger must catch.
+version: 1
+rows:
+  - norm_id: NORM-006
+    winners:
+      - FR-GUI-063
+    discarded:
+      - file: "13"
+        section: "3.5"
+        quote: "이 문장은 원본 명세에 존재하지 않는다"
+    contract: "CTR-WS@v1"
+    rationale: "placeholder"
+    enforcement:
+      - type: ci_static
+        predicate: "placeholder"
+        check: "WP-3A-04"
+        status: planned

@@ -1,0 +1,240 @@
+# Wave -1 정규화 원장 — 02a §1.3 모순 6건 판정 적재 + §1.4 참조 무결성 소견.
+# 스키마: registry/normalization/ledger.schema.json (필드 정본 = 02a §1.2).
+# 승리 요구사항은 비어있지 않은 목록이다(리드 확정): §1.2는 "1개"라 적었으나
+# §1.3 6판정 중 4건의 승자가 게이트쌍·2개 NFR이 나르는 불변식·복수 D/M이라
+# 단일 값이 이를 담지 못한다.
+# discarded[].quote는 원본 파일의 원문이다(강조 마커·연속 공백만 정규화). 안전 인용은
+# 절대 의역하지 않는다.
+version: 1
+
+rows:
+  - norm_id: NORM-001
+    contradiction: >-
+      브링업 시퀀스 이중정본. 01 §4.2 (T1) 6단계가 robot.connect(calibrate=True) →
+      set_zero_position() → enable_torque()를 지시한다. 반면 02 §2.0.4 + 12 FR-SAF-075는
+      connect_readonly()(torque-OFF, enable_all 미호출) → 손 검증 → 명시 set_zero →
+      명시 Enable을 요구한다.
+    winners:
+      - FR-SAF-075
+      - FR-CON-061
+      - FR-CON-062
+      - FR-CON-063
+      - M-20
+    discarded:
+      - file: "01"
+        section: "4.2"
+        quote: "robot.connect(calibrate=True) → CAN 소켓 open → (캘리브레이션됨) set_zero_position() → enable_torque()"
+      - file: "01"
+        section: "4.2"
+        quote: "rest 자세 확인 모달"
+    contract: "CTR-CAL@v1"
+    rationale: >-
+      16 M-20 [확정] — connect()의 auto set_zero를 오버라이드한다. rest 모달은 02 FR-CON-063대로
+      connect가 아니라 명시 set_zero 단계로 이동한다. 참조 rebot.py:247-259, openarm_follower.py:152-153.
+    enforcement:
+      - type: ci_static
+        predicate: "정본 경로에서 calibrate=True 리터럴 및 connect() 내 set_zero_position 호출 금지"
+        check: "WP-1-02"
+        status: planned
+      - type: runtime_assert
+        predicate: "connect_readonly() 이후 is_torque_enabled == False"
+        check: "WP-1-02"
+        status: planned
+
+  - norm_id: NORM-002
+    contradiction: >-
+      CONNECTED 허브의 송신권 공백. 01 §4.1 표가 CONNECTED의 send_action() 호출권을
+      "없음(유휴)"로 규정하면서 동시에 "모든 모드의 허브"로 규정한다. 그러나 12 NFR-SAF-007은
+      Cat-2 홀드에서 RID 9 TIMEOUT보다 짧은 주기의 상시 송신을 의무화하고, 12 NFR-SAF-009는
+      송신 주체 소실 = 낙하로 확정한다. 즉 토크-ON 상태로 CONNECTED에 머무는 순간 아무도
+      안 쏘는 구간이 생기고 모터 통신두절 워치독이 인에이블을 이탈시킨다.
+    winners:
+      - NFR-SAF-007
+      - NFR-SAF-009
+    discarded:
+      - file: "01"
+        section: "4.1"
+        quote: "없음 (유휴)"
+      - file: "01"
+        section: "4.1"
+        quote: "관측만 폴링"
+      - file: "01"
+        section: "4.1"
+        quote: "없음 (중력보상 홀드)"
+    contract: "CTR-ACT@v1"
+    rationale: >-
+      승자는 SPINE §2-1 상시 액추에이션 불변식이며, 그 불변식은 grep 불가한 해소된 계획
+      문서이므로 그것을 구체적으로 나르는 12 NFR-SAF-007·NFR-SAF-009를 승리 요구사항으로
+      기록한다. 호출권 = 생산자 선택권이지 CAN 틱 소유권이 아니다. ActuationScheduler가 유일
+      CAN 라이터이며 매 틱 4종 중 하나를 방출한다 → CONNECTED/SAFE_HOLD는 "생산자 없음 =
+      모드전환 홀드/안전래치 홀드 방출" 상태로 재정의된다.
+    enforcement:
+      - type: runtime_assert
+        predicate: "토크-ON 구간의 연속 무송신 인터벌이 RID 9 TIMEOUT(50 µs 단위, 16 M-4) 대비 설정 여유를 초과하면 FAULT"
+        check: "WP-0A-02"
+        status: planned
+      - type: ci_static
+        predicate: "모드 표의 모든 행이 4종 방출 중 하나로 매핑됨을 정적 검증"
+        check: "WP-0A-02"
+        status: planned
+
+  - norm_id: NORM-003
+    contradiction: >-
+      M-8 ID 이중 의미. 16 §8 = "Quest 추적 정확도 — 무조사 종결". 15 §2.10 / NFR-PRF-054 /
+      NFR-PRF-055 / NFR-PRF-004 / NFR-PRF-040 = "LeRobot Python 제어루프 사이클타임 —
+      최우선 측정". 같은 ID가 "안 잰다"와 "최우선으로 재라"를 동시에 지시한다.
+    winners:
+      - PG-RT-001a
+      - PG-RT-001b
+    discarded:
+      - file: "15"
+        section: "2.8"
+        quote: "NFR-PRF-054 / M-8"
+      - file: "15"
+        section: "3.1"
+        quote: "M-1(하드웨어 상한) + M-8(Python 루프 상한)"
+      - file: "15"
+        section: "3.5"
+        quote: "M-2 + M-8 지터 실측"
+    contract: "gate-registry:WP-N1-03"
+    rationale: >-
+      두 뜻이 실재하며 어느 쪽도 오기가 아니다 → ID 재사용이 아니라 ID 폐기 + 신규 네임스페이스만이
+      해소책이다. PG-RT-001a/b는 계획 소유 게이트 2개(03 §5.1a/§5.1b)로, DAG 데드락 해소로 분할됐다:
+      a=Wave 1·합성 GIL 부하·잠정, b=Wave 3C·실카메라·최종 정본. 명세 매핑 = NFR-PRF-054 +
+      15 §2.10 측정 프로토콜 조건 1~7. 맨 PG-RT-001은 게이트 ID가 아니다(03에 미분할 ID 미실재).
+    enforcement:
+      - type: ci_static
+        predicate: "게이트 ID 값 자리(게이트 표 ID 칸·매니페스트 gates: 필드·레지스트리 gate 축)에 M-8이 오면 빌드 실패. 산문(경고문·이 원장 행·수용 게이트 서술 칸)은 명시 예외."
+        check: "CI-10"
+        status: active
+      - type: ci_static
+        predicate: "맨 PG-RT-001을 게이트 선언 위치에서 빌드 실패시킨다"
+        check: "CI-11b"
+        status: active
+
+  - norm_id: NORM-004
+    contradiction: >-
+      지역 [결정필요]가 전역 D-n 확정과 충돌한다. 12 FR-SAF-045가 클램프 정본을 URDF_MECH /
+      DRIVER_OPERATIONAL / LEROBOT_CONSERVATIVE / CUSTOM 중 미선택 시 토크 인가 거부로
+      [결정필요] 유지. 그러나 16 D-3이 이미 기계 리밋 = v2 URDF joint_limits.yaml(rad), 운영
+      리밋 = driver per-side openarm_cell.yaml, LeRobot deg = 초기 소프트 클램프로만 을 [확정].
+      동종: 03 FR-MOT-031, 12 NFR-SAF-007([결정필요]) vs 16 M-4([확정]), 03 FR-MOT-024/026 vs 16 D-4.
+    winners:
+      - D-3
+      - D-4
+      - M-4
+    discarded:
+      - file: "12"
+        section: "3.6"
+        quote: "URDF_MECH / DRIVER_OPERATIONAL / LEROBOT_CONSERVATIVE / CUSTOM 중에서 명시적으로 선택하도록 요구"
+        req: FR-SAF-045
+      - file: "03"
+        section: "3.5"
+        quote: "어느 리밋 세트를 운영 클램프의 기본 프로파일로 삼을지"
+        req: FR-MOT-031
+      - file: "12"
+        section: "3.9"
+        quote: "RID 9 TIMEOUT 값보다 짧아야"
+        req: NFR-SAF-007
+    contract: "CTR-GW@v1"
+    rationale: >-
+      16 §12 — "결정을 문서에 반영하지 않으면 결정하지 않은 것과 같다". D-n은 전역 등록부이고
+      지역 태그는 그 하류다. FR-SAF-045의 [결정필요] → [확정]. 열거형은 선택지가 아니라 계층으로
+      재진술: URDF_MECH = 기계 상위집합, DRIVER_OPERATIONAL = 기본 운영, LEROBOT_CONSERVATIVE =
+      초기 소프트 클램프, CUSTOM = 부분집합 강제.
+    enforcement:
+      - type: ci_static
+        predicate: "[결정필요] 태그를 가진 FR이 16 §4~§10의 확정 항목을 근거로 인용하면 태그 불일치 오류"
+        check: "WP-1-03"
+        status: planned
+      - type: runtime_assert
+        predicate: "03 FR-MOT-032 (운영 리밋 ⊄ 기계 리밋 → 저장 거부)가 계층을 집행"
+        check: "WP-1-03"
+        status: planned
+
+  - norm_id: NORM-006
+    contradiction: >-
+      비상정지가 물리적으로 상반된 두 결과를 가리킨다. 13 FR-GUI-063이 소프트 스톱(토크로 자세
+      유지)과 하드 E-Stop(전원 차단 = 낙하)을 서로 다른 컨트롤로 정의해 놓고, 같은 문서가
+      비상정지를 두 뜻으로 쓴다: 13 FR-GUI-067은 단축키 목록에 "비상정지, 소프트 스톱"을 병렬
+      열거 → 비상정지 = 하드 = 낙하. 반면 13 NFR-GUI-005는 "비상정지 명령의 왕복 지연 상한
+      (브라우저 → WS → 백엔드 STOP_HOLD 적용)" → 비상정지 = 소프트 = 자세 유지. 그리고
+      13 FR-GUI-065는 어느 쪽인지 규정되지 않은 채 관찰자에게까지 능력을 부여한다.
+    winners:
+      - FR-GUI-063
+    discarded:
+      - file: "13"
+        section: "3.5"
+        quote: "비상정지 컨트롤은 모든 화면·모든 모드·제어권 보유 여부와 무관하게 항상 접근 가능"
+        req: FR-GUI-065
+      - file: "13"
+        section: "3.5"
+        quote: "비상정지, 소프트 스톱"
+        req: FR-GUI-067
+      - file: "13"
+        section: "3.9"
+        quote: "비상정지 명령의 왕복 지연 상한(브라우저 입력 → WS → 백엔드 STOP_HOLD 적용)"
+        req: NFR-GUI-005
+    contract: "CTR-WS@v1"
+    rationale: >-
+      구현자 = 병렬 fan-out 13명(02d §2.0 화면별 착지). 지시체가 둘인 낱말을 13명이 각자 해석하면
+      각자의 해석이 전부 02d CG-G-03b의 208조합(13화면 × 8모드 × 관찰자/제어권) 검사를 통과하지만
+      검사는 아무것도 보증하지 않는다. 낱말 비상정지를 두 식별자로 치환: STOP_HOLD(토크 유지) /
+      POWER_CUT(전원 차단·낙하). FR-GUI-065 주어 = STOP_HOLD(멱등·안전이므로 관찰자 포함 상시
+      가시), FR-GUI-067 단축키 = STOP_HOLD만 관찰자 노출 + 정지 2종은 재정의 불가 예약 키,
+      NFR-GUI-005 = STOP_HOLD 왕복 지연 상한.
+    enforcement:
+      - type: ci_static
+        predicate: "docs/spec/13·docs/plan/02d의 요구사항 ID 칸과 수용검사 칸 값에 낱말 '비상정지' 0건(필드 파싱). 02d CG-G-03b 주어가 STOP_HOLD로 확정됐는지 정적 확인. 명시 예외 = 이 원장 행과 경고문."
+        check: "WP-3A-04"
+        status: planned
+
+  - norm_id: NORM-007
+    contradiction: >-
+      POWER_CUT 컨트롤이 존재하지 않는 하드웨어 경계를 전제한다. 13 §2.7 포트 매니페스트는 자신을
+      "이 시스템의 전 네트워크 경계"로 선언하고 7행을 전수 열거하나 릴레이·컨택터·GPIO·안전 PLC·
+      E-Stop 접점 = 0행이다. 그럼에도 13 FR-GUI-063은 하드 E-Stop을 컨트롤로 제공하라 하고,
+      13 FR-GUI-111은 충돌 반응 정책 선택지에 하드 E-Stop을 넣어 소프트웨어 자동 전원차단 경로를
+      전제하며, 13 FR-GUI-060은 "E-Stop 상태" 배지로 물리 버튼 상태를 읽는 경로를 전제한다.
+      사용자 확정(2026-07-16): 보유 리그에 SW 전원차단 경계는 없다 — 하드 E-Stop = 전원라인 물리
+      버튼(사람 손)뿐.
+    winners:
+      - M-2
+    discarded:
+      - file: "13"
+        section: "3.5"
+        quote: "하드 E-Stop(전원 차단)을 서로 다른 컨트롤로 제공"
+        req: FR-GUI-063
+      - file: "13"
+        section: "3.8"
+        quote: "충돌 반응 정책(소프트 스톱 / 속도 스케일 하향 / 하드 E-Stop)"
+        req: FR-GUI-111
+      - file: "13"
+        section: "3.5"
+        quote: "E-Stop 상태"
+        req: FR-GUI-060
+    contract: "CTR-GW@v1"
+    rationale: >-
+      아무것도 하지 않는 버튼이 아무 버튼도 없는 것보다 나쁘다. 02d §0.5는 "진짜 안전장치는
+      전원라인 물리 버튼"이라 못 박고 02d §1.3은 "GUI의 어떤 수용 검사도 이 위험을 해소됨으로
+      표시하지 않는다"고 적었다. 승자 16 §4 M-2 = "E-Stop = 모터 전원 자체 차단 → CAN도 끊긴다"
+      = 전원라인 물리 버튼. FR-GUI-063의 "하드 E-Stop을 컨트롤로 제공" → 지시·상태 패널(물리
+      버튼 위치 안내 + 낙하 경고)로 재정의. FR-GUI-111 반응 정책 열거에서 "하드 E-Stop" 선택지
+      삭제. FR-GUI-060의 "E-Stop 상태" 배지 폐기 — 감지 경로가 없다.
+    enforcement:
+      - type: ci_static
+        predicate: "GUI 코드 경로에 전원차단 발화 심볼 0건; 13 FR-GUI-111 정책 열거에 전원차단 항목 0건; 13 §2.7에 없는 경계를 전제하는 FR 0건"
+        check: "WP-1-03"
+        status: planned
+
+notes:
+  - norm_id: NORM-005
+    finding: >-
+      SPINE §3의 PG-CAN-001 명세 매핑이 16 M-25를 인용하나 16에 M-25가 실재하지 않는다(등록부
+      M-n = M-1~M-4, M-8, M-10~M-13, M-16, M-17, M-20~M-24). 사이클당 CAN 프레임 수의 실재
+      근거는 15 §2.10 측정 프로토콜 조건 7(candump 프레임 수) + 15 §2.1(패턴 B = 32프레임/사이클,
+      CAN-FD 상한 625 Hz) + 01 NFR-SYS-002다. 모순이 아니라 댕글링 참조이므로 원장 부속 소견이다.
+    resolution: >-
+      PG-CAN-001 명세 매핑을 15 §2.10 조건 7 + 15 §2.1 + 01 NFR-SYS-002로 정정한다. 게이트 ID·
+      분기·판정선은 불변(SPINE 우선). 존재하지 않는 ID 인용은 06 추적성 레지스트리의 CI 검증에서
+      미해결 참조로 잡힌다.

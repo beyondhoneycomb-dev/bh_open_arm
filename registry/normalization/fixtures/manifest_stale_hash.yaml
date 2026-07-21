@@ -1,0 +1,13 @@
+# Violation fixture: a manifest citing a superseded normalization hash. After a
+# ledger change bumps the issued hash, a manifest still declaring the old value
+# is starting against a normalization that no longer exists, so the barrier
+# refuses it. The value below is a permanently-wrong all-zero digest.
+wp_id: WP-FIXTURE-STALE
+exec_class: AI-offline
+workflow: SHAPE-CF
+owns: []
+consumes: []
+produces: []
+gates: []
+normalization_hash: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+env_hash: null

@@ -1,0 +1,5 @@
+# Wave -1 정규화 해시 — 원장(ledger.yaml) + 게이트 매핑(gate_spec_map.yaml)의
+# canonical 직렬화 콘텐츠 해시. 발행자 = WP-N1-04.
+# 모든 하류 WP 매니페스트는 normalization_hash로 이 값을 선언한다 — 불일치 = 착수 거부.
+# 재발행: python -m registry.normalization.cli --issue
+sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803

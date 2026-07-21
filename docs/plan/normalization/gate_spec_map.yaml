@@ -1,0 +1,134 @@
+# Wave -1 게이트 ID 네임스페이스 매핑표 — 02a §1.5 WP-N1-03 산출.
+# 스키마: registry/normalization/gate_map.schema.json.
+# 계획이 소유하는 PG-* 게이트(03 §5)를 명세 ID(FR/NFR/D-n/M-n) 및 문서·절 앵커로
+# 매핑한다. 명세 ID를 재사용하지 않고 매핑만 한다(PG-*는 계획 소유, 03 §0.1).
+#
+# spec_refs 원칙: 미해결 참조 0건(02a §1.5 ②). 각 참조는 코퍼스에서 정의로 실재해야
+# 한다 — FR/NFR은 docs/spec 요구사항 표에, D-n/M-n은 16에, "NN §S"는 그 문서의 절로.
+# 정의 없이 인용만 된 ID(예: 06 §5.9의 FR-CAM-008)와 유령 ID(M-25)·봉인 ID(M-8)는
+# 매핑에서 제외한다. 03 §5의 원문 명세 매핑 칸은 행 번호·내부 Q-참조까지 담은 풍부한
+# 산문이며, 이 표는 그 중 정본으로 해소되는 식별자만 추린 기계판독 뷰다.
+#
+# branches: 03 §0.5가 정의한 5상태(PASS / RETRY_WITH_VARIANT / DEGRADED_ACCEPTED /
+# FAIL_BLOCKING / SUPERSEDED)의 부분집합이며, 각 게이트의 상태표에서 실제 선언된
+# 것만 담는다(발명 금지). PG-RID-001만 DEGRADED_ACCEPTED가 없다(축소 수용 경로 부재).
+#
+# NORM-005: PG-CAN-001의 명세 매핑은 유령 ID `16 M-25`를 인용했었다. 실재 근거인
+# `15 §2.10 조건 7 + 15 §2.1 + 01 NFR-SYS-002`로 정정했다(02a §1.4, 03 §4.2/§5.2 정합).
+version: 1
+
+rows:
+  - pg_id: PG-RT-001a
+    spec_refs:
+      - NFR-PRF-054
+      - NFR-PRF-055
+      - NFR-PRF-004
+      - NFR-PRF-040
+      - NFR-PRF-053
+      - "15 §2.10"
+    branches: [PASS, RETRY_WITH_VARIANT, DEGRADED_ACCEPTED, FAIL_BLOCKING, SUPERSEDED]
+
+  - pg_id: PG-RT-001b
+    spec_refs:
+      - NFR-PRF-054
+      - NFR-PRF-055
+      - NFR-PRF-004
+      - NFR-PRF-040
+      - NFR-PRF-053
+      - "15 §2.10"
+    branches: [PASS, RETRY_WITH_VARIANT, DEGRADED_ACCEPTED, FAIL_BLOCKING, SUPERSEDED]
+
+  - pg_id: PG-CAN-001
+    spec_refs:
+      - "15 §2.10"
+      - "15 §2.1"
+      - NFR-SYS-002
+    branches: [PASS, RETRY_WITH_VARIANT, DEGRADED_ACCEPTED, FAIL_BLOCKING, SUPERSEDED]
+
+  - pg_id: PG-RID-001
+    spec_refs:
+      - M-4
+      - FR-TEL-080
+      - NFR-SAF-007
+      - FR-MOT-009
+      - "05 §2.14"
+    branches: [PASS, RETRY_WITH_VARIANT, FAIL_BLOCKING, SUPERSEDED]
+
+  - pg_id: PG-J7-001
+    spec_refs:
+      - FR-MOT-004
+      - FR-SAF-004
+      - "16 §10.2"
+    branches: [PASS, RETRY_WITH_VARIANT, DEGRADED_ACCEPTED, FAIL_BLOCKING, SUPERSEDED]
+
+  - pg_id: PG-SAFE-001
+    spec_refs:
+      - NFR-SAF-009
+      - M-2
+      - FR-GUI-093
+      - FR-OPS-024
+    branches: [PASS, RETRY_WITH_VARIANT, DEGRADED_ACCEPTED, FAIL_BLOCKING, SUPERSEDED]
+
+  - pg_id: PG-VEL-001
+    spec_refs:
+      - M-16
+      - FR-TEL-089
+      - D-5
+    branches: [PASS, RETRY_WITH_VARIANT, DEGRADED_ACCEPTED, FAIL_BLOCKING, SUPERSEDED]
+
+  - pg_id: PG-STOP-001
+    spec_refs:
+      - NFR-MAN-002
+      - FR-MAN-050
+      - NFR-GUI-005
+    branches: [PASS, RETRY_WITH_VARIANT, DEGRADED_ACCEPTED, FAIL_BLOCKING, SUPERSEDED]
+
+  - pg_id: PG-FRIC-001
+    spec_refs:
+      - FR-SAF-029
+      - "12 §2.6"
+    branches: [PASS, RETRY_WITH_VARIANT, DEGRADED_ACCEPTED, FAIL_BLOCKING, SUPERSEDED]
+
+  - pg_id: PG-CAM-001
+    spec_refs:
+      - NFR-CAM-002
+      - NFR-CAM-003
+      - NFR-CAM-004
+      - NFR-CAM-006
+      - FR-CAM-010
+      - FR-CAM-011
+      - FR-CAM-022
+      - FR-CAM-071
+    branches: [PASS, RETRY_WITH_VARIANT, DEGRADED_ACCEPTED, FAIL_BLOCKING, SUPERSEDED]
+
+  - pg_id: PG-STO-001
+    spec_refs:
+      - NFR-CAM-005
+      - NFR-PRF-049
+      - "15 §2.10"
+    branches: [PASS, RETRY_WITH_VARIANT, DEGRADED_ACCEPTED, FAIL_BLOCKING, SUPERSEDED]
+
+  - pg_id: PG-IK-001
+    spec_refs:
+      - NFR-PRF-048
+      - NFR-TEL-004
+      - FR-TEL-050
+      - FR-TEL-055
+      - FR-TEL-089
+    branches: [PASS, RETRY_WITH_VARIANT, DEGRADED_ACCEPTED, FAIL_BLOCKING, SUPERSEDED]
+
+  - pg_id: PG-DEPTH-001
+    spec_refs:
+      - D-12
+      - "16 §3.1"
+    branches: [PASS, RETRY_WITH_VARIANT, DEGRADED_ACCEPTED, FAIL_BLOCKING, SUPERSEDED]
+
+  - pg_id: PG-VMAX-001
+    spec_refs:
+      - "16 §3.2"
+    branches: [PASS, RETRY_WITH_VARIANT, DEGRADED_ACCEPTED, FAIL_BLOCKING, SUPERSEDED]
+
+  - pg_id: PG-VR-001
+    spec_refs:
+      - M-22
+    branches: [PASS, RETRY_WITH_VARIANT, DEGRADED_ACCEPTED, FAIL_BLOCKING, SUPERSEDED]

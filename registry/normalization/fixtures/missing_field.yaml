@@ -1,0 +1,17 @@
+# Rejected by the schema: the rationale field is required; a ruling with no
+# recorded basis cannot be audited.
+version: 1
+rows:
+  - norm_id: NORM-001
+    winners:
+      - FR-SAF-075
+    discarded:
+      - file: "01"
+        section: "4.2"
+        quote: "rest 자세 확인 모달"
+    contract: "CTR-CAL@v1"
+    enforcement:
+      - type: ci_static
+        predicate: "placeholder"
+        check: "CI-10"
+        status: active

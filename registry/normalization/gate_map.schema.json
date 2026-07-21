@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bh-open-arm/registry/normalization/gate_map.schema.json",
+  "title": "OpenArm Wave -1 gate ID namespace mapping",
+  "description": "One row per plan-owned PG-* gate (03 §5), mapping it to specification ids (FR/NFR/D-n/M-n) and document-section anchors. Field set is owned by 02a §1.5 WP-N1-03: {pg_id, spec_refs[], branches[]}. The gate is plan-owned and never reuses a spec id, so the mapping is a reference, not an alias.",
+  "type": "object",
+  "required": ["version", "rows"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "rows": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/row" }
+    }
+  },
+  "$defs": {
+    "pg_id": {
+      "type": "string",
+      "description": "A plan-owned gate id declared in the 03 gate table. Bare PG-RT-001 is rejected: the gate was split into PG-RT-001a/PG-RT-001b (06 CI-11b) and the unsplit id names no gate.",
+      "pattern": "^PG-(?!RT-001$)[A-Z0-9]+-\\d{3}[ab]?$"
+    },
+    "spec_ref": {
+      "type": "string",
+      "description": "A specification reference that must resolve in the corpus. An FR/NFR requirement, a D-n/M-n definition in 16, or a 'NN §S' document-section anchor. The ghost id M-25 and the sealed id M-8 are rejected by pattern so a dangling or banned citation cannot enter the map.",
+      "anyOf": [
+        { "pattern": "^(?:FR|NFR)-[A-Z]{2,4}-\\d{3}$" },
+        { "pattern": "^(?!M-8$|M-25$)[DM]-\\d+$" },
+        { "pattern": "^\\d{2} §\\d+(?:\\.\\d+)*[a-z]?$" }
+      ]
+    },
+    "branch": {
+      "type": "string",
+      "description": "A gate state-machine outcome (03 §0.5). No state outside the fixed five may appear.",
+      "enum": ["PASS", "RETRY_WITH_VARIANT", "DEGRADED_ACCEPTED", "FAIL_BLOCKING", "SUPERSEDED"]
+    },
+    "row": {
+      "type": "object",
+      "required": ["pg_id", "spec_refs", "branches"],
+      "additionalProperties": false,
+      "properties": {
+        "pg_id": { "$ref": "#/$defs/pg_id" },
+        "spec_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/spec_ref" }
+        },
+        "branches": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/branch" }
+        }
+      }
+    }
+  }
+}
