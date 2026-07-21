@@ -29,7 +29,15 @@ from registry.ingest.markdown import Section, Table, plain_text, read_sections
 # The `G<n>` suffix form is the band-local GUI liaison package (`WP-4A-G1`,
 # `WP-4C-G1`); `S<nn>` is the per-screen GUI form (`WP-G-S13`).
 WP_ID = re.compile(r"\bWP-(?:BOOT|N1|ENV|0A|0B|0C|OPS|[1-5][A-D]?|G)-[SG]?\d{1,2}[a-z]?\b")
-REQ_ID = re.compile(r"\b(?:FR|NFR)-[A-Z]{2,4}-\d{3}\b")
+# The corpus is Korean, so an id is routinely followed by an attached particle
+# ("FR-GUI-060의"). A trailing `\b` never fires there — Hangul is a word
+# character, so id-then-particle is a word-internal position and the whole id is
+# silently lost. The terminator therefore rejects only what could *continue* the
+# id. The leading `\b` is kept: particle attachment is a suffix phenomenon, no
+# Korean construction prefixes Hangul to a token without a space, and the mirror
+# lookbehind matches zero additional occurrences corpus-wide while newly
+# rejecting hyphen-preceded ids that `\b` accepts.
+REQ_ID = re.compile(r"\b(?:FR|NFR)-[A-Z]{2,4}-\d{3}(?![A-Za-z0-9-])")
 PG_ID = re.compile(r"\bPG-[A-Z0-9]+-\d{3}[ab]?\b")
 CG_ID = re.compile(r"\bCG-[A-Z0-9]+-\d{2}[a-z]\b")
 CONTRACT_ID = re.compile(r"\bCTR-[A-Z]+@v\d+\b")

@@ -168,6 +168,13 @@ def _render_report(document: dict[str, Any], report: Any, errors: list[str]) -> 
         report.packages_without_acceptance,
     )
     section(
+        "3.4a 전개되지 않은 `06` §6 요구사항 범위",
+        "`06` §6은 소유를 **선언**하는 유일한 자리다. 범위가 파싱되지 않으면 그 구간의 ID는 "
+        "선언을 잃고 더 약한 sole-citation 규칙으로 떨어져 **정본이 부정하는 소유자**를 얻는다. "
+        "조용히 건너뛰지 않고 여기 남긴다 — 사람이 문서 쪽을 고쳐야 한다.",
+        report.malformed_ranges,
+    )
+    section(
         "3.5 카탈로그가 다단계로 선언한 WP",
         "형상·실행클래스 칸에 토큰이 둘 이상이다. 스칼라 칸에 토큰 2개는 금지이므로 "
         "`phases[]`로 인코딩했고, 각 스테이지의 `cancel_policy`는 실행 클래스에서 도출했다 — "

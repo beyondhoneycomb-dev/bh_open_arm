@@ -121,32 +121,40 @@ def _load_rule_statuses() -> list[RuleStatus]:
     executable exists but never ran, is `absent` — not `pass`. Collapsing those
     into "green" is exactly how a rule comes to be trusted without being
     enforced.
+
+    The report is written by `registry.check` on every run, and its `rules`
+    entries are this page's only evidence that a rule executed. A missing report,
+    or a report that omits a rule, is absent: the page never infers that a rule
+    ran from the mere existence of a checker module next to it.
     """
-    findings: dict[str, list[dict[str, Any]]] = {}
-    ran: set[str] = set()
+    ran: dict[str, dict[str, Any]] = {}
     if REPORT_PATH.exists():
         report = json.loads(REPORT_PATH.read_text(encoding="utf-8"))
-        for entry in report.get("results", report if isinstance(report, list) else []):
-            rule_id = entry.get("rule_id") or entry.get("ci_id", "")
-            if not rule_id:
-                continue
-            ran.add(rule_id)
-            if entry.get("reason") or entry.get("violations"):
-                findings.setdefault(rule_id, []).append(entry)
+        for entry in report.get("rules", []):
+            rule_id = entry.get("rule_id", "")
+            if rule_id:
+                ran[rule_id] = entry
 
     statuses: list[RuleStatus] = []
     judged_limit = CI_RULES.index(JUDGED_THROUGH)
     for index, rule_id in enumerate(CI_RULES):
-        module = CHECKS_DIR / f"ci_{rule_id[3:].lower().replace('-', '_')}.py"
-        if rule_id not in ran:
+        entry = ran.get(rule_id)
+        if entry is None:
+            module = CHECKS_DIR / f"ci_{rule_id[3:].lower().replace('-', '_')}.py"
             state = STATE_ABSENT
             detail = "실행체 없음" if not module.exists() else "미실행"
-        elif rule_id in findings:
+        elif entry.get("findings"):
             state = STATE_FAIL
-            detail = f"위반 {len(findings[rule_id])}건"
+            detail = f"위반 {len(entry['findings'])}건"
+        elif entry.get("vacuous"):
+            # Green because it judged nothing is not the claim green because it
+            # judged and found nothing. The strip cannot draw that difference,
+            # so the label carries it.
+            state = STATE_PASS
+            detail = "판정 대상 0건 — 위반이 없는 게 아니라 볼 것이 없었다"
         else:
             state = STATE_PASS
-            detail = ""
+            detail = f"판정 대상 {entry.get('sites', 0)}건"
         statuses.append(
             RuleStatus(rule_id=rule_id, state=state, detail=detail, judged=index <= judged_limit)
         )

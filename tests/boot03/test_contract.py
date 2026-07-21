@@ -135,17 +135,54 @@ def test_minimum_field_floor_matches_the_canon() -> None:
     assert len(CANONICAL_FIELDS) == 5
 
 
-def test_entry_point_exits_non_zero_on_violations() -> None:
-    """The single entry point signals failure through its exit status."""
+def _violating_root(root: Path) -> Path:
+    """Build a throwaway repository whose corpus violates CI-02b by construction.
+
+    `--root` reaches the same entry point the repository uses, so the exit-code
+    contract is exercised end to end without borrowing the real corpus. The
+    directory is a git repository because `Corpus.tracked_files` asks git which
+    files exist, and an orphan is a tracked file no `owns[]` glob claims.
+
+    Args:
+        root: Empty directory to populate.
+
+    Returns:
+        (Path) The populated root, ready to pass as `--root`.
+    """
+    subprocess.run(["git", "init", "-q", "."], cwd=root, check=True)
+    orphan = root / "backend" / "actuation" / "orphan.py"
+    orphan.parent.mkdir(parents=True, exist_ok=True)
+    orphan.write_text("placeholder\n", encoding="utf-8")
+
+    registry_file = root / "registry" / "traceability.yaml"
+    registry_file.parent.mkdir(parents=True, exist_ok=True)
+    registry_file.write_text(
+        "version: 1\nspine_ref: fixture\nentries:\n"
+        "  - wp: WP-0A-01\n    owns:\n      - glob: sim/mjcf/**\n        mode: EXCLUSIVE\n",
+        encoding="utf-8",
+    )
+    return root
+
+
+def test_entry_point_exits_non_zero_on_violations(tmp_path: Path) -> None:
+    """The single entry point signals failure through its exit status.
+
+    The corpus is constructed to violate rather than borrowed from the
+    repository. Running a rule that the real corpus happens to break ties this
+    test to the repository's defect backlog: repairing the corpus would turn the
+    exit-code contract red without the entry point having changed, and the
+    obvious way out of that red is to weaken the rule that was just satisfied.
+    """
+    root = _violating_root(tmp_path)
     result = subprocess.run(
-        ["python", "-m", "registry.check", "--rule", "CI-04"],
+        ["python", "-m", "registry.check", "--rule", "CI-02b", "--root", str(root)],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
         check=False,
     )
-    assert result.returncode != 0, "a corpus with known violations exited zero"
-    assert "CI-04" in result.stdout
+    assert result.returncode != 0, "a corpus built to violate exited zero"
+    assert "CI-02b" in result.stdout
 
 
 def test_ci13_detects_a_gate_change_without_a_stale_set_diff(monkeypatch) -> None:

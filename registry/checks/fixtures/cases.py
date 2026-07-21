@@ -396,15 +396,68 @@ def _ci11_corpus(root: Path, body: str) -> Corpus:
     return corpus(entries, root=root, tracked_files=(_ANCHORED_SOURCE,))
 
 
+_ANCHORED_EVIDENCE = "registry/build/evidence/PG-RT-001a/hash.json"
+
+# Every shape CI-11 must tolerate in one file: an annotated constant that cites its
+# evidence, a tuple whose *values* are the annotation tokens, a docstring that
+# explains the rule, and a constant carrying no annotation at all. Only the first is
+# a site, and the middle two are the shapes a file-granularity checker mistook for
+# one.
+_CI11_PASS_SOURCE = f'''"""Control-loop budget.
+
+Constants here carry an @target annotation naming the run that measured them.
+"""
+
+ANNOTATION_TOKENS = ("@target", "@threshold")
+
+RETRY_LIMIT = 3
+
+# @target f_max, measured by {_ANCHORED_EVIDENCE}
+F_MAX_HZ = 250
+'''
+
+# One correctly anchored declaration above one that cites nothing. A checker asking
+# whether the *file* mentions an evidence path calls this clean, which is the false
+# negative that made CI-11 judge the wrong unit.
+_CI11_VIOLATION_SOURCE = f"""# @target f_max, measured by {_ANCHORED_EVIDENCE}
+F_MAX_HZ = 250
+
+# @threshold end-to-end latency budget
+LATENCY_BUDGET_MS = 12
+"""
+
+# The declaration the violating fixture must be reported against, named here so the
+# assertion and the fixture cannot drift apart.
+CI11_UNANCHORED_NAME = "LATENCY_BUDGET_MS"
+CI11_UNANCHORED_LINE = 5
+
+_CI11_MENTIONS_ONLY_SOURCE = '''"""This module explains the @target annotation.
+
+It declares no target of its own.
+"""
+
+ANNOTATION_TOKENS = ("@target", "@threshold")
+
+RETRY_LIMIT = 3
+'''
+
+_CI11_LONE_VIOLATION_SOURCE = "# @target control loop budget\nF_MAX_HZ = 250\n"
+
+
 def _ci11_pass(root: Path) -> Corpus:
-    return _ci11_corpus(
-        root,
-        "# @target f_max from registry/build/evidence/PG-RT-001a/hash.json\nF_MAX = 250\n",
-    )
+    return _ci11_corpus(root, _CI11_PASS_SOURCE)
 
 
 def _ci11_violation(root: Path) -> Corpus:
-    return _ci11_corpus(root, "# @target control loop budget\nF_MAX = 250\n")
+    return _ci11_corpus(root, _CI11_VIOLATION_SOURCE)
+
+
+def _ci11_mentions_only(root: Path) -> Corpus:
+    return _ci11_corpus(root, _CI11_MENTIONS_ONLY_SOURCE)
+
+
+def _ci11_lone_violation(root: Path) -> Corpus:
+    return _ci11_corpus(root, _CI11_LONE_VIOLATION_SOURCE)
 
 
 def _ci11b_self_pass(_root: Path) -> Corpus:
@@ -651,7 +704,12 @@ CASES: tuple[FixtureCase, ...] = (
     FixtureCase("CI-08", _ci08_pass, _ci08_violation, "a floating ^ version in consumes[]"),
     FixtureCase("CI-09", _ci09_pass, _ci09_violation, "frozen content differing from its hash"),
     FixtureCase("CI-10", _ci10_pass, _ci10_violation, "M-8 occupying a gate declaration site"),
-    FixtureCase("CI-11", _ci11_pass, _ci11_violation, "an @target constant citing no evidence"),
+    FixtureCase(
+        "CI-11",
+        _ci11_pass,
+        _ci11_violation,
+        "an annotated constant citing no evidence, beside one that does",
+    ),
     FixtureCase("CI-11b", _ci11b_pass, _ci11b_violation, "bare PG-RT-001 at a declaration site"),
     FixtureCase(
         "CI-11b-자기적용",

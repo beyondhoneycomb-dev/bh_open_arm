@@ -4,11 +4,16 @@ Exit status is the contract: non-zero when any judged rule reports a finding.
 `06` §5 admits no warning level, so there is no partial success — a run is green
 or the build fails.
 
+Every run also leaves the machine-readable report on disk, at the path the
+dashboard reads. That file is the only evidence a rule ever executed: readers
+distinguish "ran and found nothing" from "never ran", and they can only do so if
+a run that failed leaves a record exactly as loudly as one that passed.
+
 Usage:
     python -m registry.check                 # judge range, CI-01..CI-17
     python -m registry.check --all           # build range, CI-01..CI-18
     python -m registry.check --rule CI-05e   # one rule
-    python -m registry.check --json          # machine-readable report
+    python -m registry.check --json          # machine-readable report on stdout
 """
 
 from __future__ import annotations
@@ -29,6 +34,10 @@ EXIT_VIOLATIONS = 1
 
 _JUDGE_RANGE_LABEL = "CI-01..CI-17"
 _BUILD_RANGE_LABEL = "CI-01..CI-18"
+
+# Generated output, resolved against `--root`. `registry/build` is written by
+# generators and never by hand — a pre-commit hook rejects hand edits there.
+REPORT_RELPATH = Path("registry") / "build" / "check-report.json"
 
 
 def run_rules(corpus: Corpus, modules: tuple[ModuleType, ...]) -> list[RuleResult]:
@@ -87,6 +96,21 @@ def as_report(results: list[RuleResult], judged_only: bool) -> dict[str, Any]:
     }
 
 
+def write_report(report: dict[str, Any], path: Path) -> None:
+    """Persist the machine-readable report where readers expect to find it.
+
+    Written on every outcome, green or failed. A report that appeared only on
+    success would make a failed run indistinguishable from a run that never
+    happened, which is the one distinction the report exists to carry.
+
+    Args:
+        report: The report assembled by `as_report`.
+        path: Destination file; missing parent directories are created.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def print_text(results: list[RuleResult]) -> None:
     """Print a terminal summary of a run.
 
@@ -125,7 +149,15 @@ def main(argv: list[str] | None = None) -> int:
         help=f"run the build range {_BUILD_RANGE_LABEL} instead of {_JUDGE_RANGE_LABEL}",
     )
     parser.add_argument("--rule", action="append", default=None, help="run only this rule id")
-    parser.add_argument("--json", action="store_true", help="emit the machine-readable report")
+    parser.add_argument(
+        "--json", action="store_true", help="emit the machine-readable report on stdout"
+    )
+    parser.add_argument(
+        "--report",
+        type=Path,
+        default=None,
+        help=f"write the machine-readable report here (default: <root>/{REPORT_RELPATH})",
+    )
     args = parser.parse_args(argv)
 
     corpus = Corpus(args.root)
@@ -138,6 +170,7 @@ def main(argv: list[str] | None = None) -> int:
 
     results = run_rules(corpus, modules)
     report = as_report(results, judged_only)
+    write_report(report, args.report or args.root / REPORT_RELPATH)
 
     if args.json:
         print(json.dumps(report, ensure_ascii=False, indent=2))

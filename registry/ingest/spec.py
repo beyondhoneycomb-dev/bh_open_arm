@@ -18,9 +18,11 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from registry.ingest.catalog import REQ_ID
 from registry.ingest.markdown import plain_text, read_sections
 
-REQ_ID = re.compile(r"\b(?:FR|NFR)-[A-Z]{2,4}-\d{3}\b")
+__all__ = ["REQ_ID", "Requirement", "find_duplicates", "parse_all", "parse_spec"]
+
 VALID_PRIORITY = ("M", "S", "C")
 VALID_TAG = ("확정", "미확인", "결정필요", "신규구현")
 

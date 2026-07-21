@@ -16,12 +16,28 @@ assignment (CI-04 and CI-07 both exempt it).
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
 from registry.ingest.catalog import WP_ID, CatalogEntry
 from registry.ingest.markdown import all_tables, plain_text
 from registry.ingest.spec import REQ_ID
+
+# `06` §6 abbreviates a contiguous block of requirements as `FR-GUI-060~074`:
+# the right-hand side is a bare 3-digit number inheriting the left prefix. The
+# left side is matched as a bare 3-digit group rather than a whole id because
+# the same column also writes `FR-GUI-003/010~025b`, where the range opens on
+# an abbreviated id; anchoring on a full id would make that row invisible, and
+# invisible is the one outcome this module may not produce.
+_RANGE_BOUNDS = re.compile(r"(?<!\d)(\d{3})\s*~\s*([0-9A-Za-z]+)")
+# The prefix a bare bound inherits is the nearest id declared to its left.
+_RANGE_PREFIX = re.compile(r"\b((?:FR|NFR)-[A-Z]{2,4})-\d{3}")
+_BARE_BOUND = re.compile(r"^\d{3}$")
+# The widest legitimate block in the corpus is 15 (`FR-GUI-060~074`). The cap is
+# not a style limit: it is what separates a block from a digit typo, which would
+# otherwise expand into hundreds of fabricated assignments.
+MAX_RANGE_SPAN = 50
 
 # Ownership rules, most authoritative first.
 RULE_DOC06 = "doc06-section6"
@@ -52,20 +68,75 @@ class Assignment:
     candidates: tuple[str, ...]
 
 
-def read_doc06_assignments(registry_doc: Path) -> dict[str, str]:
+def expand_req_ranges(cell: str) -> tuple[list[str], list[str]]:
+    """Expand every `<prefix>-<lo>~<hi>` block in one cell into its member ids.
+
+    A range is only recognised where a requirement prefix is declared to the
+    left of it in the same cell, which is what separates an id block from
+    ordinary prose — the same column writes "하네스(조건 1~7)", meaning seven
+    numbered conditions and no requirement at all.
+
+    A range that is recognised but does not parse is returned as a defect
+    rather than dropped. Dropping it is indistinguishable from a document that
+    never had a range, and `06` §6 is the only place the corpus states
+    ownership: an id lost here falls through to the weaker sole-citation rule
+    and acquires an owner the canon contradicts.
+
+    Args:
+        cell: Plain-text requirement cell.
+
+    Returns:
+        (tuple) Two values: the expanded requirement ids in ascending order,
+        and one message per malformed range.
+    """
+    prefixes = [(found.start(), found.group(1)) for found in _RANGE_PREFIX.finditer(cell)]
+    expanded: list[str] = []
+    defects: list[str] = []
+
+    for bounds in _RANGE_BOUNDS.finditer(cell):
+        inherited = [name for start, name in prefixes if start < bounds.start()]
+        if not inherited:
+            continue
+        prefix = inherited[-1]
+        low, high = bounds.group(1), bounds.group(2)
+        expression = f"{prefix}-{low}~{high}"
+
+        if not _BARE_BOUND.match(high):
+            defects.append(f"{expression} — right bound is not a bare 3-digit number")
+            continue
+        first, last = int(low), int(high)
+        if last < first:
+            defects.append(f"{expression} — bounds are reversed")
+            continue
+        if last - first + 1 > MAX_RANGE_SPAN:
+            span = last - first + 1
+            defects.append(f"{expression} — spans {span}, over the {MAX_RANGE_SPAN} cap")
+            continue
+        expanded.extend(f"{prefix}-{number:03d}" for number in range(first, last + 1))
+    return expanded, defects
+
+
+def read_doc06_assignments(registry_doc: Path) -> tuple[dict[str, str], list[str]]:
     """Read the explicit requirement-to-package assignments in `06` §6.
 
     Only rows naming exactly one package are taken. A row naming several is a
     shared responsibility, not an assignment, and treating it as one would put
     a fabricated owner into the canonical column.
 
+    Ids written out and ids covered by a range carry the same authority, so
+    both are recorded. Expansion is not filtered against the specification
+    here: this function reports what `06` §6 states, and a member the
+    specification never declared is simply never looked up.
+
     Args:
         registry_doc: Path to `06-추적성-레지스트리.md`.
 
     Returns:
-        (dict) Requirement id to owning work-package id.
+        (tuple) Two values: requirement id to owning work-package id, and one
+        message per malformed range, each prefixed with its owning package.
     """
     assignments: dict[str, str] = {}
+    defects: list[str] = []
     for table in all_tables(registry_doc):
         requirement_column = table.column_index("대표 요구사항")
         package_column = table.exact_column_index("WP")
@@ -75,9 +146,12 @@ def read_doc06_assignments(registry_doc: Path) -> dict[str, str]:
             packages = WP_ID.findall(plain_text(row[package_column]))
             if len(packages) != 1:
                 continue
-            for req_id in REQ_ID.findall(plain_text(row[requirement_column])):
+            cell = plain_text(row[requirement_column])
+            ranged, malformed = expand_req_ranges(cell)
+            defects.extend(f"{packages[0]}: {message}" for message in malformed)
+            for req_id in [*REQ_ID.findall(cell), *ranged]:
                 assignments.setdefault(req_id, packages[0])
-    return assignments
+    return assignments, defects
 
 
 def resolve(

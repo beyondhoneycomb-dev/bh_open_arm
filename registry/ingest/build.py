@@ -20,7 +20,7 @@ from typing import Any
 
 from registry.ingest.catalog import CONTRACT_ID, PG_ID, WP_ID, CatalogEntry
 from registry.ingest.catalog import parse_all as parse_catalogs
-from registry.ingest.markdown import all_tables, find_pipe_defects, plain_text
+from registry.ingest.markdown import all_tables, find_pipe_defects, plain_text, read_sections
 from registry.ingest.resolve import (
     DEFERRED,
     RULE_AMBIGUOUS,
@@ -55,6 +55,26 @@ LATCHING_CLASSES = ("AI-on-HW", "Human-assisted-HW")
 
 _OWNS_MAP_MODES = ("EXCLUSIVE", "CONTRACT_FROZEN", "SHARED_APPEND", "GENERATED")
 
+# `03` is the measurement-gate canon: one section per `PG-*`, each carrying a
+# binding row that names the package executing the gate and the packages
+# consuming its verdict (`03`:175). The row labels themselves are corpus tokens
+# and are held literally in `_GATE_BINDING_ROWS` below.
+GATE_DOC = "03-측정-게이트.md"
+_GATE_CARD_LABEL = "항목"
+_GATE_BINDING_ROWS = ("소유 WP", "하류 소비자 WP", "WP 바인딩")
+# A binding row lists several kinds of package against one gate. Only the two
+# below are *gated on* it: a predecessor runs before the gate exists, and a
+# negative-branch alternative runs only if the gate fails, so neither is judged
+# by it and neither carries its staleness.
+_GATE_CLAUSE = re.compile(
+    r"(소유|하류 소비자|선행|음성분기 대체|부트스트랩 리미터 소비)\s*(?:WP)?\s*[:=]"
+)
+_GATE_BOUND_CLAUSES = ("소유", "하류 소비자")
+# The GUI screens do not appear in a gate's binding row; they declare the gate
+# they inherit in their own column instead (`06` §6). Both are declarations, so
+# reading only `03` would trade one under-read for another.
+_INHERITED_GATE_COLUMN = "상속 게이트"
+
 
 @dataclass
 class BuildReport:
@@ -70,6 +90,8 @@ class BuildReport:
         packages_without_acceptance: Packages declaring no numbered acceptance item.
         multi_stage_packages: Packages the catalogs declared with several stages.
         pipe_defects: Table rows holding an unescaped pipe inside a code span.
+        malformed_ranges: `06` §6 requirement ranges that did not parse, so the
+            ids they cover were not assigned from the canonical table.
     """
 
     requirements: int = 0
@@ -81,6 +103,7 @@ class BuildReport:
     packages_without_acceptance: list[str] = field(default_factory=list)
     multi_stage_packages: list[str] = field(default_factory=list)
     pipe_defects: list[str] = field(default_factory=list)
+    malformed_ranges: list[str] = field(default_factory=list)
 
 
 def read_glob_ownership(registry_doc: Path) -> dict[str, list[dict[str, str]]]:
@@ -162,6 +185,102 @@ def read_contract_producers(plan_dir: Path) -> dict[str, str]:
     return producers
 
 
+def _bound_packages(label: str, value: str) -> list[str]:
+    """Return the packages a single gate-binding row declares as gated.
+
+    A row labelled with one relation holds only that relation, so its whole
+    value is taken. A `WP 바인딩` row instead packs several relations into one
+    cell, so it is split on the clause labels and only the gated ones are kept.
+
+    Args:
+        label: Row label, plain text.
+        value: Row value, plain text.
+
+    Returns:
+        (list) Work-package ids declared gated by this row, in source order.
+    """
+    if not label.startswith("WP 바인딩"):
+        return WP_ID.findall(value)
+
+    kept: list[str] = []
+    position = 0
+    clause = ""
+    for marker in _GATE_CLAUSE.finditer(value):
+        if clause in _GATE_BOUND_CLAUSES:
+            kept.extend(WP_ID.findall(value[position : marker.start()]))
+        clause = marker.group(1)
+        position = marker.end()
+    if clause in _GATE_BOUND_CLAUSES:
+        kept.extend(WP_ID.findall(value[position:]))
+    return kept
+
+
+def read_gate_bindings(plan_dir: Path) -> dict[str, list[str]]:
+    """Read which measurement gates each package is judged by, from `03`.
+
+    The gate a package is gated on is *declared* here, once per gate, rather
+    than inferred from acceptance prose. The distinction is the same one that
+    separates citation from ownership elsewhere in this module: acceptance text
+    names `PG-*` ids to say a target is not yet fixed ("`PG-RT-001a` 이전이므로")
+    or to constrain the id vocabulary, and reading those as gates fabricates a
+    gate axis — which then propagates as a fabricated downstream population.
+
+    A gate's binding row may sit under a deeper subsection than the heading
+    naming the gate (`PG-VEL-001` declares its binding under `03` §5.6.0), so
+    the gate is inherited from the nearest enclosing heading that names one.
+
+    Args:
+        plan_dir: Directory holding the planning documents.
+
+    Returns:
+        (dict) Work-package id to the gate ids it is judged by, sorted.
+    """
+    bindings: dict[str, list[str]] = {}
+
+    def bind(wp_id: str, gate: str) -> None:
+        """Record one package-to-gate binding, keeping declaration order."""
+        if gate not in bindings.setdefault(wp_id, []):
+            bindings[wp_id].append(gate)
+
+    for path in sorted(plan_dir.glob("*.md")):
+        for table in all_tables(path):
+            gate_column = table.column_index(_INHERITED_GATE_COLUMN)
+            wp_column = table.exact_column_index("WP")
+            if gate_column is None or wp_column is None:
+                continue
+            for row in table.rows:
+                for wp_id in WP_ID.findall(plain_text(row[wp_column])):
+                    for gate in PG_ID.findall(plain_text(row[gate_column])):
+                        bind(wp_id, gate)
+
+    document = plan_dir / GATE_DOC
+    if not document.exists():
+        return {wp_id: sorted(gates) for wp_id, gates in bindings.items()}
+
+    enclosing_level = 0
+    enclosing_gates: list[str] = []
+
+    for section in read_sections(document):
+        named = PG_ID.findall(section.title)
+        if named:
+            enclosing_level, enclosing_gates = section.level, named
+        elif not (enclosing_gates and section.level > enclosing_level):
+            continue
+        gates = named or enclosing_gates
+
+        for table in section.tables:
+            if len(table.header) != 2 or plain_text(table.header[0]) != _GATE_CARD_LABEL:
+                continue
+            for row in table.rows:
+                label = plain_text(row[0])
+                if not label.startswith(_GATE_BINDING_ROWS):
+                    continue
+                for wp_id in _bound_packages(label, plain_text(row[1])):
+                    for gate in gates:
+                        bind(wp_id, gate)
+    return {wp_id: sorted(gates) for wp_id, gates in bindings.items()}
+
+
 def _phases_for(entry: CatalogEntry) -> list[dict[str, Any]]:
     """Expand a multi-stage catalog entry into ordered phase objects.
 
@@ -202,18 +321,23 @@ def _phases_for(entry: CatalogEntry) -> list[dict[str, Any]]:
     return phases
 
 
-def _gates_for(entry: CatalogEntry) -> list[str]:
+def _gates_for(entry: CatalogEntry, bindings: dict[str, list[str]]) -> list[str]:
     """Collect the gate ids a package is judged by.
 
-    Measurement gates are read from the acceptance text; acceptance checks are
-    derived positionally (`06` §2.4a). A bare `PG-RT-001` is dropped rather
-    than recorded: it is not a gate id in this position (CI-11b), and the
-    catalogs use it legitimately as a family reference in the same prose.
+    Measurement gates come from the `03` binding declarations, not from the
+    acceptance cell: the cell mentions gate ids for reasons other than being
+    gated on them. Acceptance checks stay positionally derived (`06` §2.4a).
+
+    A bare `PG-RT-001` is dropped rather than recorded: it is not a gate id in
+    this position (CI-11b), and the corpus uses it as a family reference.
     """
-    measurement = [
-        gate for gate in dict.fromkeys(PG_ID.findall(entry.acceptance_text)) if gate != "PG-RT-001"
-    ]
+    measurement = [gate for gate in bindings.get(entry.wp_id, []) if gate != "PG-RT-001"]
     return measurement + list(entry.derived_cg_ids())
+
+
+def _consumed_contracts(entry: CatalogEntry) -> list[str]:
+    """Return the frozen contracts a package declares as input, in id order."""
+    return sorted(dict.fromkeys(CONTRACT_ID.findall(entry.consumes_text)))
 
 
 def _evidence_artifacts(gates: list[str]) -> list[dict[str, str]]:
@@ -290,9 +414,10 @@ def _package_axes(
     entries: list[CatalogEntry],
     ownership: dict[str, list[dict[str, str]]],
     producers: dict[str, str],
+    bindings: dict[str, list[str]],
 ) -> dict[str, Any]:
     """Compute the axes CI-14c requires to be identical across a package's records."""
-    gates = _gates_for(entry)
+    gates = _gates_for(entry, bindings)
     # Two independent declaration sites, merged rather than one overriding the
     # other: `06` §3.2 names an owner per symbol, and `02a` states ownership
     # inline in the contract cell. A package can appear in both, and dropping
@@ -318,10 +443,13 @@ def _package_axes(
             else SHAPE_TO_EXEC_CLASS.get(axes["workflow"], "AI-offline")
         )
     axes["evidence"] = _evidence_artifacts(gates)
-    # A provisional gate's consumers must re-derive when the final one lands,
-    # or a synthetic-load figure survives as though it were measured (CI-11c).
-    if "PG-RT-001a" in gates:
-        axes["stale_on"] = sorted({*axes["stale_on"], "PG-RT-001b:PASS"})
+    axes["consumes"] = _consumed_contracts(entry)
+    # `stale_on` is read from the corpus and never derived, even where the
+    # derivation would be sound. CI-03d and CI-11c exist to detect that a
+    # package failed to declare a trigger it owes; a seeder that supplies the
+    # trigger satisfies those rules by construction and they stop being able to
+    # fail. The registry is the artifact under test, so a field a rule judges
+    # must come from the declaration that rule is judging.
     axes["produces"] = sorted(
         contract for contract, owner in producers.items() if owner == entry.wp_id
     )
@@ -364,10 +492,11 @@ def _record(
         if any(not (REPO_ROOT / item["path"]).exists() for item in record["artifact"]):
             record["planned"] = True
         record["contract"] = {
-            "consumes": sorted(dict.fromkeys(CONTRACT_ID.findall(entry.consumes_text))),
+            "consumes": list(axes.get("consumes", [])),
             "produces": list(axes.get("produces", [])),
         }
         record.pop("produces", None)
+        record.pop("consumes", None)
         if record["downstream"]:
             record.pop("terminal", None)
 
@@ -412,9 +541,15 @@ def _plan_axis_record(entry: CatalogEntry, axes: dict[str, Any], index: int) -> 
     record["artifact"] = list(axes.get("evidence", []))
     record.pop("evidence", None)
     record.pop("produces", None)
+    record.pop("consumes", None)
     if any(not (REPO_ROOT / item["path"]).exists() for item in record["artifact"]):
         record["planned"] = True
-    record["contract"] = {"consumes": [], "produces": sorted(axes.get("produces", []))}
+    # Stated, not blanked: these packages have no `FR-*` to point at, but they
+    # do consume frozen contracts, and `stale_on` is derived from that list.
+    record["contract"] = {
+        "consumes": list(axes.get("consumes", [])),
+        "produces": sorted(axes.get("produces", [])),
+    }
     record["owns"] = [
         {"glob": glob, "mode": mode} for glob, mode in entry.declared_owns()
     ] or axes.get("owns", [])
@@ -440,17 +575,20 @@ def build(plan_dir: Path, spec_dir: Path, spine_ref: str) -> tuple[dict[str, Any
     by_id = {entry.wp_id: entry for entry in entries}
     ownership = read_glob_ownership(registry_doc)
     producers = read_contract_producers(plan_dir)
+    bindings = read_gate_bindings(plan_dir)
 
+    doc06_assignments, malformed_ranges = read_doc06_assignments(registry_doc)
     assignments = fill_coverage(
         resolve(
             [requirement.req_id for requirement in requirements],
             entries,
-            read_doc06_assignments(registry_doc),
+            doc06_assignments,
         ),
         entries,
     )
     axes_cache = {
-        entry.wp_id: _package_axes(entry, entries, ownership, producers) for entry in entries
+        entry.wp_id: _package_axes(entry, entries, ownership, producers, bindings)
+        for entry in entries
     }
 
     records = [
@@ -492,6 +630,7 @@ def build(plan_dir: Path, spec_dir: Path, spine_ref: str) -> tuple[dict[str, Any
             for path in sorted(directory.glob("*.md"))
             for line, _ in find_pipe_defects(path)
         ],
+        malformed_ranges=malformed_ranges,
     )
 
     document = {"version": SCHEMA_VERSION, "spine_ref": spine_ref, "entries": records}

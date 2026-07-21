@@ -398,8 +398,8 @@ GUI 교차스트림 네임스페이스는 `WP-G-*` (`WP-G-00`~`04`, `WP-G-S01`~`
 | ② | `WP-1-02` | 🔴 **`connect_readonly()` + 명시 영점 + 캘리브 영속** — `OaOpenArmFollower` **1차 소유자**(§5.2) | `Human-assisted-HW` | `SHAPE-HG` | — |
 | ③ | `WP-1-03` | 🔴 **`ActuationScheduler` + 통합 게이트웨이** — tau/vel 라우팅 · 최소 클램프 · ERR-nibble · 상시 홀드. `OaOpenArmFollower` **2차 소유자**(인계) | `AI-offline` → `AI-on-HW` | `SHAPE-CF` | — |
 | ④ | `WP-1-04` | **읽기전용 측정** — 제어루프 사이클타임 히스토그램 + 사이클당 CAN 프레임 수(`candump -t d`: 8+8+8+8=32인가, 8+8=16인가). **부하 기준 = 합성 GIL 부하 하네스**(`WP-0C-06`) — 실카메라 조건 4는 3C의 `PG-RT-001b`가 소유 | `AI-on-HW` | `SHAPE-MS` | **`PG-RT-001a`**(잠정, §2.5a) · **`PG-CAN-001`** |
-| ⑤ | `WP-1-05` | **`PG-SAFE-001` 통과 후** 가드된 토크-ON + 홀드 검증 + **정지경로 지연 측정** | `Human-assisted-HW` + `Human-judgment` | `SHAPE-HG` | **`PG-SAFE-001`**(선행) · **`PG-STOP-001`** |
-| ⑥ | `WP-1-06` | **확장 안전 브링업** + **무부하 최대 속도 + vMax 대조** | `Human-assisted-HW` | `SHAPE-HG` | **`PG-VEL-001`** |
+| ⑤ | `WP-1-05` | **`PG-SAFE-001` 통과 후** 가드된 토크-ON + 홀드 검증 + **정지경로 지연 측정** | `Human-assisted-HW` + `Human-judgment` | `SHAPE-HG` → `SHAPE-MS` | **`PG-SAFE-001`**(선행) · **`PG-STOP-001`** |
+| ⑥ | `WP-1-06` | **확장 안전 브링업** + **무부하 최대 속도 + vMax 대조** | `Human-assisted-HW` | `SHAPE-HG` → `SHAPE-MS` | **`PG-VEL-001`** |
 
 #### 4.7.1 🔴 `PG-STOP-001`·`PG-VEL-001`은 Wave 1 소유다 (B-4)
 

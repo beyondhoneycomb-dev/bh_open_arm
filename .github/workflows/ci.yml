@@ -24,13 +24,13 @@ jobs:
       - run: uv pip install -e ".[dev]"
 
       - name: Lint
-        run: uv run ruff check registry ops tests
+        run: uv run ruff check registry ops dashboard tests
 
       - name: Format check
-        run: uv run ruff format --check registry ops tests
+        run: uv run ruff format --check registry ops dashboard tests
 
       - name: Types
-        run: uv run mypy registry ops
+        run: uv run mypy registry ops dashboard
 
       - name: Tests
         run: uv run pytest -q
@@ -54,7 +54,8 @@ jobs:
         run: uv run python -m registry.generate.cli --check
 
       - name: BOOT band acceptance gate
-        # Judge range is CI-01..CI-17. CI-18 is built but excluded on purpose:
-        # its predicate references this gate, so including it would make the
-        # gate reference itself (02a §-2.2).
-        run: uv run python -m registry.check --through CI-17
+        # Every rule runs; JUDGE_RANGE decides which ones the exit status counts.
+        # CI-18 is built but excluded from judgement on purpose: its predicate
+        # references this gate, so judging it would make the gate reference
+        # itself (02a §-2.2, registry/checks/__init__.py JUDGE_EXCLUDED).
+        run: uv run python -m registry.check --all
