@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@29adc93
+spine_ref: docs/plan/00-실행계획-개요.md@9ceffec
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -102,7 +102,11 @@ entries:
   - id: ART-EVIDENCE-0B08I
     kind: report
     path: registry/build/evidence/CG-0B-08i/
-  owns: []
+  owns:
+  - glob: backend/camera/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -189,8 +193,19 @@ entries:
   - WP-0C-06
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-CF
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: 하류 WP-0C-06는 이 WP가 산출한 카메라 능력 매트릭스를 데이터로 읽는다(있으면 실측 프로파일, 없으면 합성 프로파일 — 02a 입력 칸) — 코드
+    import가 아니라 데이터 산출물 조인이라 정적 import 그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -227,7 +242,11 @@ entries:
   - id: ART-EVIDENCE-0B08I
     kind: report
     path: registry/build/evidence/CG-0B-08i/
-  owns: []
+  owns:
+  - glob: backend/camera/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -314,8 +333,19 @@ entries:
   - WP-0C-06
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-CF
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: 하류 WP-0C-06는 이 WP가 산출한 카메라 능력 매트릭스를 데이터로 읽는다(있으면 실측 프로파일, 없으면 합성 프로파일 — 02a 입력 칸) — 코드
+    import가 아니라 데이터 산출물 조인이라 정적 import 그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -352,7 +382,11 @@ entries:
   - id: ART-EVIDENCE-0B08I
     kind: report
     path: registry/build/evidence/CG-0B-08i/
-  owns: []
+  owns:
+  - glob: backend/camera/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -439,8 +473,19 @@ entries:
   - WP-0C-06
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-CF
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: 하류 WP-0C-06는 이 WP가 산출한 카메라 능력 매트릭스를 데이터로 읽는다(있으면 실측 프로파일, 없으면 합성 프로파일 — 02a 입력 칸) — 코드
+    import가 아니라 데이터 산출물 조인이라 정적 import 그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -477,7 +522,11 @@ entries:
   - id: ART-EVIDENCE-0B08I
     kind: report
     path: registry/build/evidence/CG-0B-08i/
-  owns: []
+  owns:
+  - glob: backend/camera/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -564,8 +613,19 @@ entries:
   - WP-0C-06
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-CF
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: 하류 WP-0C-06는 이 WP가 산출한 카메라 능력 매트릭스를 데이터로 읽는다(있으면 실측 프로파일, 없으면 합성 프로파일 — 02a 입력 칸) — 코드
+    import가 아니라 데이터 산출물 조인이라 정적 import 그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: doc06-section6
@@ -691,7 +751,11 @@ entries:
   - id: ART-EVIDENCE-0B08I
     kind: report
     path: registry/build/evidence/CG-0B-08i/
-  owns: []
+  owns:
+  - glob: backend/camera/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -778,8 +842,19 @@ entries:
   - WP-0C-06
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-CF
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: 하류 WP-0C-06는 이 WP가 산출한 카메라 능력 매트릭스를 데이터로 읽는다(있으면 실측 프로파일, 없으면 합성 프로파일 — 02a 입력 칸) — 코드
+    import가 아니라 데이터 산출물 조인이라 정적 import 그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -876,7 +951,11 @@ entries:
   - id: ART-EVIDENCE-0B08I
     kind: report
     path: registry/build/evidence/CG-0B-08i/
-  owns: []
+  owns:
+  - glob: backend/camera/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -963,8 +1042,19 @@ entries:
   - WP-0C-06
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-CF
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: 하류 WP-0C-06는 이 WP가 산출한 카메라 능력 매트릭스를 데이터로 읽는다(있으면 실측 프로파일, 없으면 합성 프로파일 — 02a 입력 칸) — 코드
+    import가 아니라 데이터 산출물 조인이라 정적 import 그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -1063,7 +1153,11 @@ entries:
   - id: ART-EVIDENCE-0B08I
     kind: report
     path: registry/build/evidence/CG-0B-08i/
-  owns: []
+  owns:
+  - glob: backend/camera/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -1150,8 +1244,19 @@ entries:
   - WP-0C-06
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-CF
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: 하류 WP-0C-06는 이 WP가 산출한 카메라 능력 매트릭스를 데이터로 읽는다(있으면 실측 프로파일, 없으면 합성 프로파일 — 02a 입력 칸) — 코드
+    import가 아니라 데이터 산출물 조인이라 정적 import 그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -1206,7 +1311,11 @@ entries:
   - id: ART-EVIDENCE-0B08I
     kind: report
     path: registry/build/evidence/CG-0B-08i/
-  owns: []
+  owns:
+  - glob: backend/camera/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -1293,8 +1402,19 @@ entries:
   - WP-0C-06
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-CF
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: 하류 WP-0C-06는 이 WP가 산출한 카메라 능력 매트릭스를 데이터로 읽는다(있으면 실측 프로파일, 없으면 합성 프로파일 — 02a 입력 칸) — 코드
+    import가 아니라 데이터 산출물 조인이라 정적 import 그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -2797,7 +2917,11 @@ entries:
   - id: ART-EVIDENCE-0B05G
     kind: report
     path: registry/build/evidence/CG-0B-05g/
-  owns: []
+  owns:
+  - glob: ops/hw/udev/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -2860,8 +2984,20 @@ entries:
   - WP-OPS-02
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-IM
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: 하류 소비자(WP-0B-06·WP-0B-07)는 udev 고정 이름(oa_fl/oa_fr/oa_ll/oa_lr, 02 FR-CON-005)을 문자열 계약으로
+    소비한다 — LeRobot port=oa_fl에 그대로 들어가는 이름/YAML 조인이라 정적 import 그래프에 안 보인다(06 §5.6 — CI-16이 인용하는 'udev
+    규칙이 프로파일과 YAML로만 조인'되는 사례)
   planned: true
   provenance:
     wp_rule: coverage-fill
@@ -2931,7 +3067,11 @@ entries:
   - id: ART-EVIDENCE-0B02G
     kind: report
     path: registry/build/evidence/CG-0B-02g/
-  owns: []
+  owns:
+  - glob: backend/can/link/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b02/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -2987,7 +3127,6 @@ entries:
       금지(미지 포맷 = 명시적 오류) — 변종 픽스처 5종으로 확인 ⑤ 코드베이스에 ip link set 류 설정 호출 부재(정적검사) ⑥ txqueuelen 권장값이 셋업 산출물에
       존재 ⑦ 실물 픽스처 재검증 훅 존재
   downstream:
-  - WP-0B-05
   - WP-0B-07
   - WP-G-S02
   stale_on: []
@@ -3039,7 +3178,11 @@ entries:
   - id: ART-EVIDENCE-0B01F
     kind: report
     path: registry/build/evidence/CG-0B-01f/
-  owns: []
+  owns:
+  - glob: backend/can/lock/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -3129,7 +3272,11 @@ entries:
   - id: ART-EVIDENCE-0B03F
     kind: report
     path: registry/build/evidence/CG-0B-03f/
-  owns: []
+  owns:
+  - glob: backend/can/intruder/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -3179,6 +3326,9 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 소비자(WP-0B-04 이중바인드·WP-OPS-01 ACL/샌드박스·WP-G-03 2종 정지 UI)는 backend.can.intruder를 import하지
+    않고 위협모델·WARN/FAULT 계약·프리플라이트 점유 규약을 데이터/계약으로 소비한다 — 이중바인드 검사기는 WP-0B-01 락을 직접 쓰고 ACL·정지 UI는 정책·WS
+    계약으로 붙으므로 실기→상류 정적 import는 존재하지 않는다(06 §5.6 계약 조인)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -17806,7 +17956,11 @@ entries:
   - id: ART-EVIDENCE-0B07H
     kind: report
     path: registry/build/evidence/CG-0B-07h/
-  owns: []
+  owns:
+  - glob: backend/can/rid/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -17907,8 +18061,19 @@ entries:
   - WP-G-S03
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-IM
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: WP-0B-07 → WP-0C-03 하류 에지는 PG-J7-001 게이트 판정(RID 23 TMAX가 DM4310 불일치) 트리거이지 파이썬 import가
+    아니다 — 정적 참조 그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: doc06-section6
@@ -17942,7 +18107,11 @@ entries:
   - id: ART-EVIDENCE-0B07H
     kind: report
     path: registry/build/evidence/CG-0B-07h/
-  owns: []
+  owns:
+  - glob: backend/can/rid/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -18043,8 +18212,19 @@ entries:
   - WP-G-S03
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-IM
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: WP-0B-07 → WP-0C-03 하류 에지는 PG-J7-001 게이트 판정(RID 23 TMAX가 DM4310 불일치) 트리거이지 파이썬 import가
+    아니다 — 정적 참조 그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -18090,7 +18270,11 @@ entries:
   - id: ART-EVIDENCE-0B01F
     kind: report
     path: registry/build/evidence/CG-0B-01f/
-  owns: []
+  owns:
+  - glob: backend/can/lock/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -18271,7 +18455,11 @@ entries:
   - id: ART-EVIDENCE-0B07H
     kind: report
     path: registry/build/evidence/CG-0B-07h/
-  owns: []
+  owns:
+  - glob: backend/can/rid/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -18372,8 +18560,19 @@ entries:
   - WP-G-S03
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-IM
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: WP-0B-07 → WP-0C-03 하류 에지는 PG-J7-001 게이트 판정(RID 23 TMAX가 DM4310 불일치) 트리거이지 파이썬 import가
+    아니다 — 정적 참조 그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -18407,7 +18606,11 @@ entries:
   - id: ART-EVIDENCE-0B07H
     kind: report
     path: registry/build/evidence/CG-0B-07h/
-  owns: []
+  owns:
+  - glob: backend/can/rid/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -18508,8 +18711,19 @@ entries:
   - WP-G-S03
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-IM
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: WP-0B-07 → WP-0C-03 하류 에지는 PG-J7-001 게이트 판정(RID 23 TMAX가 DM4310 불일치) 트리거이지 파이썬 import가
+    아니다 — 정적 참조 그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -21220,7 +21434,11 @@ entries:
   - id: ART-EVIDENCE-0B07H
     kind: report
     path: registry/build/evidence/CG-0B-07h/
-  owns: []
+  owns:
+  - glob: backend/can/rid/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -21321,8 +21539,19 @@ entries:
   - WP-G-S03
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-IM
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: WP-0B-07 → WP-0C-03 하류 에지는 PG-J7-001 게이트 판정(RID 23 TMAX가 DM4310 불일치) 트리거이지 파이썬 import가
+    아니다 — 정적 참조 그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -41510,7 +41739,11 @@ entries:
   - id: ART-EVIDENCE-0B01F
     kind: report
     path: registry/build/evidence/CG-0B-01f/
-  owns: []
+  owns:
+  - glob: backend/can/lock/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -41603,7 +41836,11 @@ entries:
   - id: ART-EVIDENCE-0B02G
     kind: report
     path: registry/build/evidence/CG-0B-02g/
-  owns: []
+  owns:
+  - glob: backend/can/link/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b02/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -41659,7 +41896,6 @@ entries:
       금지(미지 포맷 = 명시적 오류) — 변종 픽스처 5종으로 확인 ⑤ 코드베이스에 ip link set 류 설정 호출 부재(정적검사) ⑥ txqueuelen 권장값이 셋업 산출물에
       존재 ⑦ 실물 픽스처 재검증 훅 존재
   downstream:
-  - WP-0B-05
   - WP-0B-07
   - WP-G-S02
   stale_on: []
@@ -41771,7 +42007,11 @@ entries:
   - id: ART-EVIDENCE-0B01F
     kind: report
     path: registry/build/evidence/CG-0B-01f/
-  owns: []
+  owns:
+  - glob: backend/can/lock/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -41858,7 +42098,11 @@ entries:
   - id: ART-EVIDENCE-0B04E
     kind: report
     path: registry/build/evidence/CG-0B-04e/
-  owns: []
+  owns:
+  - glob: backend/can/bind/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -52173,7 +52417,11 @@ entries:
   - id: ART-EVIDENCE-0B06G
     kind: report
     path: registry/build/evidence/CG-0B-06g/
-  owns: []
+  owns:
+  - glob: ops/hw/usb/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -52233,8 +52481,19 @@ entries:
   - WP-1-04
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-CF
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: 하류 소비자 WP-0B-08(카메라 열거)는 usb_topology(루트 허브/컨트롤러 트리)를, WP-1-04는 f_max_can을 데이터 아티팩트로
+    소비한다 — ops/hw/usb/ 파이썬을 import하지 않으므로 정적 참조 그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: coverage-fill
@@ -53207,7 +53466,11 @@ entries:
   - id: ART-EVIDENCE-0B07H
     kind: report
     path: registry/build/evidence/CG-0B-07h/
-  owns: []
+  owns:
+  - glob: backend/can/rid/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -53308,8 +53571,19 @@ entries:
   - WP-G-S03
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-IM
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: WP-0B-07 → WP-0C-03 하류 에지는 PG-J7-001 게이트 판정(RID 23 TMAX가 DM4310 불일치) 트리거이지 파이썬 import가
+    아니다 — 정적 참조 그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: doc06-section6
@@ -53732,7 +54006,11 @@ entries:
   - id: ART-EVIDENCE-0B04E
     kind: report
     path: registry/build/evidence/CG-0B-04e/
-  owns: []
+  owns:
+  - glob: backend/can/bind/**
+    mode: EXCLUSIVE
+  - glob: tests/wp0b04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []

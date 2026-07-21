@@ -1,0 +1,7 @@
+# One-axis rules — must be rejected at store time (contract: 1축 규칙 → 저장 거부).
+# First rule pins only the adapter (serial) and omits the channel axis (dev_id);
+# second pins only the channel (dev_id) and omits the adapter axis.
+SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="280", \
+  ATTRS{serial}=="OA_ADAPTER_A", NAME="oa_fl"
+SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="280", \
+  ATTR{dev_id}=="0x1", NAME="oa_fr"

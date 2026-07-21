@@ -1,0 +1,92 @@
+[
+  {
+    "reboot_index": 0,
+    "bindings": {
+      "oa_fl": "serial:OA_ADAPTER_A/dev_id:0x0",
+      "oa_fr": "serial:OA_ADAPTER_A/dev_id:0x1",
+      "oa_ll": "serial:OA_ADAPTER_B/dev_id:0x0",
+      "oa_lr": "serial:OA_ADAPTER_B/dev_id:0x1"
+    }
+  },
+  {
+    "reboot_index": 1,
+    "bindings": {
+      "oa_fl": "serial:OA_ADAPTER_A/dev_id:0x0",
+      "oa_fr": "serial:OA_ADAPTER_A/dev_id:0x1",
+      "oa_ll": "serial:OA_ADAPTER_B/dev_id:0x0",
+      "oa_lr": "serial:OA_ADAPTER_B/dev_id:0x1"
+    }
+  },
+  {
+    "reboot_index": 2,
+    "bindings": {
+      "oa_fl": "serial:OA_ADAPTER_A/dev_id:0x0",
+      "oa_fr": "serial:OA_ADAPTER_A/dev_id:0x1",
+      "oa_ll": "serial:OA_ADAPTER_B/dev_id:0x0",
+      "oa_lr": "serial:OA_ADAPTER_B/dev_id:0x1"
+    }
+  },
+  {
+    "reboot_index": 3,
+    "bindings": {
+      "oa_fl": "serial:OA_ADAPTER_A/dev_id:0x0",
+      "oa_fr": "serial:OA_ADAPTER_A/dev_id:0x1",
+      "oa_ll": "serial:OA_ADAPTER_B/dev_id:0x0",
+      "oa_lr": "serial:OA_ADAPTER_B/dev_id:0x1"
+    }
+  },
+  {
+    "reboot_index": 4,
+    "bindings": {
+      "oa_fl": "serial:OA_ADAPTER_A/dev_id:0x0",
+      "oa_fr": "serial:OA_ADAPTER_A/dev_id:0x1",
+      "oa_ll": "serial:OA_ADAPTER_B/dev_id:0x0",
+      "oa_lr": "serial:OA_ADAPTER_B/dev_id:0x1"
+    }
+  },
+  {
+    "reboot_index": 5,
+    "bindings": {
+      "oa_fl": "serial:OA_ADAPTER_B/dev_id:0x0",
+      "oa_fr": "serial:OA_ADAPTER_A/dev_id:0x1",
+      "oa_ll": "serial:OA_ADAPTER_A/dev_id:0x0",
+      "oa_lr": "serial:OA_ADAPTER_B/dev_id:0x1"
+    }
+  },
+  {
+    "reboot_index": 6,
+    "bindings": {
+      "oa_fl": "serial:OA_ADAPTER_A/dev_id:0x0",
+      "oa_fr": "serial:OA_ADAPTER_A/dev_id:0x1",
+      "oa_ll": "serial:OA_ADAPTER_B/dev_id:0x0",
+      "oa_lr": "serial:OA_ADAPTER_B/dev_id:0x1"
+    }
+  },
+  {
+    "reboot_index": 7,
+    "bindings": {
+      "oa_fl": "serial:OA_ADAPTER_A/dev_id:0x0",
+      "oa_fr": "serial:OA_ADAPTER_A/dev_id:0x1",
+      "oa_ll": "serial:OA_ADAPTER_B/dev_id:0x0",
+      "oa_lr": "serial:OA_ADAPTER_B/dev_id:0x1"
+    }
+  },
+  {
+    "reboot_index": 8,
+    "bindings": {
+      "oa_fl": "serial:OA_ADAPTER_A/dev_id:0x0",
+      "oa_fr": "serial:OA_ADAPTER_A/dev_id:0x1",
+      "oa_ll": "serial:OA_ADAPTER_B/dev_id:0x0",
+      "oa_lr": "serial:OA_ADAPTER_B/dev_id:0x1"
+    }
+  },
+  {
+    "reboot_index": 9,
+    "bindings": {
+      "oa_fl": "serial:OA_ADAPTER_A/dev_id:0x0",
+      "oa_fr": "serial:OA_ADAPTER_A/dev_id:0x1",
+      "oa_ll": "serial:OA_ADAPTER_B/dev_id:0x0",
+      "oa_lr": "serial:OA_ADAPTER_B/dev_id:0x1"
+    }
+  }
+]

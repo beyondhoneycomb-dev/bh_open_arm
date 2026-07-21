@@ -1,0 +1,9 @@
+# A correct two-axis rule set: adapter axis (serial) x channel axis (dev_id), no can-prefix.
+SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="280", \
+  ATTRS{serial}=="OA_ADAPTER_A", ATTR{dev_id}=="0x0", NAME="oa_fl"
+SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="280", \
+  ATTRS{serial}=="OA_ADAPTER_A", ATTR{dev_id}=="0x1", NAME="oa_fr"
+SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="280", \
+  ATTRS{serial}=="OA_ADAPTER_B", ATTR{dev_id}=="0x0", NAME="oa_ll"
+SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="280", \
+  ATTRS{serial}=="OA_ADAPTER_B", ATTR{dev_id}=="0x1", NAME="oa_lr"

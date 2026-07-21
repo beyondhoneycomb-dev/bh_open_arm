@@ -1,0 +1,2 @@
+3: can0: <NOARP,UP,LOWER_UP,ECHO> mtu 72 qdisc pfifo_fast state UP mode DEFAULT group default qlen 1000
+    link/can  promiscuity 0 minmtu 0 maxmtu 0

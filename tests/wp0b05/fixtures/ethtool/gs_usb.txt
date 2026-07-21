@@ -1,0 +1,10 @@
+driver: gs_usb
+version: 6.8.0-generic
+firmware-version: N/A
+expansion-rom-version:
+bus-info: 1-1.2:1.0
+supports-statistics: no
+supports-test: no
+supports-eeprom-access: no
+supports-register-dump: no
+supports-priv-flags: no

@@ -1,0 +1,6 @@
+3: can0: <NOARP,UP,LOWER_UP,ECHO> mtu 72 qdisc pfifo_fast state UP mode DEFAULT group default qlen 1000
+    link/can  promiscuity 0 minmtu 0 maxmtu 0
+    can <FD,TDC-AUTO> state BUS-OFF (berr-counter tx 255 rx 0) restart-ms 0
+          bitrate 1000000 sample-point 0.750
+          dbitrate 5000000 dsample-point 0.750
+    clock 80000000 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535

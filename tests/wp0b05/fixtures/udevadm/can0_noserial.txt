@@ -1,0 +1,25 @@
+
+  looking at device '/devices/pci0000:00/0000:00:14.0/usb1/1-1/1-1.2/1-1.2:1.0/net/can0':
+    KERNEL=="can0"
+    SUBSYSTEM=="net"
+    DRIVER==""
+    ATTR{dev_id}=="0x0"
+    ATTR{type}=="280"
+    ATTR{addr_len}=="0"
+    ATTR{tx_queue_len}=="10"
+
+  looking at parent device '/devices/pci0000:00/0000:00:14.0/usb1/1-1/1-1.2/1-1.2:1.0':
+    KERNELS=="1-1.2:1.0"
+    SUBSYSTEMS=="usb"
+    DRIVERS=="gs_usb"
+    ATTRS{bInterfaceNumber}=="00"
+    ATTRS{bInterfaceClass}=="ff"
+
+  looking at parent device '/devices/pci0000:00/0000:00:14.0/usb1/1-1/1-1.2':
+    KERNELS=="1-1.2"
+    SUBSYSTEMS=="usb"
+    DRIVERS=="usb"
+    ATTRS{idVendor}=="1d50"
+    ATTRS{idProduct}=="606f"
+    ATTRS{manufacturer}=="Pibiger"
+    ATTRS{product}=="SavvyCAN-FD-X2"

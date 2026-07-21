@@ -312,10 +312,10 @@ GUI 교차스트림 네임스페이스는 `WP-G-*` (`WP-G-00`~`04`, `WP-G-S01`~`
 | `WP-0B-02` | **`ip link` 파싱·검증** — CAN-FD(nominal 1 Mbps / data 5 Mbps)·`ERROR-ACTIVE` | `AI-offline` | `SHAPE-IM` | — |
 | `WP-0B-03` | **침입자 탐지** — `/proc/net/can/rcvlist_all` ifindex별 RX 리스너 수 능동검사 | `AI-offline` | `SHAPE-IM` | — |
 | `WP-0B-04` | **이중 바인드 능동 검사** — 두 프로세스 bind 시 **둘 다 성공**(`13` F-1) | `AI-offline` | `SHAPE-IM` | — |
-| `WP-0B-05` | **udev 고정 이름** (실물 디스크립터 — `ethtool -i`/`dev_id`) | `AI-on-HW` | `SHAPE-MS` | — |
-| `WP-0B-06` | **USB 토폴로지 · RTT · HOL 실측** | `AI-on-HW` | `SHAPE-MS` | `PG-CAN-001` **증거 공급** |
-| `WP-0B-08` | **카메라 열거** — 타입·모델·시리얼, USB 루트허브/컨트롤러 귀속, USB 2.0 폴백 감지 | `AI-on-HW` | `SHAPE-MS` | **`PG-CAM-001`** |
-| `WP-0B-07` | **RID 리드 하네스** — RID 9(comm-loss timeout, **16모터 전량**) · RID 23(TMAX/J7 타입) · RID 22(VMAX) · RID 21(PMAX) · RID 13/14(펌웨어) · ERR 니블 | `AI-on-HW` | `SHAPE-MS` | **`PG-RID-001`** · **`PG-J7-001`**(증거) · **`PG-VMAX-001`** |
+| `WP-0B-05` | **udev 고정 이름** (실물 디스크립터 — `ethtool -i`/`dev_id`) | `AI-offline` → `AI-on-HW` | `SHAPE-IM` → `SHAPE-MS` | — |
+| `WP-0B-06` | **USB 토폴로지 · RTT · HOL 실측** | `AI-offline` → `AI-on-HW` | `SHAPE-CF` → `SHAPE-MS` | `PG-CAN-001` **증거 공급** |
+| `WP-0B-08` | **카메라 열거** — 타입·모델·시리얼, USB 루트허브/컨트롤러 귀속, USB 2.0 폴백 감지 | `AI-offline` → `AI-on-HW` | `SHAPE-CF` → `SHAPE-MS` | **`PG-CAM-001`** |
+| `WP-0B-07` | **RID 리드 하네스** — RID 9(comm-loss timeout, **16모터 전량**) · RID 23(TMAX/J7 타입) · RID 22(VMAX) · RID 21(PMAX) · RID 13/14(펌웨어) · ERR 니블 | `AI-offline` → `AI-on-HW` | `SHAPE-IM` → `SHAPE-MS` | **`PG-RID-001`** · **`PG-J7-001`**(증거) · **`PG-VMAX-001`** |
 
 **동시성 근거**:
 

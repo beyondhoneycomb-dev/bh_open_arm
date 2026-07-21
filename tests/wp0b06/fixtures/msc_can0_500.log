@@ -1,0 +1,19 @@
+# motor_sampling_check --all 500 can0 -fd
+# synthetic M-1 harness capture; real tool format is confirmed by the re-verification hook
+target_hz=500
+cycle=1 rtt_us=205.0 frames=32 actual_hz=499.6
+cycle=2 rtt_us=212.4 frames=32 actual_hz=499.2
+cycle=3 rtt_us=198.7 frames=32 actual_hz=500.1
+cycle=4 rtt_us=231.9 frames=32 actual_hz=498.7
+cycle=5 rtt_us=220.1 frames=32 actual_hz=499.0
+cycle=6 rtt_us=209.3 frames=32 actual_hz=499.4
+cycle=7 rtt_us=245.6 frames=32 actual_hz=498.1
+cycle=8 rtt_us=201.2 frames=32 actual_hz=499.9
+cycle=9 rtt_us=260.8 frames=32 actual_hz=497.6
+cycle=10 rtt_us=215.0 frames=32 actual_hz=499.1
+cycle=11 rtt_us=207.7 frames=32 actual_hz=499.5
+cycle=12 rtt_us=228.4 frames=32 actual_hz=498.8
+cycle=13 rtt_us=199.5 frames=32 actual_hz=500.0
+cycle=14 rtt_us=241.0 frames=32 actual_hz=498.3
+cycle=15 rtt_us=210.6 frames=32 actual_hz=499.3
+SUMMARY target_hz=500 actual_hz=499.0 rtt_p50=210.6 rtt_p95=245.6 rtt_p99=260.8

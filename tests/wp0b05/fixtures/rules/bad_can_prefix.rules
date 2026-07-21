@@ -1,0 +1,6 @@
+# A rule set that illegally names interfaces with a `can` prefix — acceptance ⑦.
+# The kernel is concurrently assigning canN, so these race for the namespace and must be rejected.
+SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="280", \
+  ATTRS{serial}=="OA_ADAPTER_A", ATTR{dev_id}=="0x0", NAME="can10"
+SUBSYSTEM=="net", ACTION=="add", ATTR{type}=="280", \
+  ATTRS{serial}=="OA_ADAPTER_A", ATTR{dev_id}=="0x1", NAME="can11"

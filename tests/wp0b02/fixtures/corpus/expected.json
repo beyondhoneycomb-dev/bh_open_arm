@@ -1,0 +1,9 @@
+{
+  "normal.txt":            {"ok": true,  "fd": true,  "bitrate": 1000000, "dbitrate": 5000000, "state": "ERROR-ACTIVE", "txqueuelen": 1000},
+  "fd_token_form.txt":     {"ok": true,  "fd": true,  "bitrate": 1000000, "dbitrate": 5000000, "state": "ERROR-ACTIVE", "txqueuelen": 1000},
+  "low_txqueuelen.txt":    {"ok": true,  "fd": true,  "bitrate": 1000000, "dbitrate": 5000000, "state": "ERROR-ACTIVE", "txqueuelen": 10, "below_recommended": true},
+  "fd_off.txt":            {"ok": false, "fd": false, "bitrate": 1000000, "dbitrate": null,    "state": "ERROR-ACTIVE", "txqueuelen": 1000},
+  "bitrate_mismatch.txt":  {"ok": false, "fd": true,  "bitrate": 500000,  "dbitrate": 5000000, "state": "ERROR-ACTIVE", "txqueuelen": 1000},
+  "dbitrate_mismatch.txt": {"ok": false, "fd": true,  "bitrate": 1000000, "dbitrate": 2000000, "state": "ERROR-ACTIVE", "txqueuelen": 1000},
+  "bus_off.txt":           {"ok": false, "fd": true,  "bitrate": 1000000, "dbitrate": 5000000, "state": "BUS-OFF",      "txqueuelen": 1000}
+}

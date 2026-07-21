@@ -1,0 +1,6 @@
+driver: peak_usb
+version: 6.8.0-generic
+firmware-version: 3.3.0
+bus-info: 2-1.4:1.0
+supports-statistics: yes
+supports-test: no

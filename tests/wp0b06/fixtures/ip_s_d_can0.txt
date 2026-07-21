@@ -1,0 +1,14 @@
+3: can0: <NOARP,UP,LOWER_UP,ECHO> mtu 72 qdisc pfifo_fast state UP mode DEFAULT group default qlen 1000
+    link/can  promiscuity 0 minmtu 0 maxmtu 0
+    can state ERROR-ACTIVE (berr-counter tx 0 rx 0) restart-ms 100
+          bitrate 1000000 sample-point 0.750
+          tq 12 prop-seg 29 phase-seg1 30 phase-seg2 20 sjw 1 brp 1
+          dbitrate 5000000 dsample-point 0.750
+          dtq 12 dprop-seg 5 dphase-seg1 8 dphase-seg2 6 dsjw 1 dbrp 1
+          clock 60000000
+          re-started bus-errors arbit-lost error-warn error-pass bus-off
+          2          14         0          1          0         0
+    RX:  bytes packets errors dropped  missed   mcast
+       1234560     98765      0       0        3       0
+    TX:  bytes packets errors dropped carrier collsns
+        987650     87654      0       0        0       0

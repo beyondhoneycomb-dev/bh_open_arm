@@ -1,0 +1,6 @@
+/:  Bus 002.Port 001: Dev 001, Class=root_hub, Driver=xhci_hcd/4p, 480M
+    |__ Port 001: Dev 002, If 0, Class=Communications, Driver=gs_usb, 480M
+    |__ Port 002: Dev 003, If 0, Class=Communications, Driver=gs_usb, 480M
+    |__ Port 003: Dev 004, If 0, Class=Human Interface Device, Driver=usbhid, 1.5M
+/:  Bus 001.Port 001: Dev 001, Class=root_hub, Driver=xhci_hcd/2p, 12M
+    |__ Port 001: Dev 002, If 0, Class=Hub, Driver=hub, 480M
