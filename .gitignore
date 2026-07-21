@@ -22,13 +22,16 @@ build/
 dist/
 .venv/
 venv/
-env/
+# Root-anchored: this ignores a repo-root `env/` virtualenv, not the tracked
+# WP-ENV-04 code path `registry/env/` (02a §2.2). An unanchored `env/` matched both.
+/env/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
 .coverage
 htmlcov/
-uv.lock
+# `uv.lock` is a committed deliverable (WP-ENV-02): env_hash folds in the lock
+# hash, so reproducibility across clones requires the lock in the tree.
 
 # ── Node / Web frontend (web SPA) ──────────────────────────────
 node_modules/

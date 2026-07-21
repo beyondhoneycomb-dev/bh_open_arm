@@ -93,6 +93,24 @@ def _is_owned(path: Path) -> bool:
     )
 
 
+def _under_hidden_dir(path: Path, root: Path) -> bool:
+    """Whether a directory component of `path` below `root` is hidden.
+
+    Args:
+        path: The file being considered.
+        root: The scan root the path was found under.
+
+    Returns:
+        (bool): True when any directory between `root` and the file starts with
+            `.` — the `.venv`, `.git`, and cache trees that hold non-source files.
+    """
+    try:
+        relative = path.relative_to(root)
+    except ValueError:
+        return False
+    return any(part.startswith(".") for part in relative.parts[:-1])
+
+
 def find_external_latch_calls(
     root: Path,
     exclude: Iterable[Path] = (),
@@ -113,6 +131,12 @@ def find_external_latch_calls(
 
     for path in sorted(root.rglob("*.py")):
         resolved = path.resolve()
+        if _under_hidden_dir(path, root):
+            # `.venv`, `.git`, and the tool caches hold installed dependencies and
+            # build artifacts, not repository source. Parsing them is both wrong
+            # (they are not ours to enforce) and fragile — a dependency's generated
+            # AST can exceed the visitor's recursion limit.
+            continue
         if any(directory in resolved.parents for directory in excluded):
             continue
         if _is_owned(path):

@@ -1,0 +1,28 @@
+{
+  "repo_url": "https://github.com/huggingface/lerobot",
+  "commit_sha": "30da8e687a6dfc617fcd94afc367ac7071c376ce",
+  "tree_hash": "5e895984009ef7443bf1c1f27d225ace08134d8b",
+  "resolved_version": "0.6.0",
+  "self_claimed_version": "0.6.1",
+  "version_mismatch_intended": true,
+  "tag": "v0.6.0",
+  "rollout_entry": {
+    "console_script": "lerobot-rollout",
+    "target": "lerobot.scripts.lerobot_rollout:main",
+    "engine_module": "lerobot.rollout",
+    "note": "lerobot.scripts.rollout does not exist in v0.6.0; the real onboard rollout engine entry is lerobot.scripts.lerobot_rollout (16 D-11)."
+  },
+  "realsense_class": {
+    "module": "lerobot.cameras.realsense",
+    "symbol": "RealSenseCamera",
+    "config_symbol": "RealSenseCameraConfig",
+    "note": "16 §10.2 depth path. Symbol existence only; live capture is PG-DEPTH-001."
+  },
+  "provenance": {
+    "commit_sha_source": "GitHub git ref refs/tags/v0.6.0 -> object.sha (lightweight tag, points directly at the release commit 'chore(dependencies): Bump lerobot to 0.6.0 (#3956)').",
+    "tree_hash_source": "GitHub git commit 30da8e6 -> tree.sha.",
+    "resolved_version_source": "Installed lerobot.__version__ == 0.6.0, PyPI dist metadata == 0.6.0, and the tagged commit's pyproject.toml version field == 0.6.0.",
+    "self_claimed_version_source": "huggingface/lerobot main HEAD pyproject.toml version field == 0.6.1 — an unreleased dev bump with no PyPI release and no git tag (the phantom of 16 §3.1). The pin deliberately fixes the last released tag, not the 0.6.1-dev HEAD.",
+    "why_sha_not_semver": "01 FR-SYS-014 forbids forking upstream and pip cannot address 0.6.1 (does not exist) nor distinguish the 0.6.0 wheel from the 0.6.0-tagged source; only a commit SHA pins the exact tree (16 §3.1)."
+  }
+}

@@ -1,0 +1,99 @@
+# WP-ENV-02 — heterogeneous fleet target matrix (SPINE §7 / 00 §2.1 P-2).
+#
+# One lockfile (uv.lock), many targets. Per-target branching lives HERE, not in the
+# lock: blocked_paths[] name the runtime guards (targets.guards) that FR-INF-033/034
+# enforce. lock_resolution records whether THIS host can resolve the target's stack;
+# only the host-adjacent rtx target resolves locally, the rest carry an explicit
+# deferral reason (acceptance ①: silent failure = 0). A100/H100 are an explicit
+# exclusion, not an omission (acceptance ②).
+
+version: 1
+
+targets:
+  - target_id: jetson_nano
+    arch: aarch64
+    accel: "Maxwell GPU, no tensor/RT cores"
+    python_abi: cp312-aarch64
+    supported_profiles: [teleop_record, replay]
+    blocked_paths:
+      - name: groot_sync_over_ceiling
+        predicate: targets.guards.sync_over_inference_ceiling
+        rationale: "FR-INF-034 — sub-Orin compute; sync inference above the ceiling is blocked."
+    lock_resolution:
+      status: DEFERRED
+      reason: >-
+        aarch64 (cp312-aarch64) wheels for torch/mujoco and the JetPack CUDA stack
+        are not resolvable on this x86_64 host; requires cross-resolution on the
+        device or an aarch64 index. Not silently failed — deferred explicitly.
+
+  - target_id: jetson_orin
+    arch: aarch64
+    accel: "Ampere GPU + TRT 10.3 (DiT-only), Tensor cores; no backbone TRT engine"
+    python_abi: cp312-aarch64
+    supported_profiles: [teleop_record, replay, inference_onboard_dit_only]
+    blocked_paths:
+      - name: orin_trt_full_pipeline
+        predicate: targets.guards.orin_trt_backbone_unsupported
+        rationale: "FR-INF-033 — TRT 10.3 cannot compile the backbone engine; trt_full_pipeline blocked."
+      - name: groot_sync_over_ceiling
+        predicate: targets.guards.sync_over_inference_ceiling
+        rationale: "FR-INF-034 — GR00T onboard tops out at 4.6 Hz (11 §2.6); sync above it blocked."
+    lock_resolution:
+      status: DEFERRED
+      reason: >-
+        aarch64 + JetPack CUDA (TRT 10.3) wheels are not resolvable on this x86_64
+        host; requires on-device or aarch64-index resolution. Deferred explicitly.
+
+  - target_id: rtx_5090
+    arch: x86_64
+    accel: "Ada/Blackwell GPU, RT + Tensor cores, CUDA"
+    python_abi: cp312-x86_64
+    supported_profiles: [teleop_record, replay, inference_onboard, inference_remote, sim_isaac]
+    blocked_paths:
+      - name: groot_sync_over_ceiling
+        predicate: targets.guards.sync_over_inference_ceiling
+        rationale: "FR-INF-034 — sync inference above the measured ceiling is blocked."
+    lock_resolution:
+      status: DEFERRED
+      reason: >-
+        This host is an rtx_5080 (sm_120), close to rtx_5090 but NOT the target: the
+        exact 5090 CUDA-build resolution differs and cannot be reproduced here. The
+        realized rtx-host stack is captured in targets/host-rtx5080.freeze.txt as the
+        nearest concrete evidence. Deferred explicitly rather than fabricated.
+
+  - target_id: rtx_a6000
+    arch: x86_64
+    accel: "Ampere GPU, RT + Tensor cores, CUDA"
+    python_abi: cp312-x86_64
+    supported_profiles: [teleop_record, replay, inference_onboard, inference_remote, sim_isaac]
+    blocked_paths:
+      - name: groot_sync_over_ceiling
+        predicate: targets.guards.sync_over_inference_ceiling
+        rationale: "FR-INF-034 — sync inference above the measured ceiling is blocked."
+    lock_resolution:
+      status: DEFERRED
+      reason: >-
+        A6000 CUDA-build wheels are not the ones installed on this rtx_5080 host; a
+        faithful A6000 resolution needs that hardware or its pinned index. Deferred
+        explicitly.
+
+# The host actually used to produce uv.lock and run the ENV checks. Not one of the
+# four fleet targets, but the single row that DID resolve locally — its evidence is
+# uv.lock plus the freeze. Recorded so "resolved somewhere" is never mistaken for
+# "resolved on a fleet target".
+host:
+  target_id: rtx_5080
+  arch: x86_64
+  accel: "Blackwell GPU (sm_120), RT + Tensor cores, CUDA (torch +cu130)"
+  python_abi: cp312-x86_64
+  lock_resolution:
+    status: RESOLVED
+    lockfile: uv.lock
+    freeze: targets/host-rtx5080.freeze.txt
+
+# SPINE §7 explicit exclusion — present so the absence is a decision, not a gap.
+excluded:
+  - target_id: a100
+    reason: "Isaac unsupported — datacenter GPU has no RT cores; simulation path unavailable."
+  - target_id: h100
+    reason: "Isaac unsupported — datacenter GPU has no RT cores; simulation path unavailable."

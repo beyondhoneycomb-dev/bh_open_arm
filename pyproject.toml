@@ -2,7 +2,9 @@
 name = "bh-open-arm"
 version = "0.0.0"
 description = "OpenArm v2.0 physical-AI platform — Wave -2 BOOT execution bootstrap"
-requires-python = ">=3.11"
+# 3.12 floor: the pinned LeRobot (deps/lerobot.pin, [robot] group) requires >=3.12,
+# and both the dev venv and CI already run 3.12. The core plan-machine works on 3.12.
+requires-python = ">=3.12"
 dependencies = [
     "pyyaml>=6.0",
     "jsonschema>=4.10",
@@ -16,6 +18,21 @@ dev = [
     "mypy>=1.11",
     "types-PyYAML>=6.0",
 ]
+# WP-ENV-01/04: the robot/sim stack the ENV import- and contract-regression checks
+# introspect. Kept OUT of the core `dependencies` so the plan-machine (registry/,
+# ops/, dashboard/) — and `registry.check` — stay light (pyyaml + jsonschema) and
+# never pull torch/lerobot/mujoco. LeRobot is pinned by commit SHA (deps/lerobot.pin,
+# 16 §3.1): a bare `lerobot==0.6.x` spec is refused by deps/phantom.py. `av` is held
+# below 14 because lerobot 0.6.0 uses the pre-14 `av.option` API. The per-target
+# heavy IK/sim packages (openarm_control, openarm_mujoco, mink, torch build) are
+# provisioned per deploy target, not in this universal group — see targets/matrix.yaml.
+robot = [
+    "lerobot @ git+https://github.com/huggingface/lerobot@30da8e687a6dfc617fcd94afc367ac7071c376ce",
+    "python-can>=4.6",
+    "datasets>=2.19",
+    "grpcio>=1.60",
+    "av>=12,<14",
+]
 
 [project.scripts]
 oa-check = "registry.check:main"
@@ -23,6 +40,7 @@ oa-registry = "registry.ingest.cli:main"
 oa-index = "registry.generate.cli:main"
 oa-state = "ops.launch.cli:main"
 oa-contracts = "registry.contracts.cli:main"
+oa-env = "registry.env.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -51,6 +69,23 @@ exclude = ["registry/fixtures/", "registry/build/"]
 
 [[tool.mypy.overrides]]
 module = ["jsonschema.*"]
+ignore_missing_imports = true
+
+# The robot/sim stack ships no type stubs (no py.typed). registry.env.upstream
+# introspects it inside its predicates; mypy analyses those imports statically and
+# would otherwise fail the light lane, where the stack is not installed at all.
+[[tool.mypy.overrides]]
+module = [
+    "lerobot.*",
+    "openarm_control.*",
+    "openarm_mujoco.*",
+    "mujoco.*",
+    "mink.*",
+    "can.*",
+    "torch.*",
+    "datasets.*",
+    "grpc.*",
+]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

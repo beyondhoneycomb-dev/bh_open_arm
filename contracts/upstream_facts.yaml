@@ -1,0 +1,91 @@
+# WP-ENV-04 — upstream contract-regression facts.
+#
+# Every fact 16 §10.1/§10.2 and 01 §2.18 cite about the pinned upstream carries a
+# check_predicate. The predicate is a symbol/signature/default/source introspection
+# in registry.env.upstream (import THEN inspect), never a file-text match at a line
+# number. cited_source records where the fact is asserted; check_line records the
+# upstream git-tree line the citation used, for provenance only — the predicate does
+# not read it. affected_frs is the blast radius reported when a predicate fails.
+#
+# severity on violation: FAIL_BLOCKING = a premise a downstream WP is built on has
+# moved (build must stop + alternate WP); HIGH = a silent-failure defence lost its
+# ground; MEDIUM = a numeric/shape fact drifted.
+
+version: 1
+facts:
+  - fact_id: SEND_ACTION_TAU_DQ_ZERO
+    cited_source: "12 §2.7.0; 16 §10.1 (damiao send_action)"
+    check_line: "robots/openarm_follower send_action; damiao.py:492-502"
+    check_predicate: send_action_tau_dq_zero_hardcode
+    severity: FAIL_BLOCKING
+    affected_frs: [FR-SAF-074, "12 §2.7"]
+
+  - fact_id: MIT_BATCH_ACCEPTS_TAU
+    cited_source: "16 §10.1 (damiao.py:492-502 _mit_control_batch tau)"
+    check_line: "damiao.py:492-502"
+    check_predicate: mit_control_batch_accepts_tau
+    severity: HIGH
+    affected_frs: ["16 §5 M-21", FR-SAF-074]
+
+  - fact_id: USE_VEL_TORQUE_DEFAULT_FALSE
+    cited_source: "16 §11 #1; 01 §2.18 #1 (config_openarm_follower.py:71)"
+    check_line: "config_openarm_follower.py:71"
+    check_predicate: use_velocity_and_torque_default_false
+    severity: HIGH
+    affected_frs: [FR-SYS-012, FR-OPS-081]
+
+  - fact_id: SIDE_REQUIRES_EXPLICIT
+    cited_source: "16 §11 #2; 01 §2.18 #2 (config_openarm_follower.py:107-120)"
+    check_line: "config_openarm_follower.py:107-120"
+    check_predicate: side_default_requires_explicit
+    severity: HIGH
+    affected_frs: [FR-SYS-013, FR-OPS-014]
+
+  - fact_id: MAX_RELATIVE_TARGET_OFF
+    cited_source: "16 §11 #7; 01 §2.18 #7"
+    check_line: "config_openarm_follower.py"
+    check_predicate: max_relative_target_default_off
+    severity: HIGH
+    affected_frs: [FR-SYS-017, FR-OPS-012]
+
+  - fact_id: CAMERAS_EMPTY_DICT
+    cited_source: "16 §10.2 (config_openarm_follower camera contract)"
+    check_line: "config_openarm_follower.py"
+    check_predicate: cameras_default_empty_dict
+    severity: MEDIUM
+    affected_frs: ["16 D-12"]
+
+  - fact_id: SOCKETCAN_NO_BITRATE
+    cited_source: "16 §10.1 (socketcan.py:694-703); 01 §2.18 #5"
+    check_line: "socketcan.py:694-703"
+    check_predicate: socketcan_no_bitrate_param
+    severity: HIGH
+    affected_frs: [FR-SYS-006, FR-OPS-084]
+
+  - fact_id: MAX_STATE_DIM_32
+    cited_source: "10 FR-TRN-064 (max_state_dim=32)"
+    check_line: "configuration_smolvla.py:41"
+    check_predicate: max_state_dim_default_32
+    severity: MEDIUM
+    affected_frs: [FR-TRN-064]
+
+  - fact_id: KINEMATICS_UNCONSTRAINED_FALLBACK
+    cited_source: "16 §11 #6; 01 §2.18 #6 (kinematics.py:220-231)"
+    check_line: "kinematics.py:220-231"
+    check_predicate: kinematics_unconstrained_fallback
+    severity: HIGH
+    affected_frs: [FR-SYS-016, FR-OPS-043]
+
+  - fact_id: MAKE_ROBOT_HARDCODED_OPENARM
+    cited_source: "16 §10.1 D-1 (robots/utils.py:63-68)"
+    check_line: "robots/utils.py:63-68"
+    check_predicate: make_robot_from_config_hardcoded_openarm
+    severity: FAIL_BLOCKING
+    affected_frs: [FR-SYS-002, "16 D-1"]
+
+  - fact_id: CHUNK_SIZE_THRESHOLD_HALF
+    cited_source: "16 §10.2 (async_inference/configs.py:119,137)"
+    check_line: "async_inference/configs.py:119,137"
+    check_predicate: chunk_size_threshold_default_half
+    severity: MEDIUM
+    affected_frs: [FR-INF-046]

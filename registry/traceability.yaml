@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@a429979
+spine_ref: docs/plan/00-실행계획-개요.md@e8b0912
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -26920,7 +26920,11 @@ entries:
   - id: ART-EVIDENCE-ENV03G
     kind: report
     path: registry/build/evidence/CG-ENV-03g/
-  owns: []
+  owns:
+  - glob: .github/**
+    mode: EXCLUSIVE
+  - glob: tests/env03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -41052,7 +41056,11 @@ entries:
   - id: ART-EVIDENCE-ENV01E
     kind: report
     path: registry/build/evidence/CG-ENV-01e/
-  owns: []
+  owns:
+  - glob: deps/**
+    mode: EXCLUSIVE
+  - glob: tests/env01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -41105,6 +41113,8 @@ entries:
   env_hash: null
   workflow: SHAPE-IG
   exec_class: AI-offline
+  justification: ENV WP 간 하류 에지는 코드 import가 아니라 데이터 산출물 조인이다(핀 SHA·락·env_hash·매트릭스를 데이터로 소비) — 정적 import
+    그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: coverage-fill
@@ -41865,7 +41875,13 @@ entries:
   - id: ART-EVIDENCE-ENV04G
     kind: report
     path: registry/build/evidence/CG-ENV-04g/
-  owns: []
+  owns:
+  - glob: contracts/upstream_facts.yaml
+    mode: EXCLUSIVE
+  - glob: registry/env/**
+    mode: EXCLUSIVE
+  - glob: tests/env04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -55030,7 +55046,13 @@ entries:
   provenance:
     wp_rule: plan-axis
     source: 02a-작업패키지-Wave-minus1-to-1.md:166
-  owns: []
+  owns:
+  - glob: targets/**
+    mode: EXCLUSIVE
+  - glob: uv.lock
+    mode: EXCLUSIVE
+  - glob: tests/env02/**
+    mode: EXCLUSIVE
   gate:
   - CG-ENV-02a
   - CG-ENV-02b
@@ -55065,6 +55087,8 @@ entries:
   env_hash: null
   workflow: SHAPE-IG
   exec_class: AI-offline
+  justification: ENV WP 간 하류 에지는 코드 import가 아니라 데이터 산출물 조인이다(핀·락·매트릭스를 데이터로 소비) — 정적 import 그래프에 안 보인다(06
+    §5.6)
   planned: true
 - req: PLAN-N1-01
   spec_ref: 00#3.5
