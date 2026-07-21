@@ -13,15 +13,15 @@ configuration so the residual isolates *round-trip fidelity* from global converg
 — convergence from a distant seed is a solver-tuning question owned by PG-IK-001's
 latency bench, not the round-trip contract.
 
-Honest environment gap: the only QP solver installed here is ``daqp``, and its
-constrained solve (the ``ConfigurationLimit`` QP) reports infeasible for this model
-on every sample — so the safety-default adapter (unconstrained fallback *disabled*)
-holds 100% of the time and produces no residuals. To characterise the round trip at
-all in this environment, the distribution pass enables the unconstrained fallback
-and records every firing as provenance (``fallback_firings``); the note on each
-report states that the residuals came through the fallback because the constrained
-solver was infeasible. The constrained-only behaviour is not hidden — it is the
-honest 100%-hold state a caller sees when ``allow_unconstrained_fallback=False``.
+Grippers are held at neutral, not sampled: they are not IK degrees of freedom (the
+adapter passes them through ``set_gripper``) and do not move the EE, so randomising
+them adds nothing to the arm round trip. It is also unsafe to sample them — the
+gripper driver's soft-limit range (``finger_joint1``, ``[-1.1345, 0]``) intersects
+its equality-mirror ``finger_joint2``'s un-overridden MJCF range (``[0, 0.7854]``)
+only at 0, so any non-zero gripper command drives the mirror out of range and makes
+the whole ``ConfigurationLimit`` QP infeasible. With grippers pinned to their home
+value the constrained (safety-default) solve is feasible for the arm targets this
+harness measures.
 """
 
 from __future__ import annotations
@@ -67,6 +67,13 @@ IN_LIMIT_TOLERANCE_RAD = 1e-6
 
 # Pose layout: the first three components are the EE position the residual measures.
 _POSITION_DIM = 3
+
+# Gripper driver slots in the arm-major 16-vector (right[7]=gripper, left[7]=gripper).
+# Held at the home value rather than sampled: IK does not solve them, and any non-zero
+# command makes the ConfigurationLimit QP infeasible via the finger_joint2 mirror (see
+# the module docstring). Home gripper state is 0 (``IkAdapter``'s home keyframe).
+_GRIPPER_INDICES = (SIDE_WIDTH - 1, 2 * SIDE_WIDTH - 1)
+_GRIPPER_NEUTRAL_RAD = 0.0
 
 
 def default_ik_params() -> IKParams:
@@ -242,7 +249,7 @@ def sample_interior_configs(count: int, seed: int) -> np.ndarray:
     span = INTERIOR_SPAN_FRACTION * (upper - lower)
     rng = np.random.default_rng(seed)
     offsets = (rng.random((count, BIMANUAL_WIDTH)) - 0.5) * span
-    return np.clip(mid + offsets, lower, upper)
+    return _hold_grippers(np.clip(mid + offsets, lower, upper))
 
 
 def sample_near_limit_configs(count: int, seed: int) -> np.ndarray:
@@ -264,7 +271,23 @@ def sample_near_limit_configs(count: int, seed: int) -> np.ndarray:
     rng = np.random.default_rng(seed)
     pick_upper = rng.random((count, BIMANUAL_WIDTH)) < 0.5
     configs = np.where(pick_upper, upper - margin, lower + margin)
-    return np.clip(configs, lower, upper)
+    return _hold_grippers(np.clip(configs, lower, upper))
+
+
+def _hold_grippers(configs: np.ndarray) -> np.ndarray:
+    """Pin the gripper DOFs of each sampled configuration to their neutral value.
+
+    IK does not solve the grippers and a sampled gripper command makes the
+    ConfigurationLimit QP infeasible; see ``_GRIPPER_INDICES`` and the module docstring.
+
+    Args:
+        configs: A ``(count, 16)`` array of sampled radian configurations, mutated.
+
+    Returns:
+        (np.ndarray) The same array with the gripper columns set to neutral.
+    """
+    configs[:, list(_GRIPPER_INDICES)] = _GRIPPER_NEUTRAL_RAD
+    return configs
 
 
 def _forward_pose(adapter: IkAdapter, config: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -372,7 +395,7 @@ def run_distribution(
     samples: int = DEFAULT_SAMPLES,
     seed: int = DEFAULT_SEED,
     ik_params: IKParams | None = None,
-    allow_unconstrained_fallback: bool = True,
+    allow_unconstrained_fallback: bool = False,
     seed_perturbation_rad: float = 0.0,
     near_limit: bool = False,
 ) -> RoundTripReport:
@@ -383,9 +406,9 @@ def run_distribution(
         seed: RNG seed for the sampled configurations.
         ik_params: mink IK parameters; None uses the documented production tuning.
         allow_unconstrained_fallback: Whether IK may fall back to ``limits=[]`` when
-            the constrained QP is infeasible. Enabled by default so the harness
-            yields a distribution in an environment whose only solver (daqp) reports
-            the constrained QP infeasible; every firing is recorded.
+            the constrained QP is infeasible. Disabled by default: the harness
+            characterises the production-safe constrained solver, which is feasible
+            for the arm targets once grippers are held neutral. Any firing is recorded.
         seed_perturbation_rad: Warm-start perturbation std-dev; 0 seeds exactly at q.
         near_limit: When True, draw configurations at the soft-limit boundary
             (acceptance ⑤) rather than the interior.
@@ -437,16 +460,14 @@ def _provenance_note(results: list[RoundTripSample], allow_fallback: bool) -> st
     if allow_fallback and fallback > 0:
         return (
             f"residuals measured through the unconstrained fallback ({fallback} firing(s)): "
-            "the only installed QP solver (daqp) reports the constrained ConfigurationLimit "
-            "QP infeasible for this model, so a constrained-only run produces no solution "
-            "instead. Each firing discards the soft limits (12 FR-SAF-016) and is counted, "
-            "not hidden."
+            "the constrained ConfigurationLimit QP was infeasible for these target(s). Each "
+            "firing discards the soft limits (12 FR-SAF-016) and is counted, not hidden."
         )
     if not allow_fallback and unsolved == len(results) and results:
         return (
-            "constrained-only run: every sample produced no solution. In this environment the "
-            "daqp constrained QP is infeasible; this is the honest safety-default state, not "
-            "a fabricated pass."
+            "constrained-only run: every sample produced no solution — the safety-default "
+            "adapter held rather than discarding the soft limits. This is the honest hold "
+            "state, not a fabricated pass."
         )
     return ""
 
@@ -496,16 +517,17 @@ def main(argv: list[str] | None = None) -> int:
         help="Sample at the soft-limit boundary instead of the interior.",
     )
     parser.add_argument(
-        "--no-fallback",
+        "--allow-fallback",
         action="store_true",
-        help="Disable the unconstrained fallback (safety default); may hold every sample.",
+        help="Enable the unconstrained fallback for infeasible targets (off by default; "
+        "the constrained safety-default solve is feasible for interior/near-limit poses).",
     )
     args = parser.parse_args(argv)
 
     report = run_distribution(
         samples=args.samples,
         seed=args.seed,
-        allow_unconstrained_fallback=not args.no_fallback,
+        allow_unconstrained_fallback=args.allow_fallback,
         near_limit=args.near_limit,
     )
     print(json.dumps(report.to_dict(), indent=2))

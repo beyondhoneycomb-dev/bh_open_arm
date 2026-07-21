@@ -49,21 +49,24 @@ def test_histogram_is_rendered() -> None:
     assert "#" in histogram
 
 
-def test_fallback_provenance_is_disclosed_not_hidden() -> None:
-    # In this environment the constrained daqp QP is infeasible, so residuals come
-    # through the fallback. That must be recorded, never silently absorbed.
-    report = roundtrip.run_distribution(samples=_SAMPLES, seed=3, ik_params=_FAST)
+def test_fallback_when_enabled_stays_disclosed() -> None:
+    # Enabling the fallback does not change the interior result: the constrained solve
+    # is already feasible with grippers held neutral, so the fallback stays a counted,
+    # disclosed last resort rather than the path the residuals come through.
+    report = roundtrip.run_distribution(
+        samples=_SAMPLES, seed=3, ik_params=_FAST, allow_unconstrained_fallback=True
+    )
     if report.fallback_firings() > 0:
         assert "fallback" in report.note
-        assert "daqp" in report.note
+    else:
+        assert report.solved_count() > 0
 
 
-def test_constrained_only_never_fires_the_fallback() -> None:
-    # With the safety default (fallback disabled) the fallback must never fire, and a
-    # run that solves nothing must say so honestly rather than fake a solution.
-    report = roundtrip.run_distribution(
-        samples=8, seed=4, ik_params=_FAST, allow_unconstrained_fallback=False
-    )
+def test_safety_default_solves_without_the_fallback() -> None:
+    # The default is the safety posture (fallback disabled). With grippers held neutral
+    # the constrained ConfigurationLimit QP is feasible, so the run genuinely solves —
+    # it does not merely hold. The fallback must never fire.
+    report = roundtrip.run_distribution(samples=8, seed=4, ik_params=_FAST)
+    assert report.allow_unconstrained_fallback is False
     assert report.fallback_firings() == 0
-    if report.solved_count() == 0:
-        assert "no solution" in report.note
+    assert report.solved_count() > 0
