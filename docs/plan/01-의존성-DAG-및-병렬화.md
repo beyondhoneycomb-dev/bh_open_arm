@@ -374,7 +374,7 @@ GUI 교차스트림 네임스페이스는 `WP-G-*` (`WP-G-00`~`04`, `WP-G-S01`~`
 | WP | 내용 | 클래스 | 형상 | 산출 계약 |
 |---|---|---|---|---|
 | `WP-OPS-01` | **writer ACL · systemd sandbox** — 원시 CAN 조작 게이팅 | `AI-on-HW` | `SHAPE-IM` | — |
-| `WP-OPS-02` | **udev 고정 · systemd CAN 유닛** — **규칙/유닛 파일의 단일 소유자** | `AI-on-HW` | `SHAPE-IM` | — |
+| `WP-OPS-02` | **udev 고정 · systemd CAN 유닛** — **규칙/유닛 파일의 단일 소유자** | `AI-offline` → `AI-on-HW` | `SHAPE-IM` → `SHAPE-MS` | — |
 | `WP-OPS-03` | **버전 핀 · 롤백** | `AI-offline` | `SHAPE-IM` | — |
 | `WP-OPS-04` | **`push_to_hub=false` 강제 + 로컬 바인딩** — LeRobot 기본값이 `True`이고 `finally` 블록이 호출한다 | `AI-offline` | `SHAPE-IM` | — |
 | `WP-OPS-05` | **구조화 로그 · 크래시 워치독** — 프로세스 사망/bus-off = **낙하**; SW 워치독은 늦출 뿐 못 막는다 | `AI-offline` | `SHAPE-IM` | — |

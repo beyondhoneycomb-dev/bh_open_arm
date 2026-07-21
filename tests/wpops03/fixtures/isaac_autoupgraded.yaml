@@ -1,0 +1,30 @@
+# Isaac auto-upgrade fixture — WP-OPS-03 acceptance ④. The Isaac pins have been advanced
+# to the forbidden 6.0.1 / 3.0-beta (Newton) track. The specs are still exact, so the
+# blocker alone would pass this file — it is the Isaac pin assertion that must catch the
+# off-line versions and reject the silent 5.1 -> 6.0 / 2.3 -> 3.0 upgrade.
+
+contract_version: 1
+generation: 1
+
+pins:
+  lerobot:
+    kind: commit_sha
+    source: deps/lerobot.pin
+  mujoco:
+    kind: resolved
+    source: uv.lock
+  isaac_sim:
+    kind: declared
+    version: "6.0.1"
+    spec: "==6.0.1"
+  isaac_lab:
+    kind: declared
+    version: "3.0.0"
+    spec: "==3.0.0"
+  physics_backend:
+    default: mujoco
+    isaac: newton
+
+forbidden_upgrades:
+  - target: "Isaac Sim 6.0.1"
+    reason: "Newton physics"

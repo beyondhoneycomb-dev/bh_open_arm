@@ -32,6 +32,10 @@ robot = [
     "datasets>=2.19",
     "grpcio>=1.60",
     "av>=12,<14",
+    # WP-OPS-05 telemetry (14 FR-OPS-006): MCAP is the system-timeseries format (mcap
+    # python lib directly, no rosbag2). Small and pure-python, but a product-runtime dep
+    # ops/telemetry imports eagerly — kept out of core so registry.check stays light.
+    "mcap>=1.4",
 ]
 
 [project.scripts]
@@ -86,6 +90,15 @@ module = [
     "datasets.*",
     "grpc.*",
 ]
+ignore_missing_imports = true
+
+# mcap ships py.typed, so mypy walks into the installed package and hits a package-vs-__init__
+# resolution conflict there ("source file found twice"), a defect in the library's own layout,
+# not ours. The MCAP writer (WP-OPS-05, 14 FR-OPS-006) imports it directly; skipping mcap's
+# internal sources clears the conflict without weakening any check on our own code.
+[[tool.mypy.overrides]]
+module = ["mcap.*"]
+follow_imports = "skip"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

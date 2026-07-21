@@ -1,0 +1,48 @@
+# WP-OPS-03 — version pin manifest (09 FR-SIM-102, U-3).
+#
+# The no-auto-upgrade contract lives in this file. An upgrade is not an edit to a
+# range operator that a resolver later acts on; it is an explicit edit HERE plus a
+# `contract_version` bump plus a full gate re-run (02a §6 WP-OPS-03 contract). Every
+# version-contract pin below is therefore EXACT or a frozen-minor line: a range
+# operator (>=, ~=, ^, bare *) permits the resolver to pick a newer version than was
+# frozen, which is the auto-upgrade the blocker (ops/versionpin/blocker.py) rejects.
+#
+# Upstream-owned pins are REFERENCED as data, never duplicated. The LeRobot commit
+# SHA is WP-ENV-01's single source of truth (deps/lerobot.pin) and the MuJoCo version
+# is WP-ENV-02's lock resolution (uv.lock). Copying either value into this file would
+# make one fact answerable two ways and let the copies drift apart silently.
+
+contract_version: 1
+generation: 1
+
+pins:
+  lerobot:
+    kind: commit_sha
+    source: deps/lerobot.pin        # WP-ENV-01 owns the SHA; the reporter reads it as data
+  mujoco:
+    kind: resolved
+    source: uv.lock                 # WP-ENV-02 resolves it; the reporter reads the installed version
+  isaac_sim:
+    kind: declared
+    version: "5.1.0"                # U-3 canonical pin (PhysX track, driver 580.65.06)
+    spec: "==5.1.0"                 # exact — the minor line 5.1 is frozen
+  isaac_lab:
+    kind: declared
+    version: "2.3.x"                # U-3 canonical pin (enactic/openarm_isaac_lab validated combo)
+    spec: "==2.3.*"                 # 2.3 minor frozen; the patch is the "x" U-3 allows within 2.3
+  physics_backend:
+    default: mujoco                 # FR-SIM-102 default backend — its physics is MuJoCo's own solver
+    isaac: physx                    # Isaac 5.1.0 is PhysX-based; Newton is the 6.0 track we do not run
+
+# 09 FR-SIM-126 / FR-SIM-162 / FR-SIM-093: 6.0 / Newton / 3.0-beta silently change the
+# observation tensor types and the quaternion convention (wxyz -> xyzw), and replace
+# PhysxCfg with NewtonCfg. Recording each blocked upgrade keeps the ban legible; the
+# Isaac pin assertion (ops/versionpin/manifest.py::assert_isaac_pin) enforces that the
+# live pins never sit on one of these targets.
+forbidden_upgrades:
+  - target: "Isaac Sim 6.0.1"
+    reason: "Newton physics; observation tensor types and quaternion convention (wxyz->xyzw) change silently (FR-SIM-126/162)"
+  - target: "Isaac Lab 3.0-beta"
+    reason: "NewtonCfg replaces PhysxCfg and .data becomes wp.array; manager-based API breaks (FR-SIM-093)"
+  - target: "physics backend Newton"
+    reason: "physics lineage diverges from the PhysX pin; cross-backend dynamics values may not transfer (FR-SIM-092/102)"

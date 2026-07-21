@@ -1,0 +1,700 @@
+# CTR-ERR@v1 — OA-* canonical error-code registry.
+#
+# Owner: WP-OPS-06 (06 §3.2). This file is the frozen declaration; the
+# loader, severity enum, Damiao parser and checkers live in contracts/errors/
+# and read this table. Every emission point references a registry symbol —
+# an inline code literal is a static-check violation (14 §2.10).
+#
+# Canon: 14 §2.10 is the single source (not 13). severity is the 4-level
+# diagnostic_msgs semantics (14 FR-OPS-017), no ROS 2 runtime dependency.
+# The 10 domain prefixes are a closed set: a new domain is a contract bump.
+contract: CTR-ERR@v1
+
+# The 4 fixed severity levels. A value outside this set is rejected.
+severity_levels:
+  OK: 0
+  WARN: 1
+  ERROR: 2
+  STALE: 3
+
+# The closed set of domain prefixes. A code outside these is rejected;
+# adding a domain is a CTR-ERR@v(n+1) bump, never an in-place edit.
+domains:
+  - OA-CAN
+  - OA-MOT
+  - OA-CTL
+  - OA-CAM
+  - OA-TEL
+  - OA-IK
+  - OA-SYS
+  - OA-INF
+  - OA-DAT
+  - OA-ZRO
+
+# The 10 fields every code carries. {hardware_id, first_seen_t, count} are
+# runtime-populated (null/0 at definition); the rest are authored here.
+fields:
+  - code
+  - severity
+  - message_ko
+  - message_en
+  - hardware_id
+  - subsystem
+  - recovery_hint
+  - doc_url
+  - first_seen_t
+  - count
+
+# Damiao ERR nibble <-> OA-MOT-0xx, 1:1 (14 §2.4). Nibble 1 (Enable) is a
+# normal state and is intentionally unmapped.
+damiao_err_nibble_map:
+  - nibble: "0"
+    code: OA-MOT-000
+    meaning_ko: "실효/미인에이블"
+  - nibble: "8"
+    code: OA-MOT-008
+    meaning_ko: "과전압"
+  - nibble: "9"
+    code: OA-MOT-009
+    meaning_ko: "저전압"
+  - nibble: "A"
+    code: OA-MOT-00A
+    meaning_ko: "과전류"
+  - nibble: "B"
+    code: OA-MOT-00B
+    meaning_ko: "MOS 과온"
+  - nibble: "C"
+    code: OA-MOT-00C
+    meaning_ko: "코일 과온"
+  - nibble: "D"
+    code: OA-MOT-00D
+    meaning_ko: "통신 두절"
+  - nibble: "E"
+    code: OA-MOT-00E
+    meaning_ko: "과부하"
+
+# Codes. 001..006 of OA-SYS carry 14 §2.10's canon meanings; OA-SYS-007..011
+# are 01 §4.5 consumer allocations 14 §2.10 does not itself define — see
+# _notes for the 01<->14 OA-SYS numbering conflict this registry does not
+# invent away.
+codes:
+  - code: OA-CAN-001
+    severity: 2   # ERROR
+    message_ko: "CAN 버스오프"
+    message_en: "CAN bus-off"
+    hardware_id: null
+    subsystem: can
+    recovery_hint: "배선·종단저항(120Ω×2)·비트레이트 확인 후 사용자 확인 하에 재활성화. 자동 복구 없음."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-CAN-002
+    severity: 3   # STALE
+    message_ko: "프레임 스테일"
+    message_en: "CAN frame stale"
+    hardware_id: null
+    subsystem: can
+    recovery_hint: "커넥터·데이지체인 확인 후 해당 모터 재스캔. 결측 프레임을 0으로 기록 금지."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-CAN-003
+    severity: 2   # ERROR
+    message_ko: "FD 미활성"
+    message_en: "CAN FD not enabled"
+    hardware_id: null
+    subsystem: can
+    recovery_hint: "lerobot-setup-can --mode=setup 실행. 코드가 링크를 대신 고칠 수 없다."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-CAN-004
+    severity: 2   # ERROR
+    message_ko: "이중 점유/비인가 writer 감지"
+    message_en: "double occupancy / unauthorized writer"
+    hardware_id: null
+    subsystem: can
+    recovery_hint: "즉시 홀드. 침입 프로세스 종료(ss -f link, fuser) 후 락 해제 확인, 재기동."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-CAN-005
+    severity: 2   # ERROR
+    message_ko: "비트레이트 불일치"
+    message_en: "bitrate mismatch"
+    hardware_id: null
+    subsystem: can
+    recovery_hint: "링크 비트레이트를 1000000/5000000으로 재설정 후 재기동."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-CAN-006
+    severity: 2   # ERROR
+    message_ko: "side 미지정(관절 리밋 ±5° 축소)"
+    message_en: "side unspecified (joint limit reduced ±5°)"
+    hardware_id: null
+    subsystem: can
+    recovery_hint: "config에 side를 명시. 기본값 ±5° 축소는 사용 불가."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-CAN-007
+    severity: 2   # ERROR
+    message_ko: "좌/우 팔 구성 스왑/불일치"
+    message_en: "left/right arm configuration swap/mismatch"
+    hardware_id: null
+    subsystem: can
+    recovery_hint: "기대 모터 구성(CAN ID × 타입)과 실제 버스 응답을 대조. 스왑 해소 후 재기동."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-MOT-000
+    severity: 0   # OK
+    message_ko: "미인에이블"
+    message_en: "not enabled"
+    hardware_id: null
+    subsystem: motor
+    recovery_hint: "정상 비활성 상태. enable 시퀀스 수행."
+    doc_url: "docs/spec/14-시스템-운영.md#2.4"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-MOT-008
+    severity: 2   # ERROR
+    message_ko: "과전압 (overvoltage)"
+    message_en: "overvoltage"
+    hardware_id: null
+    subsystem: motor
+    recovery_hint: "즉시 홀드 후 전원 점검(권고 ≤32V/≤52V). 감속 프로파일 완화."
+    doc_url: "docs/spec/14-시스템-운영.md#2.4"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-MOT-009
+    severity: 2   # ERROR
+    message_ko: "저전압 (undervoltage)"
+    message_en: "undervoltage"
+    hardware_id: null
+    subsystem: motor
+    recovery_hint: "전원 점검(≥15V). 저전압은 회생(regen) 신호일 수 있으므로 감속 완화."
+    doc_url: "docs/spec/14-시스템-운영.md#2.4"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-MOT-00A
+    severity: 2   # ERROR
+    message_ko: "과전류 (overcurrent)"
+    message_en: "overcurrent"
+    hardware_id: null
+    subsystem: motor
+    recovery_hint: "토크 클램프 후 홀드. 충돌·끼임 물리 확인, 게인/페이로드 재검토."
+    doc_url: "docs/spec/14-시스템-운영.md#2.4"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-MOT-00B
+    severity: 2   # ERROR
+    message_ko: "MOS 과온"
+    message_en: "MOS overtemperature"
+    hardware_id: null
+    subsystem: motor
+    recovery_hint: "궤적 중단 후 중력보상 홀드, 냉각 대기. 토크를 0으로 만들지 않는다(낙하)."
+    doc_url: "docs/spec/14-시스템-운영.md#2.4"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-MOT-00C
+    severity: 2   # ERROR
+    message_ko: "모터 코일 과온"
+    message_en: "coil overtemperature"
+    hardware_id: null
+    subsystem: motor
+    recovery_hint: "궤적 중단 후 중력보상 홀드, 히스테리시스만큼 냉각 대기. 부하·게인 재검토."
+    doc_url: "docs/spec/14-시스템-운영.md#2.4"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-MOT-00D
+    severity: 2   # ERROR
+    message_ko: "통신 두절 (communication loss)"
+    message_en: "communication loss"
+    hardware_id: null
+    subsystem: motor
+    recovery_hint: "커넥터·데이지체인 확인 후 재스캔. 백엔드 CAN 해제 후 진단."
+    doc_url: "docs/spec/14-시스템-운영.md#2.4"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-MOT-00E
+    severity: 2   # ERROR
+    message_ko: "과부하 (overload)"
+    message_en: "overload"
+    hardware_id: null
+    subsystem: motor
+    recovery_hint: "토크 클램프 후 홀드. 정격 4.1kg/피크 6.0kg 대비 페이로드 재검토."
+    doc_url: "docs/spec/14-시스템-운영.md#2.4"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-CTL-001
+    severity: 1   # WARN
+    message_ko: "오버런"
+    message_en: "control loop overrun"
+    hardware_id: null
+    subsystem: control
+    recovery_hint: "실측 Hz가 목표×0.95 미만. 연속 오버런 시 홀드."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-CTL-002
+    severity: 1   # WARN
+    message_ko: "조인트 리밋 클램프"
+    message_en: "joint limit clamp"
+    hardware_id: null
+    subsystem: control
+    recovery_hint: "명령이 관절 리밋에서 클램프됨. 명령 소스·리밋 검토."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-CTL-003
+    severity: 2   # ERROR
+    message_ko: "명령 점프 가드 발동"
+    message_en: "command jump guard tripped"
+    hardware_id: null
+    subsystem: control
+    recovery_hint: "즉시 홀드. 사이클 간 명령 점프율 위반. 정책/IK 신뢰 금지."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-CTL-004
+    severity: 2   # ERROR
+    message_ko: "명령 신선도 초과"
+    message_en: "command freshness exceeded"
+    hardware_id: null
+    subsystem: control
+    recovery_hint: "홀드로 전이. 명령 age가 임계(3×주기) 초과. 링크 확인."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-CAM-001
+    severity: 2   # ERROR
+    message_ko: "disconnect"
+    message_en: "camera disconnect"
+    hardware_id: null
+    subsystem: camera
+    recovery_hint: "텔레옵 즉시 일시정지. USB 재연결 후 udev add 확인, 사용자 재-engage."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-CAM-002
+    severity: 1   # WARN
+    message_ko: "프레임 드롭"
+    message_en: "frame drop"
+    hardware_id: null
+    subsystem: camera
+    recovery_hint: "해상도/FPS 다운시프트. USB 대역폭 재배치."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-CAM-003
+    severity: 2   # ERROR
+    message_ko: "age 초과"
+    message_en: "frame age exceeded"
+    hardware_id: null
+    subsystem: camera
+    recovery_hint: "age 임계 초과 지속 시 텔레옵 중단. 케이블/코덱 재설정."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-TEL-001
+    severity: 2   # ERROR
+    message_ko: "하트비트 소실"
+    message_en: "heartbeat lost"
+    hardware_id: null
+    subsystem: teleop
+    recovery_hint: "즉시 홀드. VR 링크 확인 후 재-engage."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-TEL-002
+    severity: 2   # ERROR
+    message_ko: "추적 INVALID"
+    message_en: "tracking INVALID"
+    hardware_id: null
+    subsystem: teleop
+    recovery_hint: "추적 상태 INVALID. 조작 중단, 트래킹 복구 대기."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-TEL-003
+    severity: 3   # STALE
+    message_ko: "추적 STALE"
+    message_en: "tracking STALE"
+    hardware_id: null
+    subsystem: teleop
+    recovery_hint: "추적 데이터 stale. 홀드로 전이, 링크 age 확인."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-TEL-004
+    severity: 1   # WARN
+    message_ko: "왕복 지연 임계 초과"
+    message_en: "round-trip latency threshold exceeded"
+    hardware_id: null
+    subsystem: teleop
+    recovery_hint: "왕복 지연 임계 초과. 네트워크/부하 검토."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-IK-001
+    severity: 2   # ERROR
+    message_ko: "솔버 무해(solve() -> None)"
+    message_en: "solver no solution (solve() -> None)"
+    hardware_id: null
+    subsystem: kinematics
+    recovery_hint: "직전 유효 관절각 유지. 워크스페이스 이탈은 None을 만들지 않으므로 별도 검출."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-IK-002
+    severity: 2   # ERROR
+    message_ko: "EE 잔차 초과"
+    message_en: "end-effector residual exceeded"
+    hardware_id: null
+    subsystem: kinematics
+    recovery_hint: "홀드. ‖p_target − FK(q_solved)‖ 가 ik_residual_max_m 초과."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-IK-003
+    severity: 2   # ERROR
+    message_ko: "무제약 폴백(limits=[]) 발동"
+    message_en: "unconstrained fallback (limits=[]) triggered"
+    hardware_id: null
+    subsystem: kinematics
+    recovery_hint: "무제약 폴백은 기본 비활성화. 발동 시 홀드하고 폴백 해를 어댑터 클램프로 통과."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-IK-004
+    severity: 2   # ERROR
+    message_ko: "개루프 발산"
+    message_en: "open-loop divergence"
+    hardware_id: null
+    subsystem: kinematics
+    recovery_hint: "홀드. 개루프 IK 발산 감지."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-IK-005
+    severity: 2   # ERROR
+    message_ko: "rad<->deg 변환 검증 실패"
+    message_en: "rad<->deg conversion validation failed"
+    hardware_id: null
+    subsystem: kinematics
+    recovery_hint: "홀드. 변환 경계 검증 실패. 단위 태그(CTR-UNIT) 경계 확인."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-SYS-001
+    severity: 2   # ERROR
+    message_ko: "디스크 풀"
+    message_en: "disk full"
+    hardware_id: null
+    subsystem: system
+    recovery_hint: "1차 임계 미만: 신규 녹화 차단. 2차 임계 미만: 진행 에피소드 finalize 후 중단."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-SYS-002
+    severity: 2   # ERROR
+    message_ko: "OOM"
+    message_en: "out of memory"
+    hardware_id: null
+    subsystem: system
+    recovery_hint: "마지막 체크포인트에서 재개, 배치 사이즈 축소 후 재시도 제안."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-SYS-003
+    severity: 1   # WARN
+    message_ko: "RT 권한 없음"
+    message_en: "no RT privilege"
+    hardware_id: null
+    subsystem: system
+    recovery_hint: "@realtime 그룹 + /etc/security/limits.conf 안내. VmLck로 mlockall 검증."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-SYS-004
+    severity: 2   # ERROR
+    message_ko: "GUI 백엔드(CAN 소유 프로세스) 사망"
+    message_en: "GUI backend (CAN-owning process) death"
+    hardware_id: null
+    subsystem: system
+    recovery_hint: "최고 심각도 경보. 외부 워치독(systemd)이 감시. 백엔드 사망 = 모터 워치독 이탈 = 낙하."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-SYS-005
+    severity: 2   # ERROR
+    message_ko: "제어 루프 스레드 사망"
+    message_en: "control loop thread death"
+    hardware_id: null
+    subsystem: system
+    recovery_hint: "백엔드 사망과 구분해 감지·보고. 즉시 최고 심각도 경보."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-SYS-006
+    severity: 2   # ERROR
+    message_ko: "포트 충돌"
+    message_en: "port conflict"
+    hardware_id: null
+    subsystem: system
+    recovery_hint: "기동 거부 + 충돌 포트/프로세스 표시. 포트 설정 변경."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-SYS-007
+    severity: 2   # ERROR
+    message_ko: "push_to_hub 미설정"
+    message_en: "push_to_hub unset"
+    hardware_id: null
+    subsystem: system
+    recovery_hint: "기록 시작 거부. 명시적 false 요구."
+    doc_url: "docs/spec/01-시스템-아키텍처.md#4.5"
+    first_seen_t: null
+    count: 0
+    source: "01 §4.5"
+  - code: OA-SYS-008
+    severity: 3   # STALE
+    message_ko: "명령 스테일"
+    message_en: "command stale"
+    hardware_id: null
+    subsystem: system
+    recovery_hint: "SAFE_HOLD(중력보상). VR age>100ms 또는 제어 WS 소실. 자동 재개 금지."
+    doc_url: "docs/spec/01-시스템-아키텍처.md#4.5"
+    first_seen_t: null
+    count: 0
+    source: "01 §4.5"
+  - code: OA-SYS-009
+    severity: 1   # WARN
+    message_ko: "제어 루프 오버런"
+    message_en: "control loop overrun"
+    hardware_id: null
+    subsystem: system
+    recovery_hint: "실측 Hz < 목표×0.95. 연속 오버런 시 SAFE_HOLD."
+    doc_url: "docs/spec/01-시스템-아키텍처.md#4.5"
+    first_seen_t: null
+    count: 0
+    source: "01 §4.5"
+  - code: OA-SYS-010
+    severity: 1   # WARN
+    message_ko: "CAN 패킷 드랍 급증"
+    message_en: "CAN packet drop surge"
+    hardware_id: null
+    subsystem: system
+    recovery_hint: "드랍 카운터 임계 초과. 토크 채널 신뢰도 저하 경고. 지속 시 SAFE_HOLD."
+    doc_url: "docs/spec/01-시스템-아키텍처.md#4.5"
+    first_seen_t: null
+    count: 0
+    source: "01 §4.5"
+  - code: OA-SYS-011
+    severity: 2   # ERROR
+    message_ko: "모드 배타 위반 요청"
+    message_en: "mode exclusivity violation request"
+    hardware_id: null
+    subsystem: system
+    recovery_hint: "요청 거부 + 현재 모드·충돌 자원 반환. 모드 불변."
+    doc_url: "docs/spec/01-시스템-아키텍처.md#4.5"
+    first_seen_t: null
+    count: 0
+    source: "01 §4.5"
+  - code: OA-INF-001
+    severity: 2   # ERROR
+    message_ko: "정책 서버 무응답"
+    message_en: "policy server unresponsive"
+    hardware_id: null
+    subsystem: inference
+    recovery_hint: "즉시 홀드 + 액션 큐 비움. stale 액션 실행 금지."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-INF-002
+    severity: 2   # ERROR
+    message_ko: "액션 큐 고갈"
+    message_en: "action queue exhausted"
+    hardware_id: null
+    subsystem: inference
+    recovery_hint: "홀드. 큐가 비어 새 액션 없음."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-INF-003
+    severity: 2   # ERROR
+    message_ko: "추론 폭주(리밋 위반)"
+    message_en: "inference runaway (limit violation)"
+    hardware_id: null
+    subsystem: inference
+    recovery_hint: "즉시 홀드. 명령 안전 필터가 정책을 신뢰하지 않는다."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-INF-004
+    severity: 2   # ERROR
+    message_ko: "미지원 정책"
+    message_en: "unsupported policy"
+    hardware_id: null
+    subsystem: inference
+    recovery_hint: "정책 백엔드 추상화 확인. 지원 정책으로 교체."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-DAT-001
+    severity: 2   # ERROR
+    message_ko: "에피소드 손상(finalize 누락)"
+    message_en: "episode corrupted (finalize missing)"
+    hardware_id: null
+    subsystem: dataset
+    recovery_hint: "에피소드 무효 표시. MCAP append-only이므로 마지막 1개 메시지만 손실."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-DAT-002
+    severity: 2   # ERROR
+    message_ko: "체크포인트-데이터셋 불일치"
+    message_en: "checkpoint-dataset mismatch"
+    hardware_id: null
+    subsystem: dataset
+    recovery_hint: "체크포인트와 데이터셋 계보 대조. 일치본으로 재개."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-DAT-003
+    severity: 2   # ERROR
+    message_ko: "학습 프로세스 사망"
+    message_en: "training process death"
+    hardware_id: null
+    subsystem: dataset
+    recovery_hint: "exit 137/oom-kill 분류. 마지막 체크포인트 재개, 배치 축소 재시도."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-DAT-004
+    severity: 2   # ERROR
+    message_ko: "토크 피처 불일치(팔로워/리더 use_velocity_and_torque 비대칭)"
+    message_en: "torque feature mismatch (follower/leader use_velocity_and_torque asymmetric)"
+    hardware_id: null
+    subsystem: dataset
+    recovery_hint: "기동 거부. 단일 스위치로 팔로워·리더 동시 적용. 기본 True."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-DAT-005
+    severity: 2   # ERROR
+    message_ko: "push_to_hub 의도치 않은 활성화"
+    message_en: "push_to_hub unintended activation"
+    hardware_id: null
+    subsystem: dataset
+    recovery_hint: "기본 false 강제. 업로드는 명시 확인 + 감사 로그 필수."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-ZRO-001
+    severity: 2   # ERROR
+    message_ko: "영점 무결성 실패"
+    message_en: "zero integrity failure"
+    hardware_id: null
+    subsystem: zero
+    recovery_hint: "enable 거부, 재영점 필요 상태 진입. 전 관절 위치·m_off 골든값 대조."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-ZRO-002
+    severity: 2   # ERROR
+    message_ko: "m_off 골든값 불일치"
+    message_en: "m_off golden value mismatch"
+    hardware_id: null
+    subsystem: zero
+    recovery_hint: "enable 거부. zero_golden.yaml 골든값과 m_off(RID 54) 대조."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-ZRO-003
+    severity: 1   # WARN
+    message_ko: "캘리브레이션 만료"
+    message_en: "calibration expired"
+    hardware_id: null
+    subsystem: zero
+    recovery_hint: "재캘리브레이션 안내."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+  - code: OA-ZRO-004
+    severity: 2   # ERROR
+    message_ko: "connect() 재호출로 인한 영점 파괴 의심"
+    message_en: "zero destruction suspected from connect() re-invocation"
+    hardware_id: null
+    subsystem: zero
+    recovery_hint: "모드 전환 경로에서 connect() 재호출 금지. 재영점 검증."
+    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    first_seen_t: null
+    count: 0
+    source: "14 §2.10"
+
+# Known, deliberately un-invented-away spec conflicts a human must resolve;
+# recorded here so the freeze does not silently paper over them.
+_notes:
+  - >-
+      OA-SYS-001..006 carry 14 §2.10 meanings (disk/OOM/RT/backend-death/
+      loop-death/port), which 14's own FR-OPS-045/046/049/064/066 use. 01
+      §4.5 numbers OA-SYS-001..006 differently (CAN-lock/link/intruder/zero/
+      flag/side); those concepts live under OA-CAN/OA-ZRO/OA-DAT in the 14
+      §2.10 canon. 14 §2.10 wins (declared canon); 01 §4.5 needs
+      reconciliation.
+  - >-
+      14 §2.10 labels the domain set '11종' but enumerates 10 (OA-CAN..OA-ZRO);
+      every OA-* usage across spec+plan resolves to these 10. The closed set
+      is 10.

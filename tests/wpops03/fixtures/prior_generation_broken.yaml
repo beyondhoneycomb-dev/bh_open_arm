@@ -1,0 +1,30 @@
+# Broken prior generation — WP-OPS-03 acceptance ②, negative case. A one-generation-back
+# manifest whose Isaac Sim spec is a range operator. Rolling back to it must NOT re-pass
+# the gate: the rehearsal has to catch a bad prior generation, or "all gate jobs re-pass"
+# is a rubber stamp rather than a gate.
+
+contract_version: 0
+generation: 0
+
+pins:
+  lerobot:
+    kind: commit_sha
+    source: deps/lerobot.pin
+  mujoco:
+    kind: resolved
+    source: uv.lock
+  isaac_sim:
+    kind: declared
+    version: "5.1.0"
+    spec: ">=5.1"          # range — the rollback verification must reject this prior
+  isaac_lab:
+    kind: declared
+    version: "2.3.x"
+    spec: "==2.3.*"
+  physics_backend:
+    default: mujoco
+    isaac: physx
+
+forbidden_upgrades:
+  - target: "Isaac Sim 6.0.1"
+    reason: "Newton physics"

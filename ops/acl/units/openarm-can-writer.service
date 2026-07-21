@@ -1,0 +1,74 @@
+# /etc/systemd/system/openarm-can-writer.service
+#
+# The authorized CAN-writer service. This unit is the mandatory (kernel-enforced)
+# half of FR-SYS-007(iii): the cooperative flock of WP-0B-01 stops a *well-behaved*
+# process from opening a bus another already holds, but nothing stops a rogue
+# process from calling socket(AF_CAN, …) and transmitting anyway. The sandbox below
+# is what stops it — and it stops it for this service too, which is the point: even
+# the authorized writer may open only the socket families and touch only the devices
+# a CAN writer legitimately needs.
+#
+# Two directives carry the block, one per attack surface:
+#   RestrictAddressFamilies  — seccomp allowlist of socket families (the AF_CAN gate)
+#   DevicePolicy/DeviceAllow — the device-cgroup ACL (serial-CAN /dev nodes)
+#
+# The paired drop-in 10-openarm-deny-can.conf carries the *deny* form of the same
+# socket-family gate onto every OTHER service on the host, so a process outside this
+# unit cannot allocate an AF_CAN socket at all.
+
+[Unit]
+Description=OpenArm authorized CAN writer (sandboxed, AF_CAN only)
+# The link itself is brought up by WP-OPS-02's openarm-can-setup.service; this unit
+# only opens sockets on an already-configured interface (01 FR-SYS-006: code does not
+# configure the link). Ordering only — a soft Wants keeps the coupling loose.
+Wants=openarm-can-setup.service
+After=openarm-can-setup.service network-online.target
+
+[Service]
+Type=simple
+# A dedicated non-root identity. Opening a PF_CAN raw socket needs no capability, so
+# the writer runs with an empty capability set and gains nothing from being root.
+User=openarm
+Group=openarm
+
+# ── The AF_CAN gate (seccomp) ────────────────────────────────────────────────
+# Allowlist form: every family NOT named here is refused at socket() with EAFNOSUPPORT.
+# AF_CAN is the bus; AF_NETLINK lets the writer read link state (RTM_GETLINK) without
+# an ip-route dependency; AF_UNIX carries logs/IPC. AF_INET/AF_INET6 are deliberately
+# absent — a bus writer has no business on TCP/IP.
+RestrictAddressFamilies=AF_CAN AF_NETLINK AF_UNIX
+
+# ── The device-cgroup ACL ────────────────────────────────────────────────────
+# Deny every device node, then re-admit only what a serial-CAN adapter needs. USB/gs_usb
+# adapters present as netdevs and need no /dev node; slcan adapters bind a ttyACM.
+DevicePolicy=closed
+DeviceAllow=/dev/null rw
+DeviceAllow=char-ttyACM rw
+
+# ── Privilege floor ──────────────────────────────────────────────────────────
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+
+# ── Filesystem confinement ───────────────────────────────────────────────────
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+# The cooperative flock lives here (WP-0B-01: /run/lock/openarm-<iface>.lock). Under
+# ProtectSystem=strict the whole tree is read-only, which would make the lock file
+# uncreatable and break the flock layer. This one line is where the ACL layer is kept
+# a COMPLEMENT to flock rather than a silent replacement of it — the two layers coexist
+# only because the sandbox explicitly re-grants the lock directory (acceptance ③).
+ReadWritePaths=/run/lock
+
+ExecStart=/usr/bin/env python3 -m backend.can.writer_service
+
+[Install]
+WantedBy=multi-user.target

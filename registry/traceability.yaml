@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@9ceffec
+spine_ref: docs/plan/00-실행계획-개요.md@cb32264
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -18382,7 +18382,11 @@ entries:
   - id: ART-EVIDENCE-OPS02E
     kind: report
     path: registry/build/evidence/CG-OPS-02e/
-  owns: []
+  owns:
+  - glob: ops/systemd/**
+    mode: EXCLUSIVE
+  - glob: tests/wpops02/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -18417,8 +18421,17 @@ entries:
   terminal: true
   stale_on: []
   env_hash: null
-  workflow: SHAPE-IM
-  exec_class: AI-offline
+  phases:
+  - workflow: SHAPE-IM
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
   planned: true
   provenance:
     wp_rule: coverage-fill
@@ -22842,7 +22855,11 @@ entries:
   - id: ART-EVIDENCE-OPS05I
     kind: report
     path: registry/build/evidence/CG-OPS-05i/
-  owns: []
+  owns:
+  - glob: ops/telemetry/**
+    mode: EXCLUSIVE
+  - glob: tests/wpops05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -23513,6 +23530,12 @@ entries:
   owns:
   - glob: contracts/errors/oa_codes.yaml
     mode: SHARED_APPEND
+  - glob: contracts/errors/error_registry.yaml
+    mode: CONTRACT_FROZEN
+  - glob: contracts/errors/**
+    mode: EXCLUSIVE
+  - glob: tests/wpops06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces:
@@ -23681,6 +23704,12 @@ entries:
   owns:
   - glob: contracts/errors/oa_codes.yaml
     mode: SHARED_APPEND
+  - glob: contracts/errors/error_registry.yaml
+    mode: CONTRACT_FROZEN
+  - glob: contracts/errors/**
+    mode: EXCLUSIVE
+  - glob: tests/wpops06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces:
@@ -23867,6 +23896,12 @@ entries:
   owns:
   - glob: contracts/errors/oa_codes.yaml
     mode: SHARED_APPEND
+  - glob: contracts/errors/error_registry.yaml
+    mode: CONTRACT_FROZEN
+  - glob: contracts/errors/**
+    mode: EXCLUSIVE
+  - glob: tests/wpops06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces:
@@ -27220,6 +27255,8 @@ entries:
   env_hash: null
   workflow: SHAPE-IG
   exec_class: AI-offline
+  justification: 하류 소비자(WP-OPS-04·WP-OPS-05·WP-OPS-06)는 이 WP의 CI 잡·프리머지 집행을 CI 산출물로 소비한다(각자의 검사가 이 CI
+    파이프라인 위에서 실행됨) — .github/ 스크립트를 파이썬으로 import하지 않으므로 정적 참조 그래프에 안 보인다(06 §5.6)
   planned: true
   provenance:
     wp_rule: coverage-fill
@@ -41923,7 +41960,11 @@ entries:
   - id: ART-EVIDENCE-OPS01D
     kind: report
     path: registry/build/evidence/CG-OPS-01d/
-  owns: []
+  owns:
+  - glob: ops/acl/**
+    mode: EXCLUSIVE
+  - glob: tests/wpops01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -43527,7 +43568,11 @@ entries:
   - id: ART-EVIDENCE-OPS04F
     kind: report
     path: registry/build/evidence/CG-OPS-04f/
-  owns: []
+  owns:
+  - glob: ops/hubguard/**
+    mode: EXCLUSIVE
+  - glob: tests/wpops04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -52293,7 +52338,11 @@ entries:
   - id: ART-EVIDENCE-OPS05I
     kind: report
     path: registry/build/evidence/CG-OPS-05i/
-  owns: []
+  owns:
+  - glob: ops/telemetry/**
+    mode: EXCLUSIVE
+  - glob: tests/wpops05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -55576,7 +55625,11 @@ entries:
   provenance:
     wp_rule: plan-axis
     source: 02a-작업패키지-Wave-minus1-to-1.md:270
-  owns: []
+  owns:
+  - glob: ops/versionpin/**
+    mode: EXCLUSIVE
+  - glob: tests/wpops03/**
+    mode: EXCLUSIVE
   gate:
   - CG-OPS-03a
   - CG-OPS-03b
@@ -55604,5 +55657,8 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: WP-ENV-01/WP-ENV-02 핀 소비는 코드 import가 아니라 데이터 산출물 조인이다 — 리포터가 deps/lerobot.pin(LeRobot
+    SHA)을 데이터로 읽고 MuJoCo 버전은 uv.lock 해석을 설치 메타로 읽으며, 두 상류 소유값을 참조만 하고 복제하지 않는다(정적 import 그래프에 안 보임, 06
+    §5.6)
   terminal: true
   planned: true

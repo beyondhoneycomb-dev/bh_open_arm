@@ -1,0 +1,29 @@
+# Auto-upgrade fixture — WP-OPS-03 acceptance ①. Both Isaac pins carry range specifiers
+# (>= and ~=) that hand the resolver latitude to climb off the frozen line. The blocker
+# must reject both; a checker that passed this file would be catching nothing.
+
+contract_version: 1
+generation: 1
+
+pins:
+  lerobot:
+    kind: commit_sha
+    source: deps/lerobot.pin
+  mujoco:
+    kind: resolved
+    source: uv.lock
+  isaac_sim:
+    kind: declared
+    version: "5.1.0"
+    spec: ">=5.1"          # inequality — admits 5.2, 6.0, ...
+  isaac_lab:
+    kind: declared
+    version: "2.3.x"
+    spec: "~=2.3"          # compatible release — admits 2.4, 2.5, ...
+  physics_backend:
+    default: mujoco
+    isaac: physx
+
+forbidden_upgrades:
+  - target: "Isaac Sim 6.0.1"
+    reason: "Newton physics"

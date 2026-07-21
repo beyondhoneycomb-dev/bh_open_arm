@@ -1,0 +1,33 @@
+# Rollback rehearsal fixture — a prior generation (N-1) for WP-OPS-03 acceptance ②.
+#
+# Generation 1 is the first real freeze, so there is no genuine predecessor; this file
+# is explicitly a REHEARSAL prior, not a fabricated production history. It differs from
+# the live manifest only in its generation/contract_version metadata: the Isaac pins are
+# the U-3 floor (5.1 / 2.3.x) and do not roll back, and the upstream pins are referenced
+# the same way. Rolling back to it must leave every pin-contract gate green.
+
+contract_version: 0
+generation: 0
+
+pins:
+  lerobot:
+    kind: commit_sha
+    source: deps/lerobot.pin
+  mujoco:
+    kind: resolved
+    source: uv.lock
+  isaac_sim:
+    kind: declared
+    version: "5.1.0"
+    spec: "==5.1.0"
+  isaac_lab:
+    kind: declared
+    version: "2.3.x"
+    spec: "==2.3.*"
+  physics_backend:
+    default: mujoco
+    isaac: physx
+
+forbidden_upgrades:
+  - target: "Isaac Sim 6.0.1"
+    reason: "Newton physics; observation tensor types and quaternion convention change silently"
