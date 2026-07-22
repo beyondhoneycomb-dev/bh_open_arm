@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<mujoco model="openarm_wp2c07_walls">
+  <default>
+    <default class="collision">
+      <geom group="3" contype="1" conaffinity="1"/>
+    </default>
+  </default>
+  <worldbody>
+    <geom name="vw_keepout_front" class="collision" type="box" pos="0.9 0.0 0.8" size="0.02 0.6 0.4"/>
+    <geom name="vw_ground" class="collision" type="plane" pos="0.0 0.0 0.0" size="1.5 1.5 0.1"/>
+  </worldbody>
+</mujoco>

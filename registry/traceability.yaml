@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@e02181e
+spine_ref: docs/plan/00-실행계획-개요.md@109b551
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -12193,7 +12193,11 @@ entries:
   - id: ART-EVIDENCE-2C07C
     kind: report
     path: registry/build/evidence/CG-2C-07c/
-  owns: []
+  owns:
+  - glob: sim/walls/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2c07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -17402,7 +17406,11 @@ entries:
   - id: ART-EVIDENCE-2C08E
     kind: report
     path: registry/build/evidence/CG-2C-08e/
-  owns: []
+  owns:
+  - glob: backend/collision_preflight/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2c08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -17713,7 +17721,11 @@ entries:
   - id: ART-EVIDENCE-2C03D
     kind: report
     path: registry/build/evidence/CG-2C-03d/
-  owns: []
+  owns:
+  - glob: backend/threshold_calib/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2c03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -17749,8 +17761,20 @@ entries:
   - WP-G-S12
   stale_on: []
   env_hash: null
-  workflow: SHAPE-HG
-  exec_class: Human-assisted-HW
+  phases:
+  - workflow: SHAPE-IM
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-HG
+    exec_class: Human-assisted-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: 하류 소비자(WP-2C-04 임계 모드 · WP-G-S12 S-12 화면)는 캘리브 산출 thr0 실효 임계 [Nm] 벡터를 데이터 값으로 소비한다 —
+    WP-2C-04는 자체 ThresholdCalibration 값 타입으로 thr0을 읽어 thr_i(q̇)=thr0_i+c_i·|q̇_i|에 대입할 뿐 backend.threshold_calib을
+    코드 import하지 않는다(정적 import 그래프 미가시, 06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -17861,7 +17885,11 @@ entries:
   - id: ART-EVIDENCE-2C11D
     kind: report
     path: registry/build/evidence/CG-2C-11d/
-  owns: []
+  owns:
+  - glob: backend/temp_gripper/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2c11/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -17904,7 +17932,11 @@ entries:
   - id: ART-EVIDENCE-2C09B
     kind: report
     path: registry/build/evidence/CG-2C-09b/
-  owns: []
+  owns:
+  - glob: backend/event_ring/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2c09/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -17924,6 +17956,8 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 GUI 충돌·안전 창구(WP-G-S12)는 이벤트 덤프·재식별 경보를 WS 엔벨로프 데이터(상태 배지·텔레메트리)로 소비하며 backend.event_ring을
+    코드 import하지 않는다 — 문자열 키 WS 간선이라 정적 import 그래프에 보이지 않는다(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -30486,7 +30520,11 @@ entries:
   - id: ART-EVIDENCE-2C01C
     kind: report
     path: registry/build/evidence/CG-2C-01c/
-  owns: []
+  owns:
+  - glob: backend/gmo/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2c01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -30516,6 +30554,8 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 소비자(WP-2C-03 임계 캘리브 · WP-2C-09 이벤트 링버퍼·모델오차 모니터)는 관측기 잔차 r을 샘플 데이터 채널(잔차 시계열)로 소비하며
+    backend.gmo를 코드 import하지 않는다 — 데이터 조인이라 정적 import 그래프에 미가시(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -30671,7 +30711,11 @@ entries:
   - id: ART-EVIDENCE-2C10B
     kind: report
     path: registry/build/evidence/CG-2C-10b/
-  owns: []
+  owns:
+  - glob: backend/feedback/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2c10/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -31465,7 +31509,11 @@ entries:
   - id: ART-EVIDENCE-2C04C
     kind: report
     path: registry/build/evidence/CG-2C-04c/
-  owns: []
+  owns:
+  - glob: backend/threshold/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2c04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -33385,7 +33433,11 @@ entries:
   - id: ART-EVIDENCE-2C05F
     kind: report
     path: registry/build/evidence/CG-2C-05f/
-  owns: []
+  owns:
+  - glob: backend/reaction/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2c05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -33423,6 +33475,9 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 되먹임 경로(WP-2C-10)는 반응이 확정한 충돌 트립을 동일 프로세스 함수 호출 1회(12 FR-SAF-006 — 와이어 메시지 아님)로 받아
+    작동하며, backend.feedback는 자체 CollisionTrip 값 타입으로 트립을 값 전달받을 뿐 backend.reaction을 코드 import하지 않는다 — 따라서
+    이 간선은 정적 import 그래프에 보이지 않는 동일프로세스 값패스다(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -33546,7 +33601,11 @@ entries:
   - id: ART-EVIDENCE-2C06B
     kind: report
     path: registry/build/evidence/CG-2C-06b/
-  owns: []
+  owns:
+  - glob: backend/reaction_bench/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2c06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -33568,8 +33627,17 @@ entries:
   terminal: true
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-CF
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -53663,7 +53731,11 @@ entries:
   - id: ART-EVIDENCE-2C02C
     kind: report
     path: registry/build/evidence/CG-2C-02c/
-  owns: []
+  owns:
+  - glob: backend/detection_gate/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2c02/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -53726,7 +53798,11 @@ entries:
   - id: ART-EVIDENCE-2C06B
     kind: report
     path: registry/build/evidence/CG-2C-06b/
-  owns: []
+  owns:
+  - glob: backend/reaction_bench/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2c06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -53748,8 +53824,17 @@ entries:
   terminal: true
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-CF
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -53989,7 +54074,11 @@ entries:
   - id: ART-EVIDENCE-2C09B
     kind: report
     path: registry/build/evidence/CG-2C-09b/
-  owns: []
+  owns:
+  - glob: backend/event_ring/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2c09/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -54009,6 +54098,8 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 GUI 충돌·안전 창구(WP-G-S12)는 이벤트 덤프·재식별 경보를 WS 엔벨로프 데이터(상태 배지·텔레메트리)로 소비하며 backend.event_ring을
+    코드 import하지 않는다 — 문자열 키 WS 간선이라 정적 import 그래프에 보이지 않는다(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
