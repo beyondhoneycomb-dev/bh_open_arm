@@ -1,0 +1,414 @@
+/* Collision/safety console styling. The one deliberate design decision here is a
+   safety color language keyed to physical drop risk: a brakeless arm makes
+   "power cut" and "drop" the same event, so power-cut reactions, intrusions, and
+   held latches are red; approaches are amber; holding-with-torque is calm. The
+   rest is quiet and dense, the way an operator console should be. */
+
+.oa-safety {
+  --oa-saf-bg: #f5f6f8;
+  --oa-saf-panel: #ffffff;
+  --oa-saf-border: #d3d8e0;
+  --oa-saf-ink: #1a2330;
+  --oa-saf-muted: #5c6675;
+  --oa-saf-calm: #0f8f7e;
+  --oa-saf-danger: #c8362f;
+  --oa-saf-danger-bg: #fdecea;
+  --oa-saf-warn: #b8730a;
+  --oa-saf-warn-bg: #fdf3e2;
+  --oa-saf-grid: #e5e9ef;
+
+  color: var(--oa-saf-ink);
+  background: var(--oa-saf-bg);
+  padding: 1.25rem clamp(1rem, 3vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+@media (prefers-color-scheme: dark) {
+  .oa-safety {
+    --oa-saf-bg: #10151b;
+    --oa-saf-panel: #171e26;
+    --oa-saf-border: #2a333f;
+    --oa-saf-ink: #e6ebf2;
+    --oa-saf-muted: #93a0b1;
+    --oa-saf-calm: #3fd0b8;
+    --oa-saf-danger: #ff6b64;
+    --oa-saf-danger-bg: #2c1614;
+    --oa-saf-warn: #e0a03a;
+    --oa-saf-warn-bg: #2a2110;
+    --oa-saf-grid: #232c37;
+  }
+}
+
+.oa-safety__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.oa-safety__id {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.8rem;
+  color: var(--oa-saf-muted);
+  letter-spacing: 0.04em;
+}
+
+.oa-safety__title {
+  font-size: 1.4rem;
+  font-weight: 650;
+  margin: 0;
+}
+
+.oa-safety__panel {
+  background: var(--oa-saf-panel);
+  border: 1px solid var(--oa-saf-border);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.oa-safety__panel-title {
+  font-size: 0.95rem;
+  font-weight: 620;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.oa-safety__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.1rem;
+  align-items: start;
+}
+
+/* Standing banner — never behind a toggle or a scroll region. */
+.oa-safety__banner {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--oa-saf-warn);
+  background: var(--oa-saf-warn-bg);
+  color: var(--oa-saf-ink);
+  font-size: 0.9rem;
+}
+
+.oa-safety__banner strong {
+  color: var(--oa-saf-warn);
+}
+
+.oa-safety__status-line {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.85rem;
+  color: var(--oa-saf-muted);
+}
+
+.oa-safety__status-line b {
+  color: var(--oa-saf-ink);
+}
+
+/* Reaction policy selector. */
+.oa-reaction__option {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--oa-saf-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.oa-reaction__option--selected {
+  border-color: var(--oa-saf-calm);
+  box-shadow: inset 0 0 0 1px var(--oa-saf-calm);
+}
+
+.oa-reaction__option--drop.oa-reaction__option--selected {
+  border-color: var(--oa-saf-danger);
+  box-shadow: inset 0 0 0 1px var(--oa-saf-danger);
+}
+
+.oa-reaction__label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.oa-reaction__effect {
+  font-size: 0.8rem;
+  color: var(--oa-saf-muted);
+}
+
+.oa-reaction__drop-tag {
+  align-self: center;
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--oa-saf-danger);
+  border: 1px solid var(--oa-saf-danger);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  white-space: nowrap;
+}
+
+/* Residual plot — residual and threshold share one SVG by construction. */
+.oa-residual {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.oa-residual__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.82rem;
+}
+
+.oa-residual__joint {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-weight: 600;
+}
+
+.oa-residual__svg {
+  width: 100%;
+  height: 96px;
+  background: var(--oa-saf-panel);
+  border: 1px solid var(--oa-saf-border);
+  border-radius: 8px;
+}
+
+.oa-residual__grid-line {
+  stroke: var(--oa-saf-grid);
+  stroke-width: 1;
+}
+
+.oa-residual__series {
+  fill: none;
+  stroke: var(--oa-saf-calm);
+  stroke-width: 1.6;
+}
+
+.oa-residual__series--breached {
+  stroke: var(--oa-saf-danger);
+}
+
+.oa-residual__threshold {
+  stroke: var(--oa-saf-danger);
+  stroke-width: 1.2;
+  stroke-dasharray: 5 4;
+}
+
+.oa-residual__breach {
+  fill: var(--oa-saf-danger);
+}
+
+.oa-residual__note {
+  font-size: 0.75rem;
+  color: var(--oa-saf-danger);
+  font-weight: 600;
+}
+
+/* Contact list — intrusion/imminent highlight. */
+.oa-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.oa-contact__row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--oa-saf-border);
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+
+.oa-contact__row--intrusion {
+  border-color: var(--oa-saf-danger);
+  background: var(--oa-saf-danger-bg);
+}
+
+.oa-contact__row--imminent {
+  border-color: var(--oa-saf-warn);
+  background: var(--oa-saf-warn-bg);
+}
+
+.oa-contact__geoms {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.78rem;
+}
+
+.oa-contact__sev {
+  font-weight: 700;
+  font-size: 0.74rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+}
+
+.oa-contact__sev--intrusion {
+  color: #fff;
+  background: var(--oa-saf-danger);
+}
+
+.oa-contact__sev--imminent {
+  color: #fff;
+  background: var(--oa-saf-warn);
+}
+
+.oa-contact__sev--clear {
+  color: var(--oa-saf-muted);
+  border: 1px solid var(--oa-saf-border);
+}
+
+.oa-contact__dist {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  color: var(--oa-saf-muted);
+}
+
+/* Virtual-wall editor. */
+.oa-wall {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.oa-wall__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.oa-wall__item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--oa-saf-border);
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+
+.oa-wall__form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.55rem;
+  border: 1px dashed var(--oa-saf-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.oa-wall__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.76rem;
+  color: var(--oa-saf-muted);
+}
+
+.oa-wall__field input,
+.oa-wall__field select {
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--oa-saf-border);
+  border-radius: 6px;
+  background: var(--oa-saf-bg);
+  color: var(--oa-saf-ink);
+}
+
+.oa-wall__note {
+  grid-column: 1 / -1;
+  font-size: 0.76rem;
+  color: var(--oa-saf-muted);
+}
+
+.oa-safety__btn {
+  font: inherit;
+  font-size: 0.83rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: 7px;
+  border: 1px solid var(--oa-saf-calm);
+  background: var(--oa-saf-calm);
+  color: #fff;
+  cursor: pointer;
+}
+
+.oa-safety__btn--ghost {
+  background: transparent;
+  color: var(--oa-saf-ink);
+  border-color: var(--oa-saf-border);
+}
+
+.oa-safety__btn--danger {
+  background: transparent;
+  color: var(--oa-saf-danger);
+  border-color: var(--oa-saf-danger);
+}
+
+/* Event log. */
+.oa-events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.oa-events__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--oa-saf-border);
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+
+.oa-events__row--latched {
+  border-color: var(--oa-saf-danger);
+  background: var(--oa-saf-danger-bg);
+}
+
+.oa-events__cause {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.78rem;
+}
+
+.oa-events__meta {
+  font-size: 0.76rem;
+  color: var(--oa-saf-muted);
+}
+
+.oa-events__latch {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--oa-saf-danger);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .oa-reaction__option,
+  .oa-safety__btn {
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+  }
+}

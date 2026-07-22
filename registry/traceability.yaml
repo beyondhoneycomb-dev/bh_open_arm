@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@243c969
+spine_ref: docs/plan/00-실행계획-개요.md@69df09b
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -7892,7 +7892,9 @@ entries:
   - id: ART-EVIDENCE-GS09E
     kind: report
     path: registry/build/evidence/CG-G-S09e/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-09/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -8241,7 +8243,9 @@ entries:
   - id: ART-EVIDENCE-GS12E
     kind: report
     path: registry/build/evidence/CG-G-S12e/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-12/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -8312,7 +8316,9 @@ entries:
   - id: ART-EVIDENCE-GS12E
     kind: report
     path: registry/build/evidence/CG-G-S12e/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-12/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -8637,7 +8643,9 @@ entries:
   - id: ART-EVIDENCE-GS04J
     kind: report
     path: registry/build/evidence/CG-G-S04j/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -8757,7 +8765,9 @@ entries:
   - id: ART-EVIDENCE-GS04J
     kind: report
     path: registry/build/evidence/CG-G-S04j/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -12203,7 +12213,9 @@ entries:
   - id: ART-EVIDENCE-GS03G
     kind: report
     path: registry/build/evidence/CG-G-S03g/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -12429,7 +12441,9 @@ entries:
   - id: ART-EVIDENCE-GS02E
     kind: report
     path: registry/build/evidence/CG-G-S02e/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-02/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-CAL@v1
@@ -12507,7 +12521,9 @@ entries:
   - id: ART-EVIDENCE-GS04J
     kind: report
     path: registry/build/evidence/CG-G-S04j/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -18225,7 +18241,9 @@ entries:
   - id: ART-EVIDENCE-GS03G
     kind: report
     path: registry/build/evidence/CG-G-S03g/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -34344,7 +34362,9 @@ entries:
   - id: ART-EVIDENCE-GS03G
     kind: report
     path: registry/build/evidence/CG-G-S03g/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -50488,7 +50508,9 @@ entries:
   - id: ART-EVIDENCE-GS13G
     kind: report
     path: registry/build/evidence/CG-G-S13g/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-13/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []

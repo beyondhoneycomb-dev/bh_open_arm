@@ -1,0 +1,257 @@
+/* S-09 simulation screen styles. Self-hosted only: no url() to any external
+   origin and no web font, so the bundle stays air-gapped (CG-G-00a). Colours reuse
+   the shell's --oa-* custom properties, which already carry a dark-mode variant. */
+
+.oa-sim {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  max-width: 1100px;
+}
+
+.oa-sim__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.oa-sim__route {
+  margin: 0;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color: var(--oa-muted);
+  font-size: 0.85rem;
+}
+
+.oa-sim__title {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.oa-sim__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.oa-sim section {
+  border: 1px solid var(--oa-border);
+  border-radius: 10px;
+  background: var(--oa-surface);
+  padding: 1rem;
+}
+
+.oa-sim__section-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+}
+
+/* Asset disclaimer (CG-G-S09a). */
+.oa-sim__asset-disclaimer {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--oa-accent);
+  border-radius: 8px;
+  background: rgba(63, 182, 207, 0.12);
+  color: var(--oa-text);
+  font-size: 0.9rem;
+}
+
+.oa-sim__asset-facts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.oa-sim__asset-fact {
+  border: 1px dashed var(--oa-border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+.oa-sim__asset-fact-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.oa-sim__asset-tag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--oa-muted);
+  border: 1px solid var(--oa-border);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  white-space: nowrap;
+}
+
+.oa-sim__asset-detail {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  color: var(--oa-muted);
+}
+
+/* Backend + sim<->real swap. */
+.oa-sim__backend-picker,
+.oa-sim__gain-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+}
+
+.oa-sim__target-swap,
+.oa-sim__gain-actions button,
+.oa-sim__send-btn,
+.oa-sim__send-override-btn {
+  font: inherit;
+  cursor: pointer;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--oa-accent);
+  background: var(--oa-accent);
+  color: #fff;
+}
+
+.oa-sim__target-swap[disabled],
+.oa-sim__gain-actions button[disabled],
+.oa-sim__send-btn[disabled],
+.oa-sim__send-override-btn[disabled] {
+  cursor: not-allowed;
+  opacity: 0.45;
+  background: var(--oa-surface);
+  color: var(--oa-muted);
+}
+
+.oa-sim__target-note,
+.oa-sim__gain-active,
+.oa-sim__target-current {
+  margin: 0.5rem 0;
+  font-size: 0.85rem;
+  color: var(--oa-muted);
+}
+
+/* Gain-parity refusal + dry-run hard-block share the alert treatment. */
+.oa-sim__gain-refusal,
+.oa-sim__send-block {
+  margin: 0.5rem 0;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid #b42318;
+  border-radius: 8px;
+  background: rgba(180, 35, 24, 0.12);
+  color: var(--oa-text);
+  font-size: 0.85rem;
+}
+
+/* Dry-run six-check list (CG-G-S09d). */
+.oa-sim__dryrun-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.oa-sim__dryrun-item {
+  border: 1px solid var(--oa-border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+.oa-sim__dryrun-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.oa-sim__dryrun-status {
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+}
+
+.oa-sim__dryrun-status--pass {
+  color: #0f7b3f;
+  border: 1px solid #0f7b3f;
+}
+
+.oa-sim__dryrun-status--fail {
+  color: #b42318;
+  border: 1px solid #b42318;
+}
+
+.oa-sim__dryrun-status--not_run {
+  color: var(--oa-muted);
+  border: 1px solid var(--oa-border);
+}
+
+.oa-sim__dryrun-violation {
+  margin: 0.4rem 0 0;
+  font-size: 0.82rem;
+  color: #b42318;
+}
+
+.oa-sim__send {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.oa-sim__send-override {
+  border: 1px dashed var(--oa-border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+}
+
+.oa-sim__send-override-confirm {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+  font-size: 0.85rem;
+}
+
+/* Ghost overlay (CG-G-S09e): the two layers are visually unmistakable. */
+.oa-sim__ghost-legend {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.oa-sim__ghost-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.oa-sim__ghost-swatch {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 4px;
+  border-width: 2px;
+  border-color: var(--oa-text);
+  display: inline-block;
+}
+
+.oa-sim__ghost-legend-label {
+  font-size: 0.88rem;
+}
+
+.oa-sim__ghost-viewport {
+  border-top: 1px solid var(--oa-border);
+  padding-top: 0.75rem;
+}

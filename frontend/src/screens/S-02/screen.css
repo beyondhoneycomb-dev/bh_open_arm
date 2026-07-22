@@ -1,0 +1,130 @@
+/* S-02 robot connection screen styles. Layout and status colour only; every
+   decision the colours reflect (blocked/clear, warning) is computed in the logic
+   modules, never in CSS. Panels stack in a single readable column. */
+
+.oa-s02 {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem;
+  max-width: 60rem;
+  margin: 0 auto;
+}
+
+.oa-s02__head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.oa-s02__id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin: 0;
+}
+
+.oa-s02__title {
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+.oa-s02 section {
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-radius: 0.5rem;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.oa-s02__panel-title {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.oa-s02 table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9rem;
+}
+
+.oa-s02 th,
+.oa-s02 td {
+  border: 1px solid rgba(127, 127, 127, 0.3);
+  padding: 0.3rem 0.5rem;
+  text-align: left;
+}
+
+.oa-s02 fieldset {
+  border: 1px solid rgba(127, 127, 127, 0.3);
+  border-radius: 0.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.oa-s02-side__warning,
+.oa-s02-bringup__gate,
+.oa-s02-rezero__warning,
+.oa-s02-wizard__errors {
+  color: #b3261e;
+  font-weight: 600;
+}
+
+.oa-s02-can__startup--blocked {
+  color: #b3261e;
+  font-weight: 600;
+}
+
+.oa-s02-can__startup--clear,
+.oa-s02-rezero__done {
+  color: #1b7f34;
+  font-weight: 600;
+}
+
+.oa-s02-can__fd--bad {
+  color: #b3261e;
+}
+
+.oa-s02-can__fd--ok {
+  color: #1b7f34;
+}
+
+.oa-s02-bringup__steps li[data-step-status="current"],
+.oa-s02-rezero__steps li[data-step-status="current"] {
+  font-weight: 700;
+}
+
+.oa-s02-bringup__steps li[data-step-status="pending"],
+.oa-s02-rezero__steps li[data-step-status="pending"] {
+  opacity: 0.55;
+}
+
+.oa-s02-bringup__advance:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.oa-s02-zero__compare {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .oa-s02-side__warning,
+  .oa-s02-bringup__gate,
+  .oa-s02-rezero__warning,
+  .oa-s02-can__startup--blocked,
+  .oa-s02-can__fd--bad,
+  .oa-s02-wizard__errors {
+    color: #ff8a80;
+  }
+
+  .oa-s02-can__startup--clear,
+  .oa-s02-can__fd--ok,
+  .oa-s02-rezero__done {
+    color: #7ee08a;
+  }
+}

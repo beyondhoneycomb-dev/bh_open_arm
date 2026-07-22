@@ -1,0 +1,145 @@
+/* Motor-setup screen (S-03) styles. Scoped under .oa-motors so the screen never
+   restyles the shell or a sibling. Theme-neutral: colours come from the shell's
+   CSS custom properties where they exist, with local fallbacks. */
+
+.oa-motors {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem;
+}
+
+.oa-motors__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.oa-motors__id {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+  margin: 0;
+}
+
+.oa-motors__title {
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+.oa-motors__active-profile {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 0.85rem;
+}
+
+.oa-motors__active-profile--loaded {
+  color: #1a7f37;
+}
+
+.oa-motors__active-profile--unloaded {
+  color: #b35900;
+}
+
+.oa-motors__control-block {
+  border: 1px solid #b35900;
+  background: rgba(179, 89, 0, 0.08);
+  color: #8a4500;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.4rem;
+  font-weight: 600;
+}
+
+.oa-motors__panel {
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 0.5rem;
+  padding: 0.9rem;
+}
+
+.oa-motors__panel-title {
+  font-size: 1rem;
+  margin: 0 0 0.6rem;
+}
+
+.oa-motors__table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.85rem;
+}
+
+.oa-motors__table th,
+.oa-motors__table td {
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  padding: 0.35rem 0.5rem;
+  text-align: right;
+}
+
+.oa-motors__table th:first-child,
+.oa-motors__table td:first-child {
+  text-align: left;
+}
+
+.oa-motors__scroll {
+  overflow-x: auto;
+}
+
+.oa-motors__err-row--fault {
+  color: #b3261e;
+}
+
+.oa-motors__hint {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.oa-motors__field {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0.3rem 0.5rem 0.3rem 0;
+  font-size: 0.8rem;
+}
+
+.oa-motors__field input {
+  width: 5rem;
+}
+
+.oa-motors__refusal {
+  color: #b3261e;
+  font-size: 0.82rem;
+  margin: 0.4rem 0 0;
+  padding-left: 1rem;
+}
+
+.oa-motors__temp--warn {
+  color: #b35900;
+  font-weight: 600;
+}
+
+.oa-motors__gripper-force {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.oa-motors__speed-note {
+  font-size: 0.78rem;
+  opacity: 0.8;
+}
+
+.oa-motors__button {
+  padding: 0.3rem 0.7rem;
+  border-radius: 0.3rem;
+  border: 1px solid rgba(128, 128, 128, 0.5);
+  cursor: pointer;
+}
+
+.oa-motors__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

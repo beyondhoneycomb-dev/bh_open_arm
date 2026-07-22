@@ -1,0 +1,320 @@
+/* Manual-motion screen (WP-G-S04) styling. Self-contained and theme-aware: the
+   shell stamps data-theme on its root, and these tokens resolve for light and
+   dark. Layout only — no value here carries robot-control meaning. */
+
+.oa-man {
+  --oa-man-gap: 1rem;
+  --oa-man-card-bg: #ffffff;
+  --oa-man-card-border: #d6dae0;
+  --oa-man-fg: #1a1d21;
+  --oa-man-muted: #5b6570;
+  --oa-man-accent: #1f6feb;
+  --oa-man-warn-bg: #fff3cd;
+  --oa-man-warn-fg: #7a5900;
+  --oa-man-alert-bg: #fde2e1;
+  --oa-man-alert-fg: #8a1c13;
+  --oa-man-disabled: #9aa4af;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--oa-man-gap);
+  padding: var(--oa-man-gap);
+  color: var(--oa-man-fg);
+}
+
+@media (prefers-color-scheme: dark) {
+  .oa-man {
+    --oa-man-card-bg: #161a1f;
+    --oa-man-card-border: #2b323b;
+    --oa-man-fg: #e6e9ed;
+    --oa-man-muted: #97a2ae;
+    --oa-man-accent: #4b9bff;
+    --oa-man-warn-bg: #3a3212;
+    --oa-man-warn-fg: #f2d98a;
+    --oa-man-alert-bg: #3a1714;
+    --oa-man-alert-fg: #ff9d92;
+  }
+}
+
+:root[data-theme="dark"] .oa-man {
+  --oa-man-card-bg: #161a1f;
+  --oa-man-card-border: #2b323b;
+  --oa-man-fg: #e6e9ed;
+  --oa-man-muted: #97a2ae;
+  --oa-man-accent: #4b9bff;
+  --oa-man-warn-bg: #3a3212;
+  --oa-man-warn-fg: #f2d98a;
+  --oa-man-alert-bg: #3a1714;
+  --oa-man-alert-fg: #ff9d92;
+}
+
+:root[data-theme="light"] .oa-man {
+  --oa-man-card-bg: #ffffff;
+  --oa-man-card-border: #d6dae0;
+  --oa-man-fg: #1a1d21;
+  --oa-man-muted: #5b6570;
+  --oa-man-accent: #1f6feb;
+  --oa-man-warn-bg: #fff3cd;
+  --oa-man-warn-fg: #7a5900;
+  --oa-man-alert-bg: #fde2e1;
+  --oa-man-alert-fg: #8a1c13;
+}
+
+.oa-man__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.oa-man__id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--oa-man-muted);
+  font-size: 0.85rem;
+}
+
+.oa-man__title {
+  font-size: 1.35rem;
+  margin: 0;
+}
+
+.oa-man section,
+.oa-man__arm {
+  background: var(--oa-man-card-bg);
+  border: 1px solid var(--oa-man-card-border);
+  border-radius: 0.5rem;
+  padding: var(--oa-man-gap);
+}
+
+.oa-man h2 {
+  font-size: 1.05rem;
+  margin: 0 0 0.5rem;
+}
+
+.oa-man h3 {
+  font-size: 0.95rem;
+  margin: 0.5rem 0;
+}
+
+.oa-man__arm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.oa-man__arm-toggle {
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--oa-man-accent);
+  background: transparent;
+  color: var(--oa-man-accent);
+  cursor: pointer;
+}
+
+.oa-man__arm-toggle[data-armed="true"] {
+  background: var(--oa-man-accent);
+  color: #ffffff;
+}
+
+.oa-man__arm-toggle:disabled {
+  border-color: var(--oa-man-disabled);
+  color: var(--oa-man-disabled);
+  cursor: not-allowed;
+}
+
+.oa-man__gate {
+  color: var(--oa-man-muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.oa-man-lease {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  background: var(--oa-man-card-bg);
+  border: 1px solid var(--oa-man-card-border);
+  border-radius: 0.5rem;
+  padding: 0.6rem var(--oa-man-gap);
+  font-variant-numeric: tabular-nums;
+}
+
+.oa-man-lease[data-lease-held="false"] {
+  border-color: var(--oa-man-alert-fg);
+}
+
+.oa-man-freedrive-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  background: var(--oa-man-warn-bg);
+  color: var(--oa-man-warn-fg);
+  border: 1px solid var(--oa-man-warn-fg);
+  border-radius: 0.5rem;
+  padding: 0.6rem var(--oa-man-gap);
+  font-weight: 600;
+}
+
+.oa-man-jog__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+}
+
+.oa-man-jog__table th,
+.oa-man-jog__table td {
+  border-bottom: 1px solid var(--oa-man-card-border);
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+}
+
+.oa-man-jog__dirs {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.oa-man-jog__dir,
+.oa-man-cart__dir {
+  min-width: 2.25rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--oa-man-card-border);
+  background: transparent;
+  color: var(--oa-man-fg);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.oa-man-jog__dir:disabled,
+.oa-man-cart__dir:disabled {
+  color: var(--oa-man-disabled);
+  border-color: var(--oa-man-disabled);
+  cursor: not-allowed;
+}
+
+.oa-man-jog__controls,
+.oa-man-cart__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  margin-bottom: 0.75rem;
+}
+
+.oa-man-jog__limitset,
+.oa-man-cart__cp {
+  color: var(--oa-man-muted);
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.oa-man-jog__near {
+  margin-left: 0.5rem;
+  color: var(--oa-man-warn-fg);
+  font-size: 0.8rem;
+}
+
+.oa-man-cart__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.oa-man-cart__axis {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.35rem 0;
+}
+
+.oa-man-cart__axis-label {
+  min-width: 4rem;
+}
+
+.oa-man-cart__frame-note,
+.oa-man-elbow__note,
+.oa-man-cart__ik-note {
+  color: var(--oa-man-muted);
+  font-size: 0.85rem;
+}
+
+.oa-man-preverify[data-passed="false"] {
+  color: var(--oa-man-alert-fg);
+}
+
+.oa-man__warn,
+.oa-man-freedrive__warn,
+.oa-man-teach__mismatch,
+.oa-man-cart__ik-warn,
+.oa-man-cart__ik-fail,
+.oa-man-home__warn {
+  color: var(--oa-man-alert-fg);
+  font-weight: 600;
+}
+
+.oa-man-teach__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.oa-man-teach__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--oa-man-card-border);
+  border-radius: 0.4rem;
+}
+
+.oa-man-teach__actions {
+  display: flex;
+  gap: 0.3rem;
+  margin-left: auto;
+}
+
+.oa-man-home__execute,
+.oa-man-teach__replay,
+.oa-man-teach__capture {
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--oa-man-accent);
+  background: transparent;
+  color: var(--oa-man-accent);
+  cursor: pointer;
+}
+
+.oa-man-home__execute:disabled,
+.oa-man-teach__replay:disabled {
+  border-color: var(--oa-man-disabled);
+  color: var(--oa-man-disabled);
+  cursor: not-allowed;
+}
+
+.oa-man-freedrive__deadman {
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--oa-man-accent);
+  background: transparent;
+  color: var(--oa-man-accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.oa-man-freedrive__deadman[aria-pressed="true"] {
+  background: var(--oa-man-warn-bg);
+  color: var(--oa-man-warn-fg);
+}
+
+.oa-man-freedrive__deadman:disabled {
+  border-color: var(--oa-man-disabled);
+  color: var(--oa-man-disabled);
+  cursor: not-allowed;
+}
