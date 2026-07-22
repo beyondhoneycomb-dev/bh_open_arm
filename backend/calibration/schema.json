@@ -1,0 +1,126 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://openarm/contracts/CTR-CAL@v1",
+  "title": "OpenArm follower calibration (CTR-CAL@v1)",
+  "description": "Frozen on-disk calibration schema for one OpenArm follower arm. The joint zero itself lives in motor NV via 0xFE and is not represented here; motor_zero_raw is the readback witness and urdf_zero_offset the reference the residual is measured against (16 M-1, 02 FR-CON-064/065).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "robot_type",
+    "robot_id",
+    "side",
+    "motor_zero_raw",
+    "urdf_zero_offset",
+    "gripper_open_rad",
+    "gripper_close_rad",
+    "joint_signs",
+    "joint_scale",
+    "gripper_open_captured",
+    "gripper_close_captured",
+    "zero_method",
+    "zero_power_cycle_verified",
+    "require_rezero_each_session",
+    "schema_version",
+    "checksum"
+  ],
+  "properties": {
+    "robot_type": {
+      "type": "string",
+      "description": "Follower plugin type this calibration belongs to."
+    },
+    "robot_id": {
+      "type": "string",
+      "description": "Follower instance id (LeRobot config.id)."
+    },
+    "side": {
+      "type": "string",
+      "enum": ["left", "right"],
+      "description": "Which arm this calibration is for."
+    },
+    "motor_zero_raw": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 8,
+      "maxItems": 8,
+      "description": "Raw joint position (degrees) read back immediately after 0xFE, per motor (joint_1..joint_7, gripper). Residual-re-verify witness, not an applied offset."
+    },
+    "urdf_zero_offset": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 8,
+      "maxItems": 8,
+      "description": "Expected URDF-zero joint angle (degrees) per motor; the reference the residual is measured against. Required so limits and collision share one coordinate frame."
+    },
+    "joint_signs": {
+      "type": "array",
+      "items": { "type": "integer", "enum": [-1, 1] },
+      "minItems": 8,
+      "maxItems": 8,
+      "description": "Operator-perception sign (+1 or -1) per motor."
+    },
+    "joint_scale": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 8,
+      "maxItems": 8,
+      "description": "Degrees-per-unit scale per motor (1.0 unless a motor deviates)."
+    },
+    "gripper_open_rad": {
+      "type": "number",
+      "description": "Gripper fully-open endpoint in radians (16 D-5)."
+    },
+    "gripper_close_rad": {
+      "type": "number",
+      "description": "Gripper fully-closed endpoint in radians (16 D-5)."
+    },
+    "gripper_open_captured": {
+      "type": "boolean",
+      "description": "Whether gripper_open_rad was captured from hardware (true) or seeded (false)."
+    },
+    "gripper_close_captured": {
+      "type": "boolean",
+      "description": "Whether gripper_close_rad was captured from hardware (true) or seeded (false)."
+    },
+    "zero_method": {
+      "type": "string",
+      "enum": ["lerobot_hanging", "hardstop_bump", "mechanical_jig"],
+      "description": "How the mechanical zero reference was established (02 FR-CON-031/065)."
+    },
+    "zero_residual_deg": {
+      "type": ["array", "null"],
+      "items": { "type": "number" },
+      "minItems": 8,
+      "maxItems": 8,
+      "description": "Per-motor residual (degrees) measured at set-zero time, or null before zeroing has run."
+    },
+    "zero_power_cycle_verified": {
+      "type": "boolean",
+      "description": "Whether 0xFE zero persistence across a power cycle was confirmed within tolerance (02 FR-CON-065 iii)."
+    },
+    "require_rezero_each_session": {
+      "type": "boolean",
+      "description": "Whether every power session must explicitly re-zero. Conservative default true until persistence is confirmed."
+    },
+    "created_at": {
+      "type": ["string", "null"],
+      "description": "ISO-8601 UTC timestamp of first creation."
+    },
+    "last_updated_at": {
+      "type": ["string", "null"],
+      "description": "ISO-8601 UTC timestamp of the last write."
+    },
+    "last_zero_at": {
+      "type": ["string", "null"],
+      "description": "ISO-8601 UTC timestamp of the last successful set-zero."
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Frozen generation (always 1 for CTR-CAL@v1)."
+    },
+    "checksum": {
+      "type": "string",
+      "description": "sha256 hex over the canonical body excluding this field."
+    }
+  }
+}

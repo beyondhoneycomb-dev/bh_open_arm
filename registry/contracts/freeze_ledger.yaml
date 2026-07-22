@@ -12,3 +12,9 @@ events:
   canonical_hash: sha256:7e448ad96a0da70170f518786d72823e7f85734c6ced9a0eb1f795bf7bc9cc89
   prev_digest: 0c38a1625d4f20867aea52f7a65f00563050aa3ec89adc93b9cf9acf02526018
   digest: 088a7c48bceebeb792623d62e8083c573b8eb5aadfbbefaa7eda78d2a27598b8
+- seq: 3
+  kind: FREEZE
+  contract_id: CTR-CAL@v1
+  canonical_hash: sha256:8339de3cd5c1979395ce918411ce291ba5b06f6addf1727f5ca7daeb5bf5a480
+  prev_digest: 088a7c48bceebeb792623d62e8083c573b8eb5aadfbbefaa7eda78d2a27598b8
+  digest: 36383462a37148ad174b6fae4b42448fe4a49f5b7a9e96e5ae5e0878ccc8fb7e

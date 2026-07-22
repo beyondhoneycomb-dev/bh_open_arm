@@ -25,7 +25,7 @@ from contracts.action import (
     RequestedPositionAction,
     SafetyOverride,
 )
-from contracts.units import Deg, Rad, deg_to_rad
+from contracts.units import Deg, Nm, Rad, deg_to_rad
 
 # Symmetric per-joint position bound, in degrees: (low, high) inclusive. A limit of
 # None on a joint means "no clamp on this joint" (pass-through), used by the
@@ -97,26 +97,49 @@ def accepted_to_rad(accepted: AcceptedPositionAction) -> tuple[Rad, ...]:
     return tuple(deg_to_rad(angle) for angle in accepted.values)
 
 
-def positions_to_batch(positions: tuple[Rad, ...]) -> tuple[ExecutedMitCommand, ...]:
+def positions_to_batch(
+    positions: tuple[Rad, ...],
+    feedforward_torque: tuple[Nm, ...] | None = None,
+) -> tuple[ExecutedMitCommand, ...]:
     """Build a MIT batch that commands a set of joint positions and holds there.
 
-    Every command is position-only: zero feed-forward velocity, zero feed-forward
-    torque, fixed hold gains. A hold frame and a fresh command are produced by the
-    same call — the only difference is which positions are passed.
+    A command is position-only by default: zero feed-forward velocity and torque,
+    fixed hold gains, so a hold frame and a fresh position command are produced by
+    the same call and differ only in the positions passed. When a feed-forward
+    torque is supplied — the gateway routing a compliant/reactive command past the
+    old `send_action` tau=0 hardcode (`12` §2.7.0, `WP-1-03`) — it rides in the
+    `tau` field; the scheduler strips it back to zero when it caches the frame as a
+    hold, because a hold is always position-only (`02a` §3.1 ⑤).
 
     Args:
         positions: One target angle per joint, in radians.
+        feedforward_torque: Optional per-joint feed-forward torque; None (the
+            default) is a position-only command with zero feed-forward torque.
 
     Returns:
         (tuple[ExecutedMitCommand, ...]) One MIT command per joint.
+
+    Raises:
+        ValueError: If a feed-forward torque is given whose width differs from the
+            position count.
     """
+    if feedforward_torque is not None and len(feedforward_torque) != len(positions):
+        raise ValueError(
+            f"feed-forward torque width {len(feedforward_torque)} does not match position "
+            f"count {len(positions)}"
+        )
+    torques = (
+        feedforward_torque
+        if feedforward_torque is not None
+        else tuple(HOLD_TORQUE for _ in positions)
+    )
     return tuple(
         ExecutedMitCommand(
             kp=MIT_HOLD_KP,
             kd=MIT_HOLD_KD,
             q=position,
             dq=HOLD_VELOCITY,
-            tau=HOLD_TORQUE,
+            tau=torque,
         )
-        for position in positions
+        for position, torque in zip(positions, torques, strict=True)
     )

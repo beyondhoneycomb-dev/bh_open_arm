@@ -103,5 +103,7 @@ def decide(state: DeciderInput) -> Emission:
         return Emission(EmissionLabel.STALE_SOURCE_HOLD, ReasonCode.MAILBOX_STALE, state.hold_batch)
 
     accepted, _override = clamp_request(state.mailbox_target.request, state.joint_limits)
-    accepted_batch = positions_to_batch(accepted_to_rad(accepted))
+    accepted_batch = positions_to_batch(
+        accepted_to_rad(accepted), state.mailbox_target.feedforward_torque
+    )
     return Emission(EmissionLabel.ACCEPTED_TARGET, ReasonCode.FRESH, accepted_batch)

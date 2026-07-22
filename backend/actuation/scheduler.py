@@ -21,9 +21,11 @@ at the interface without either reimplementing the other, and the BOOT-04 tests
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from backend.actuation.can_writer import MIT_BATCH_WIDTH, CanWriter
 from backend.actuation.clock import Clock
-from backend.actuation.config import FRESHNESS_WINDOW_SEC
+from backend.actuation.config import FRESHNESS_WINDOW_SEC, HOLD_TORQUE
 from backend.actuation.decider import DeciderInput, decide
 from backend.actuation.emissions import Emission, EmissionLabel
 from backend.actuation.gateway import JointLimit, positions_to_batch
@@ -33,10 +35,27 @@ from backend.actuation.mailbox import TargetMailbox
 from backend.actuation.producer import Producer
 from backend.actuation.trace import TickRecord, TraceSink
 from backend.actuation.transition import ModeTransition
+from contracts.action import ExecutedMitCommand
 from contracts.units import Rad
 from ops.cancel.scheduler import LatchReason
 
 _VALID_LABELS = frozenset(EmissionLabel)
+
+
+def _as_hold_frame(batch: tuple[ExecutedMitCommand, ...]) -> tuple[ExecutedMitCommand, ...]:
+    """Return a position-only hold copy of a batch: same positions, zero feed-forward torque.
+
+    A hold re-sends the last accepted positions but never its feed-forward torque
+    (`02a` §3.1 ⑤). The velocity is already zero on every accepted command, so only
+    the torque needs stripping.
+
+    Args:
+        batch: The accepted MIT batch to derive a hold from.
+
+    Returns:
+        (tuple[ExecutedMitCommand, ...]) The same positions with zero feed-forward torque.
+    """
+    return tuple(replace(command, tau=HOLD_TORQUE) for command in batch)
 
 
 class EmissionInvariantError(RuntimeError):
@@ -242,10 +261,11 @@ class ActuationScheduler:
 
         # An accepted target advances the frame the next hold will re-send, so a
         # hold always parks the arm where it was last legitimately commanded rather
-        # than at torque-on. The accepted command is itself a valid hold frame
-        # (position-only, zero feed-forward), so it becomes the cached hold batch.
+        # than at torque-on. A hold is position-only (`02a` §3.1 ⑤), so any
+        # feed-forward torque the accepted command carried is stripped before it
+        # becomes the cached hold — holding is never re-applying a command torque.
         if emission.label is EmissionLabel.ACCEPTED_TARGET:
-            self._hold_batch = emission.batch
+            self._hold_batch = _as_hold_frame(emission.batch)
 
         self._trace.record(
             TickRecord(

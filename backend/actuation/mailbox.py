@@ -24,6 +24,7 @@ import threading
 from dataclasses import dataclass
 
 from contracts.action import RequestedPositionAction
+from contracts.units import Nm
 
 
 @dataclass(frozen=True)
@@ -38,10 +39,15 @@ class TimestampedTarget:
     Attributes:
         request: The 16-dim bimanual position request, in degrees (CTR-ACT).
         published_at: Clock reading taken when the producer published, in seconds.
+        feedforward_torque: Optional per-joint feed-forward torque routed into the
+            emitted MIT frame (`12` §2.7.0: the send_action tau=0 hardcode released
+            by the gateway, `WP-1-03`). None — the default — is a position-only
+            command, zero feed-forward torque; a hold is always position-only.
     """
 
     request: RequestedPositionAction
     published_at: float
+    feedforward_torque: tuple[Nm, ...] | None = None
 
 
 class TargetMailbox:

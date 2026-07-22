@@ -14,13 +14,19 @@ from a mailbox to a CAN handle) and statically (`staticcheck.find_producer_can_a
 
 from __future__ import annotations
 
+from backend.actuation.bus_writer import (
+    BIMANUAL_BATCH_WIDTH,
+    BusCanWriter,
+    DropCounter,
+    MitBus,
+)
 from backend.actuation.can_writer import (
     MIT_BATCH_WIDTH,
     CanBusFaultError,
     CanWriter,
     FakeCanWriter,
 )
-from backend.actuation.clock import Clock, ManualClock
+from backend.actuation.clock import Clock, ManualClock, WallClock
 from backend.actuation.decider import DeciderInput, decide
 from backend.actuation.emissions import (
     HOLD_LABELS,
@@ -28,17 +34,44 @@ from backend.actuation.emissions import (
     EmissionLabel,
     ReasonCode,
 )
+from backend.actuation.enforcement import (
+    ActuationGateway,
+    GateFrame,
+    GateResult,
+)
+from backend.actuation.errdecode import (
+    DecodedMotorErr,
+    UnknownErrNibbleError,
+    decode_motor_err,
+)
 from backend.actuation.gateway import (
     JointLimit,
     accepted_to_rad,
     clamp_request,
     positions_to_batch,
 )
+from backend.actuation.guard import (
+    CollisionGuard,
+    GuardCause,
+    GuardSample,
+    GuardVerdict,
+)
 from backend.actuation.harness import FaultInjectionHarness
 from backend.actuation.latch import SafetyLatch
 from backend.actuation.lease import LeaseManager
 from backend.actuation.mailbox import TargetMailbox, TimestampedTarget
 from backend.actuation.producer import MailboxProducer, Producer
+from backend.actuation.safety import (
+    CHECK_ORDER,
+    CheckStage,
+    FilterInput,
+    FilterOutcome,
+    MotionHistory,
+    SafetyConfigError,
+    SafetyFilter,
+    SafetyLimits,
+    SafetyReason,
+)
 from backend.actuation.scheduler import ActuationScheduler, EmissionInvariantError
 from backend.actuation.staticcheck import (
     StaticViolation,
@@ -49,26 +82,47 @@ from backend.actuation.trace import TallyTrace, TickRecord, TickTrace, TraceSink
 from backend.actuation.transition import ModeTransition
 
 __all__ = [
+    "BIMANUAL_BATCH_WIDTH",
+    "CHECK_ORDER",
     "HOLD_LABELS",
     "MIT_BATCH_WIDTH",
+    "ActuationGateway",
     "ActuationScheduler",
+    "BusCanWriter",
     "CanBusFaultError",
     "CanWriter",
+    "CheckStage",
     "Clock",
+    "CollisionGuard",
+    "DecodedMotorErr",
     "DeciderInput",
+    "DropCounter",
     "Emission",
     "EmissionInvariantError",
     "EmissionLabel",
     "FakeCanWriter",
     "FaultInjectionHarness",
+    "FilterInput",
+    "FilterOutcome",
+    "GateFrame",
+    "GateResult",
+    "GuardCause",
+    "GuardSample",
+    "GuardVerdict",
     "JointLimit",
     "LeaseManager",
     "MailboxProducer",
     "ManualClock",
+    "MitBus",
     "ModeTransition",
+    "MotionHistory",
     "Producer",
     "ReasonCode",
+    "SafetyConfigError",
+    "SafetyFilter",
     "SafetyLatch",
+    "SafetyLimits",
+    "SafetyReason",
     "StaticViolation",
     "TallyTrace",
     "TargetMailbox",
@@ -76,9 +130,12 @@ __all__ = [
     "TickTrace",
     "TimestampedTarget",
     "TraceSink",
+    "UnknownErrNibbleError",
+    "WallClock",
     "accepted_to_rad",
     "clamp_request",
     "decide",
+    "decode_motor_err",
     "find_disable_torque",
     "find_producer_can_access",
     "positions_to_batch",

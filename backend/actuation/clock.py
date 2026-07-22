@@ -9,6 +9,7 @@ fact, not a race against real time.
 
 from __future__ import annotations
 
+import time
 from typing import Protocol
 
 
@@ -22,6 +23,23 @@ class Clock(Protocol):
             (float) Monotonic seconds on this clock's own time base.
         """
         ...
+
+
+class WallClock:
+    """A monotonic wall clock for the running system (not the deterministic harness).
+
+    Reads `time.monotonic`, so it never goes backwards and is unaffected by wall-time
+    adjustments. The fault-injection harness uses `ManualClock` instead; this is what
+    the live gateway and guard read for real latch timestamps.
+    """
+
+    def now(self) -> float:
+        """Return the current monotonic time in seconds.
+
+        Returns:
+            (float) Monotonic seconds.
+        """
+        return time.monotonic()
 
 
 class ManualClock:

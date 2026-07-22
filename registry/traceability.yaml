@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@cb32264
+spine_ref: docs/plan/00-실행계획-개요.md@62fcab6
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -3730,6 +3730,10 @@ entries:
     mode: CONTRACT_FROZEN
   - glob: backend/calibration/schema.json
     mode: CONTRACT_FROZEN
+  - glob: backend/calibration/**
+    mode: EXCLUSIVE
+  - glob: tests/wp102/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces:
@@ -4464,6 +4468,10 @@ entries:
     mode: CONTRACT_FROZEN
   - glob: backend/calibration/schema.json
     mode: CONTRACT_FROZEN
+  - glob: backend/calibration/**
+    mode: EXCLUSIVE
+  - glob: tests/wp102/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces:
@@ -4676,6 +4684,10 @@ entries:
     mode: CONTRACT_FROZEN
   - glob: backend/calibration/schema.json
     mode: CONTRACT_FROZEN
+  - glob: backend/calibration/**
+    mode: EXCLUSIVE
+  - glob: tests/wp102/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces:
@@ -4910,6 +4922,10 @@ entries:
     mode: CONTRACT_FROZEN
   - glob: backend/calibration/schema.json
     mode: CONTRACT_FROZEN
+  - glob: backend/calibration/**
+    mode: EXCLUSIVE
+  - glob: tests/wp102/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces:
@@ -5121,6 +5137,10 @@ entries:
     mode: CONTRACT_FROZEN
   - glob: backend/calibration/schema.json
     mode: CONTRACT_FROZEN
+  - glob: backend/calibration/**
+    mode: EXCLUSIVE
+  - glob: tests/wp102/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces:
@@ -18934,6 +18954,8 @@ entries:
     mode: EXCLUSIVE
   - glob: backend/actuation/**
     mode: EXCLUSIVE
+  - glob: tests/wp103/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces:
@@ -19350,7 +19372,11 @@ entries:
   - id: ART-EVIDENCE-105M
     kind: report
     path: registry/build/evidence/CG-1-05m/
-  owns: []
+  owns:
+  - glob: backend/torque_bringup/**
+    mode: EXCLUSIVE
+  - glob: tests/wp105/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -19784,6 +19810,8 @@ entries:
   - glob: packages/lerobot_robot_openarm/openarm_follower_oa.py
     mode: EXCLUSIVE
   - glob: backend/actuation/**
+    mode: EXCLUSIVE
+  - glob: tests/wp103/**
     mode: EXCLUSIVE
   contract:
     consumes: []
@@ -20255,6 +20283,8 @@ entries:
     mode: EXCLUSIVE
   - glob: backend/actuation/**
     mode: EXCLUSIVE
+  - glob: tests/wp103/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces:
@@ -20694,6 +20724,8 @@ entries:
     mode: EXCLUSIVE
   - glob: backend/actuation/**
     mode: EXCLUSIVE
+  - glob: tests/wp103/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces:
@@ -21099,6 +21131,8 @@ entries:
   - glob: packages/lerobot_robot_openarm/openarm_follower_oa.py
     mode: EXCLUSIVE
   - glob: backend/actuation/**
+    mode: EXCLUSIVE
+  - glob: tests/wp103/**
     mode: EXCLUSIVE
   contract:
     consumes: []
@@ -21636,6 +21670,8 @@ entries:
     mode: EXCLUSIVE
   - glob: backend/actuation/**
     mode: EXCLUSIVE
+  - glob: tests/wp103/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces:
@@ -22020,6 +22056,8 @@ entries:
   - glob: packages/lerobot_robot_openarm/openarm_follower_oa.py
     mode: EXCLUSIVE
   - glob: backend/actuation/**
+    mode: EXCLUSIVE
+  - glob: tests/wp103/**
     mode: EXCLUSIVE
   contract:
     consumes: []
@@ -23095,6 +23133,8 @@ entries:
   - glob: packages/lerobot_robot_openarm/openarm_follower_oa.py
     mode: EXCLUSIVE
   - glob: backend/actuation/**
+    mode: EXCLUSIVE
+  - glob: tests/wp103/**
     mode: EXCLUSIVE
   contract:
     consumes: []
@@ -24587,6 +24627,8 @@ entries:
   - glob: packages/lerobot_robot_openarm/openarm_follower_oa.py
     mode: EXCLUSIVE
   - glob: backend/actuation/**
+    mode: EXCLUSIVE
+  - glob: tests/wp103/**
     mode: EXCLUSIVE
   contract:
     consumes: []
@@ -27317,6 +27359,10 @@ entries:
     mode: CONTRACT_FROZEN
   - glob: backend/calibration/schema.json
     mode: CONTRACT_FROZEN
+  - glob: backend/calibration/**
+    mode: EXCLUSIVE
+  - glob: tests/wp102/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces:
@@ -30665,7 +30711,13 @@ entries:
   - id: ART-EVIDENCE-106L
     kind: report
     path: registry/build/evidence/CG-1-06l/
-  owns: []
+  owns:
+  - glob: backend/safety_bringup/**
+    mode: EXCLUSIVE
+  - glob: sim/safety/**
+    mode: EXCLUSIVE
+  - glob: tests/wp106/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -30987,7 +31039,13 @@ entries:
   - id: ART-EVIDENCE-106L
     kind: report
     path: registry/build/evidence/CG-1-06l/
-  owns: []
+  owns:
+  - glob: backend/safety_bringup/**
+    mode: EXCLUSIVE
+  - glob: sim/safety/**
+    mode: EXCLUSIVE
+  - glob: tests/wp106/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -31377,7 +31435,13 @@ entries:
   - id: ART-EVIDENCE-106L
     kind: report
     path: registry/build/evidence/CG-1-06l/
-  owns: []
+  owns:
+  - glob: backend/safety_bringup/**
+    mode: EXCLUSIVE
+  - glob: sim/safety/**
+    mode: EXCLUSIVE
+  - glob: tests/wp106/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -31721,7 +31785,13 @@ entries:
   - id: ART-EVIDENCE-106L
     kind: report
     path: registry/build/evidence/CG-1-06l/
-  owns: []
+  owns:
+  - glob: backend/safety_bringup/**
+    mode: EXCLUSIVE
+  - glob: sim/safety/**
+    mode: EXCLUSIVE
+  - glob: tests/wp106/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -32043,7 +32113,13 @@ entries:
   - id: ART-EVIDENCE-106L
     kind: report
     path: registry/build/evidence/CG-1-06l/
-  owns: []
+  owns:
+  - glob: backend/safety_bringup/**
+    mode: EXCLUSIVE
+  - glob: sim/safety/**
+    mode: EXCLUSIVE
+  - glob: tests/wp106/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -32386,7 +32462,13 @@ entries:
   - id: ART-EVIDENCE-106L
     kind: report
     path: registry/build/evidence/CG-1-06l/
-  owns: []
+  owns:
+  - glob: backend/safety_bringup/**
+    mode: EXCLUSIVE
+  - glob: sim/safety/**
+    mode: EXCLUSIVE
+  - glob: tests/wp106/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -41218,6 +41300,10 @@ entries:
     mode: CONTRACT_FROZEN
   - glob: backend/calibration/schema.json
     mode: CONTRACT_FROZEN
+  - glob: backend/calibration/**
+    mode: EXCLUSIVE
+  - glob: tests/wp102/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces:
@@ -41487,7 +41573,17 @@ entries:
   - id: ART-EVIDENCE-101F
     kind: report
     path: registry/build/evidence/CG-1-01f/
-  owns: []
+  owns:
+  - glob: contracts/plugin_api/**
+    mode: EXCLUSIVE
+  - glob: tests/wp101/**
+    mode: EXCLUSIVE
+  - glob: packages/lerobot_robot_openarm/__init__.py
+    mode: EXCLUSIVE
+  - glob: packages/lerobot_robot_openarm/config_oa.py
+    mode: EXCLUSIVE
+  - glob: packages/lerobot_robot_openarm/registration.py
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -41593,6 +41689,10 @@ entries:
     mode: CONTRACT_FROZEN
   - glob: backend/calibration/schema.json
     mode: CONTRACT_FROZEN
+  - glob: backend/calibration/**
+    mode: EXCLUSIVE
+  - glob: tests/wp102/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces:
@@ -42684,6 +42784,8 @@ entries:
     mode: EXCLUSIVE
   - glob: backend/actuation/**
     mode: EXCLUSIVE
+  - glob: tests/wp103/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces:
@@ -43296,7 +43398,11 @@ entries:
   - id: ART-EVIDENCE-104K
     kind: report
     path: registry/build/evidence/CG-1-04k/
-  owns: []
+  owns:
+  - glob: backend/rtbench/**
+    mode: EXCLUSIVE
+  - glob: tests/wp104/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -43503,8 +43609,17 @@ entries:
   stale_on:
   - PG-RT-001b:PASS
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-CF
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
   planned: true
   provenance:
     wp_rule: doc06-section6
@@ -50892,7 +51007,11 @@ entries:
   - id: ART-EVIDENCE-104K
     kind: report
     path: registry/build/evidence/CG-1-04k/
-  owns: []
+  owns:
+  - glob: backend/rtbench/**
+    mode: EXCLUSIVE
+  - glob: tests/wp104/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -51099,8 +51218,17 @@ entries:
   stale_on:
   - PG-RT-001b:PASS
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-CF
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
   planned: true
   provenance:
     wp_rule: doc06-section6
@@ -51179,7 +51307,11 @@ entries:
   - id: ART-EVIDENCE-104K
     kind: report
     path: registry/build/evidence/CG-1-04k/
-  owns: []
+  owns:
+  - glob: backend/rtbench/**
+    mode: EXCLUSIVE
+  - glob: tests/wp104/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -51386,8 +51518,17 @@ entries:
   stale_on:
   - PG-RT-001b:PASS
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-CF
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -52721,7 +52862,11 @@ entries:
   - id: ART-EVIDENCE-104K
     kind: report
     path: registry/build/evidence/CG-1-04k/
-  owns: []
+  owns:
+  - glob: backend/rtbench/**
+    mode: EXCLUSIVE
+  - glob: tests/wp104/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -52928,8 +53073,17 @@ entries:
   stale_on:
   - PG-RT-001b:PASS
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-CF
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
   planned: true
   provenance:
     wp_rule: doc06-section6
