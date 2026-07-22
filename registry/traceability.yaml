@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@6f82c0b
+spine_ref: docs/plan/00-실행계획-개요.md@60f9409
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -22,7 +22,15 @@ entries:
   - id: ART-EVIDENCE-3A00E
     kind: report
     path: registry/build/evidence/CG-3A-00e/
-  owns: []
+  owns:
+  - glob: contracts/prim/schema.py
+    mode: CONTRACT_FROZEN
+  - glob: contracts/prim/schema.json
+    mode: CONTRACT_FROZEN
+  - glob: contracts/prim/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3a00/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ACT@v1
@@ -650,7 +658,15 @@ entries:
   - id: ART-EVIDENCE-3A00E
     kind: report
     path: registry/build/evidence/CG-3A-00e/
-  owns: []
+  owns:
+  - glob: contracts/prim/schema.py
+    mode: CONTRACT_FROZEN
+  - glob: contracts/prim/schema.json
+    mode: CONTRACT_FROZEN
+  - glob: contracts/prim/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3a00/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ACT@v1
@@ -2717,6 +2733,10 @@ entries:
   owns:
   - glob: contracts/ws/envelope.schema.json
     mode: CONTRACT_FROZEN
+  - glob: contracts/ws/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3a04/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-PRIM@v1
@@ -5596,7 +5616,15 @@ entries:
   - id: ART-EVIDENCE-3A02D
     kind: report
     path: registry/build/evidence/CG-3A-02d/
-  owns: []
+  owns:
+  - glob: contracts/capture/schema.py
+    mode: CONTRACT_FROZEN
+  - glob: contracts/capture/schema.json
+    mode: CONTRACT_FROZEN
+  - glob: contracts/capture/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3a02/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-PRIM@v1
@@ -5672,7 +5700,13 @@ entries:
   - id: ART-EVIDENCE-3A05F
     kind: report
     path: registry/build/evidence/CG-3A-05f/
-  owns: []
+  owns:
+  - glob: contracts/recorder/schema.json
+    mode: CONTRACT_FROZEN
+  - glob: contracts/recorder/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3a05/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-PRIM@v1
@@ -5712,6 +5746,9 @@ entries:
   env_hash: null
   workflow: SHAPE-CF
   exec_class: AI-offline
+  justification: 하류 뷰어 WP-3D-01은 CTR-REC@v1 데이터셋을 parquet/mp4 직독(Rerun 미의존)으로 소비하고 채널을 info.json의 features.observation.state.names
+    문자열로 조회하므로 contracts.recorder를 정적 import하지 않으며, WP-3B-11 레코더 임베드도 스키마를 info.json 데이터 조인으로 공유한다(정적
+    import 그래프 미가시, 06 §5.6). CONTRACT_FROZEN+CI-09로 상쇄
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -28528,7 +28565,13 @@ entries:
   - id: ART-EVIDENCE-3A05F
     kind: report
     path: registry/build/evidence/CG-3A-05f/
-  owns: []
+  owns:
+  - glob: contracts/recorder/schema.json
+    mode: CONTRACT_FROZEN
+  - glob: contracts/recorder/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3a05/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-PRIM@v1
@@ -28568,6 +28611,9 @@ entries:
   env_hash: null
   workflow: SHAPE-CF
   exec_class: AI-offline
+  justification: 하류 뷰어 WP-3D-01은 CTR-REC@v1 데이터셋을 parquet/mp4 직독(Rerun 미의존)으로 소비하고 채널을 info.json의 features.observation.state.names
+    문자열로 조회하므로 contracts.recorder를 정적 import하지 않으며, WP-3B-11 레코더 임베드도 스키마를 info.json 데이터 조인으로 공유한다(정적
+    import 그래프 미가시, 06 §5.6). CONTRACT_FROZEN+CI-09로 상쇄
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -28595,7 +28641,13 @@ entries:
   - id: ART-EVIDENCE-3A05F
     kind: report
     path: registry/build/evidence/CG-3A-05f/
-  owns: []
+  owns:
+  - glob: contracts/recorder/schema.json
+    mode: CONTRACT_FROZEN
+  - glob: contracts/recorder/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3a05/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-PRIM@v1
@@ -28635,6 +28687,9 @@ entries:
   env_hash: null
   workflow: SHAPE-CF
   exec_class: AI-offline
+  justification: 하류 뷰어 WP-3D-01은 CTR-REC@v1 데이터셋을 parquet/mp4 직독(Rerun 미의존)으로 소비하고 채널을 info.json의 features.observation.state.names
+    문자열로 조회하므로 contracts.recorder를 정적 import하지 않으며, WP-3B-11 레코더 임베드도 스키마를 info.json 데이터 조인으로 공유한다(정적
+    import 그래프 미가시, 06 §5.6). CONTRACT_FROZEN+CI-09로 상쇄
   planned: true
   provenance:
     wp_rule: doc06-section6
@@ -28663,7 +28718,13 @@ entries:
   - id: ART-EVIDENCE-3A05F
     kind: report
     path: registry/build/evidence/CG-3A-05f/
-  owns: []
+  owns:
+  - glob: contracts/recorder/schema.json
+    mode: CONTRACT_FROZEN
+  - glob: contracts/recorder/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3a05/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-PRIM@v1
@@ -28703,6 +28764,9 @@ entries:
   env_hash: null
   workflow: SHAPE-CF
   exec_class: AI-offline
+  justification: 하류 뷰어 WP-3D-01은 CTR-REC@v1 데이터셋을 parquet/mp4 직독(Rerun 미의존)으로 소비하고 채널을 info.json의 features.observation.state.names
+    문자열로 조회하므로 contracts.recorder를 정적 import하지 않으며, WP-3B-11 레코더 임베드도 스키마를 info.json 데이터 조인으로 공유한다(정적
+    import 그래프 미가시, 06 §5.6). CONTRACT_FROZEN+CI-09로 상쇄
   planned: true
   provenance:
     wp_rule: doc06-section6
@@ -28801,7 +28865,15 @@ entries:
   - id: ART-EVIDENCE-3A00E
     kind: report
     path: registry/build/evidence/CG-3A-00e/
-  owns: []
+  owns:
+  - glob: contracts/prim/schema.py
+    mode: CONTRACT_FROZEN
+  - glob: contracts/prim/schema.json
+    mode: CONTRACT_FROZEN
+  - glob: contracts/prim/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3a00/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ACT@v1
@@ -28942,7 +29014,13 @@ entries:
   - id: ART-EVIDENCE-3A01E
     kind: report
     path: registry/build/evidence/CG-3A-01e/
-  owns: []
+  owns:
+  - glob: contracts/camera_registry/schema.json
+    mode: CONTRACT_FROZEN
+  - glob: contracts/camera_registry/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3a01/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-PRIM@v1
@@ -29819,7 +29897,15 @@ entries:
   - id: ART-EVIDENCE-3A02D
     kind: report
     path: registry/build/evidence/CG-3A-02d/
-  owns: []
+  owns:
+  - glob: contracts/capture/schema.py
+    mode: CONTRACT_FROZEN
+  - glob: contracts/capture/schema.json
+    mode: CONTRACT_FROZEN
+  - glob: contracts/capture/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3a02/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-PRIM@v1
@@ -35167,7 +35253,13 @@ entries:
   - id: ART-EVIDENCE-3A01E
     kind: report
     path: registry/build/evidence/CG-3A-01e/
-  owns: []
+  owns:
+  - glob: contracts/camera_registry/schema.json
+    mode: CONTRACT_FROZEN
+  - glob: contracts/camera_registry/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3a01/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-PRIM@v1
@@ -44259,7 +44351,13 @@ entries:
   - id: ART-EVIDENCE-3A03E
     kind: report
     path: registry/build/evidence/CG-3A-03e/
-  owns: []
+  owns:
+  - glob: contracts/teleop/schema.json
+    mode: CONTRACT_FROZEN
+  - glob: contracts/teleop/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3a03/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-PRIM@v1
@@ -50953,6 +51051,9 @@ entries:
     owns: []
     cancel_policy: latch-to-hold
     after: 0
+  justification: 도출된 하류 에지 WP-3A-00·WP-3A-04는 정적 import가 아니라 계약 조인이다 — 서버 단조 시계 = 만료 판정 유일 소유 규약을 CTR-PRIM@v1이
+    원시타입으로 못 박고(EXPIRY_JUDGE_ROLE) CTR-WS@v1이 expiry_mono_server/issued_mono_client로 전송할 뿐이며, backend/deadman
+    트리와 contracts 트리는 서로 import하지 않는다(규약은 동결 스키마 + U-4로 공유). 06 §5.6 계약 조인 — CONTRACT_FROZEN+CI-09로 상쇄
   planned: true
   provenance:
     wp_rule: doc06-section6
@@ -55040,7 +55141,11 @@ entries:
   provenance:
     wp_rule: plan-axis
     source: 02b-작업패키지-Wave-2-3.md:386
-  owns: []
+  owns:
+  - glob: contracts/fixtures/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3a06/**
+    mode: EXCLUSIVE
   gate:
   - CG-3A-06a
   - CG-3A-06b

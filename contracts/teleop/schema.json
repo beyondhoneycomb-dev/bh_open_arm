@@ -1,0 +1,83 @@
+{
+  "action_features": {
+    "bimanual_position_dim": 16,
+    "convention": "flat",
+    "nested_feature_keys": [
+      "dtype",
+      "names",
+      "shape"
+    ],
+    "non_position_value": 0.0,
+    "position_suffix": ".pos",
+    "rejected_convention": "nested",
+    "single_arm_position_dim": 8,
+    "torque_suffix": ".torque",
+    "velocity_suffix": ".vel"
+  },
+  "consumed_contracts": [
+    "CTR-PRIM@v1"
+  ],
+  "contract": "CTR-TEL@v1",
+  "get_action": {
+    "non_blocking": true
+  },
+  "ker_slot": {
+    "can_channels": 0,
+    "dist_name": "lerobot_teleoperator_openarm_ker",
+    "performs_ik": false,
+    "teleop_type": "openarm_ker",
+    "transport": "usb",
+    "usb_pid": 16386,
+    "usb_vid": 12346
+  },
+  "plugin": {
+    "abstract_members": [
+      "action_features",
+      "calibrate",
+      "configure",
+      "connect",
+      "disconnect",
+      "feedback_features",
+      "get_action",
+      "is_calibrated",
+      "is_connected",
+      "send_feedback"
+    ],
+    "config_class_suffix": "Config",
+    "dist_prefix": "lerobot_teleoperator_",
+    "feedback_features": {},
+    "vr_config_class": "OpenArmVRConfig",
+    "vr_device_class": "OpenArmVR",
+    "vr_dist_name": "lerobot_teleoperator_openarm_vr",
+    "vr_teleop_type": "openarm_vr"
+  },
+  "schema_version": 1,
+  "sync_state": {
+    "method": "sync_state",
+    "operational_paths": [
+      "gui_loop"
+    ],
+    "verification_only_paths": [
+      "cli"
+    ]
+  },
+  "timestamp_domain": {
+    "receive_ts_role": "server",
+    "source_ts_role": "client"
+  },
+  "validity": {
+    "error_codes": {
+      "INVALID": "OA-TEL-002",
+      "STALE": "OA-TEL-003"
+    },
+    "levels": {
+      "INVALID": 2,
+      "OK": 0,
+      "STALE": 1
+    },
+    "publishable": [
+      "OK",
+      "STALE"
+    ]
+  }
+}

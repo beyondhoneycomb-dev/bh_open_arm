@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://openarm/contracts/CTR-CAP@v1",
+  "contract": "CTR-CAP@v1",
+  "title": "OpenArm per-episode capture-timestamp sidecar (CTR-CAP@v1)",
+  "description": "The per-episode sidecar that carries each camera frame's grab-time capture instant, joined to the LeRobot dataset by frame_index. Every time-, camera- and queue-shaped element is consumed from CTR-PRIM@v1 and not restated (02b §5.0b). This is the language-agnostic mirror of contracts/capture/schema.py; the two must not diverge. Frozen by content hash at WP-3A-06; DRAFT until then.",
+  "schema_version": 1,
+  "consumed_contract": "CTR-PRIM@v1",
+  "columns": {
+    "episode_index": {
+      "description": "The episode this sidecar belongs to; constant within one sidecar.",
+      "name": "episode_index"
+    },
+    "frame_index": {
+      "description": "The contiguous 0-based frame position; the sidecar-to-dataset join key.",
+      "name": "frame_index",
+      "is_join_key": true
+    },
+    "capture_ts": {
+      "description": "Per-slot grab instant. Column stem consumed from CTR-PRIM's CAPTURE_TS_COLUMN_SUFFIX; a CLOCK_MONOTONIC nanosecond CaptureTimestamp attached immediately after grab.",
+      "column": "<slot>_capture_ts",
+      "clock_source": "CLOCK_MONOTONIC",
+      "unit": "ns",
+      "domain": "capture"
+    },
+    "sensor_ts": {
+      "description": "Optional per-slot device hardware timestamp, preserved in parallel beside capture_ts, never in place of it.",
+      "column": "<slot>_sensor_ts",
+      "suffix": "_sensor_ts",
+      "unit": "ns",
+      "optional": true
+    },
+    "frame_number": {
+      "description": "Optional per-slot device frame counter, preserved in parallel for continuity checks.",
+      "column": "<slot>_frame_number",
+      "suffix": "_frame_number",
+      "optional": true
+    }
+  },
+  "attachment_site": {
+    "description": "capture_ts is produced at the grab site and nowhere else. A consumer that stamps receive time under the capture column is the FAIL_BLOCKING defect (02b §5.2 WP-3A-02 ①); the static ban in contracts/capture/attachment.py catches it.",
+    "sanctioned": "grab",
+    "sites": ["grab", "receive"],
+    "forbidden": "receive"
+  },
+  "lerobot_timestamp": {
+    "description": "The LeRobot dataset 'timestamp' column is frame_index/fps: a synthetic playback grid in seconds, orthogonal to when a frame was captured. Marked synthetic for meta/UI so it is never read as a real capture time (02b §5.2 WP-3A-02 ④).",
+    "domain": "synthetic_grid",
+    "is_synthetic": true,
+    "formula": "frame_index / fps"
+  },
+  "capture_match_queue": {
+    "description": "The queue class a capture-to-frame match uses, consumed from CTR-PRIM QUEUE_PROFILES. A match miss is a counted drop, not a defect; a frame that cannot be matched is dropped and tallied, never interpolated or duplicated.",
+    "profile": "capture_match",
+    "drop_classification": "counted"
+  },
+  "verifiers": {
+    "description": "The checks WP-3B-04 runs over real capture data (02b §5.2 WP-3A-02 ③).",
+    "host_sensor_offset": "capture_ts - sensor_ts, in ns, per frame where both are present",
+    "offset_drift_span": "peak-to-peak of the host-sensor offset series over the episode",
+    "frame_number_continuity": "the device frame counter increments by exactly one each kept step"
+  }
+}

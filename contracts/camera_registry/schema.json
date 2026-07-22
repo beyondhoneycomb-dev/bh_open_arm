@@ -1,0 +1,40 @@
+{
+  "capabilities": {
+    "optional": [
+      "depth"
+    ],
+    "required": [
+      "rgb"
+    ],
+    "simulation_conformance": "required-subset; not exact-stream-match"
+  },
+  "consumes": "CTR-PRIM@v1",
+  "contract": "CTR-CAM@v1",
+  "dataset_keys": {
+    "depth": "observation.images.<slot>_depth",
+    "derived_from": "slot key; carries no width/height/fps",
+    "rgb": "observation.images.<slot>"
+  },
+  "geometry": {
+    "declared_in": "camera spec only",
+    "fields": [
+      "width",
+      "height",
+      "fps"
+    ],
+    "restated_elsewhere": false,
+    "unspecified_blocks_collection_start": true
+  },
+  "identifier": {
+    "sim_namespace_prefix": "sim_",
+    "slot_key_pattern": "^[a-z][a-z0-9_]*$",
+    "source": "CTR-PRIM@v1"
+  },
+  "model": "name-keyed registry; no fixed-slot contract",
+  "registration": {
+    "arm_prefix_auto_attached": true,
+    "sim_namespace_isolated": true,
+    "slot_name_collision": "rejected before save"
+  },
+  "version": 1
+}

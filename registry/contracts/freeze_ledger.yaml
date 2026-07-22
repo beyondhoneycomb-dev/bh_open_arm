@@ -18,3 +18,39 @@ events:
   canonical_hash: sha256:8339de3cd5c1979395ce918411ce291ba5b06f6addf1727f5ca7daeb5bf5a480
   prev_digest: 088a7c48bceebeb792623d62e8083c573b8eb5aadfbbefaa7eda78d2a27598b8
   digest: 36383462a37148ad174b6fae4b42448fe4a49f5b7a9e96e5ae5e0878ccc8fb7e
+- seq: 4
+  kind: FREEZE
+  contract_id: CTR-PRIM@v1
+  canonical_hash: sha256:018281f0096e52ff35cda09380e6c15e34a275411e6da0dcc739e9b378bfb19f
+  prev_digest: 36383462a37148ad174b6fae4b42448fe4a49f5b7a9e96e5ae5e0878ccc8fb7e
+  digest: 1f14c8cb28de19be79c6ed921f4980c2093e2abdd6c6a122fcf892af02d5b358
+- seq: 5
+  kind: FREEZE
+  contract_id: CTR-CAM@v1
+  canonical_hash: sha256:c36c9fa1297726fc237e750faa1c37f7e373b430b5f18621cef82dadfc6cb668
+  prev_digest: 1f14c8cb28de19be79c6ed921f4980c2093e2abdd6c6a122fcf892af02d5b358
+  digest: 8b205d6849c0de4b54c62b822868e1e86d1b668dff35585574a0010c9c40f765
+- seq: 6
+  kind: FREEZE
+  contract_id: CTR-CAP@v1
+  canonical_hash: sha256:2bcec12004af87dea7e3d4ae1ff45b90420b2c46ca17b1fcc552341ecd120126
+  prev_digest: 8b205d6849c0de4b54c62b822868e1e86d1b668dff35585574a0010c9c40f765
+  digest: 531bfea2e5c2a27789ae49f3b95398819c000c79c877a9ae027d67319b06cce8
+- seq: 7
+  kind: FREEZE
+  contract_id: CTR-TEL@v1
+  canonical_hash: sha256:428effac09fa5e8b97f1015694ad1ae6acf8110b1dfce91e2bb8d24696052730
+  prev_digest: 531bfea2e5c2a27789ae49f3b95398819c000c79c877a9ae027d67319b06cce8
+  digest: da977540db6d46f5043f8af82f1d654150dc5b8824af51e1999dc89df33ec50d
+- seq: 8
+  kind: FREEZE
+  contract_id: CTR-WS@v1
+  canonical_hash: sha256:7834385d9f54f12c6681154acb91d246399650b36167e7016738e05ee572ad27
+  prev_digest: da977540db6d46f5043f8af82f1d654150dc5b8824af51e1999dc89df33ec50d
+  digest: db9180291c5c4a6c7e7e2b0582ee7b62eb907f445d32a758a5e67e2ce418574f
+- seq: 9
+  kind: FREEZE
+  contract_id: CTR-REC@v1
+  canonical_hash: sha256:aba79ae69ef09f811de9dc258cc47aa674a104ab926914f1d58b9f66a37d1c0f
+  prev_digest: db9180291c5c4a6c7e7e2b0582ee7b62eb907f445d32a758a5e67e2ce418574f
+  digest: 93993fae3220e02fb764141b5163ac6612af3e0e20a0cd60f2e3507bf80536e1

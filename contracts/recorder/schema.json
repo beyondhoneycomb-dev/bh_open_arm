@@ -1,0 +1,82 @@
+{
+  "action": {
+    "bimanual_dim": 16,
+    "definition": "position command that passed the safety gate and was sent to CAN",
+    "forbidden_suffixes": [
+      ".vel",
+      ".torque"
+    ],
+    "position_only": true,
+    "single_arm_dim": 8,
+    "unit": "deg"
+  },
+  "consumes": [
+    "CTR-PRIM@v1"
+  ],
+  "contract": "CTR-REC@v1",
+  "images": {
+    "depth_key": "observation.images.<slot>_depth",
+    "required_frame_type": "rgb",
+    "rgb_key": "observation.images.<slot>"
+  },
+  "info_key_rule": "exactly {action, observation.state, observation.images.<slot>[, <slot>_depth], timestamp, frame_index, episode_index, index, task_index}; no other key",
+  "meta_features": [
+    "timestamp",
+    "frame_index",
+    "episode_index",
+    "index",
+    "task_index"
+  ],
+  "motors": {
+    "arm_prefixes": {
+      "left": "left_",
+      "right": "right_"
+    },
+    "left_first": true,
+    "per_arm": [
+      "joint_1",
+      "joint_2",
+      "joint_3",
+      "joint_4",
+      "joint_5",
+      "joint_6",
+      "joint_7",
+      "gripper"
+    ]
+  },
+  "observation_state": {
+    "address_by": "name_suffix",
+    "bimanual_dims": {
+      "full": 48,
+      "position_only": 16
+    },
+    "interleave": "per_motor",
+    "per_motor_suffixes_full": [
+      ".pos",
+      ".vel",
+      ".torque"
+    ],
+    "per_motor_suffixes_min": [
+      ".pos"
+    ],
+    "single_arm_dims": {
+      "full": 24,
+      "position_only": 8
+    }
+  },
+  "push_to_hub": {
+    "default": false,
+    "enforced_by": "WP-OPS-04 hub guard"
+  },
+  "schema_version": 1,
+  "timestamp_domain": "synthetic_grid",
+  "unit_convention": {
+    ".pos": "deg",
+    ".torque": "Nm",
+    ".vel": "deg/s"
+  },
+  "use_velocity_and_torque": {
+    "default": false,
+    "scope": "single follower+leader switch"
+  }
+}

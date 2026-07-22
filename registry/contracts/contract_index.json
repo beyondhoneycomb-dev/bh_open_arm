@@ -2,7 +2,7 @@
   "version": 1,
   "namespace": "CTR-<NAME>@v<n>",
   "canonical_source": "docs/plan/01-의존성-DAG-및-병렬화.md",
-  "ledger_head": "36383462a37148ad174b6fae4b42448fe4a49f5b7a9e96e5ae5e0878ccc8fb7e",
+  "ledger_head": "93993fae3220e02fb764141b5163ac6612af3e0e20a0cd60f2e3507bf80536e1",
   "contracts": [
     {
       "contract_id": "CTR-ACT@v1",
@@ -31,8 +31,8 @@
     {
       "contract_id": "CTR-CAM@v1",
       "version": 1,
-      "canonical_hash": null,
-      "status": "DRAFT",
+      "canonical_hash": "sha256:c36c9fa1297726fc237e750faa1c37f7e373b430b5f18621cef82dadfc6cb668",
+      "status": "FROZEN",
       "owner_wp": "WP-3A-01",
       "consumer_wps": [
         "WP-3A-06",
@@ -42,8 +42,8 @@
     {
       "contract_id": "CTR-CAP@v1",
       "version": 1,
-      "canonical_hash": null,
-      "status": "DRAFT",
+      "canonical_hash": "sha256:2bcec12004af87dea7e3d4ae1ff45b90420b2c46ca17b1fcc552341ecd120126",
+      "status": "FROZEN",
       "owner_wp": "WP-3A-02",
       "consumer_wps": [
         "WP-3A-06",
@@ -93,8 +93,8 @@
     {
       "contract_id": "CTR-PRIM@v1",
       "version": 1,
-      "canonical_hash": null,
-      "status": "DRAFT",
+      "canonical_hash": "sha256:018281f0096e52ff35cda09380e6c15e34a275411e6da0dcc739e9b378bfb19f",
+      "status": "FROZEN",
       "owner_wp": "WP-3A-00",
       "consumer_wps": [
         "WP-3A-01",
@@ -108,8 +108,8 @@
     {
       "contract_id": "CTR-REC@v1",
       "version": 1,
-      "canonical_hash": null,
-      "status": "DRAFT",
+      "canonical_hash": "sha256:aba79ae69ef09f811de9dc258cc47aa674a104ab926914f1d58b9f66a37d1c0f",
+      "status": "FROZEN",
       "owner_wp": "WP-3A-05",
       "consumer_wps": [
         "WP-3A-06",
@@ -119,8 +119,8 @@
     {
       "contract_id": "CTR-TEL@v1",
       "version": 1,
-      "canonical_hash": null,
-      "status": "DRAFT",
+      "canonical_hash": "sha256:428effac09fa5e8b97f1015694ad1ae6acf8110b1dfce91e2bb8d24696052730",
+      "status": "FROZEN",
       "owner_wp": "WP-3A-03",
       "consumer_wps": [
         "WP-3A-06",
@@ -145,8 +145,8 @@
     {
       "contract_id": "CTR-WS@v1",
       "version": 1,
-      "canonical_hash": null,
-      "status": "DRAFT",
+      "canonical_hash": "sha256:7834385d9f54f12c6681154acb91d246399650b36167e7016738e05ee572ad27",
+      "status": "FROZEN",
       "owner_wp": "WP-3A-04",
       "consumer_wps": [
         "WP-3A-06",

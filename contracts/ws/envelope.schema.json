@@ -1,0 +1,217 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://openarm/contracts/CTR-WS@v1",
+  "contract": "CTR-WS@v1",
+  "title": "OpenArm single-WebSocket envelope (CTR-WS@v1)",
+  "description": "The one realtime browser<->backend transport (D-2): a single WebSocket multiplexing telemetry, command, camera-binary and control-lease frames. Consumes CTR-PRIM@v1 by reference and redefines none of its primitives. Transports the WP-2A-02 dead-man lease; it does NOT redefine the lease semantics. This body is generated from contracts/ws/schema.py by canonical_envelope(); WP-3A-06 freezes it by content hash (CI-09).",
+  "schema_version": 1,
+  "consumed_contracts": [
+    "CTR-PRIM@v1"
+  ],
+  "transport": {
+    "realtime_channel": "websocket",
+    "single_realtime_channel": true,
+    "forbidden_parallel_stacks": [
+      "webrtc",
+      "foxglove",
+      "rosbridge",
+      "grpc-web"
+    ],
+    "grpc_scope": "backend-remote-inference-only"
+  },
+  "frame_directions": [
+    "client_to_server",
+    "server_to_client"
+  ],
+  "frame_types": {
+    "telemetry": {
+      "direction": "server_to_client",
+      "payload": "text",
+      "queue": "telemetry",
+      "priority": 2,
+      "control_frame": false,
+      "fields": []
+    },
+    "command": {
+      "direction": "client_to_server",
+      "payload": "text",
+      "queue": "command",
+      "priority": 1,
+      "control_frame": true,
+      "fields": []
+    },
+    "camera": {
+      "direction": "server_to_client",
+      "payload": "binary",
+      "queue": "camera_preview",
+      "priority": 3,
+      "control_frame": false,
+      "fields": [],
+      "tag": "<slot>:<channel>",
+      "tag_separator": ":"
+    },
+    "lease_renew": {
+      "direction": "client_to_server",
+      "payload": "text",
+      "queue": "lease",
+      "priority": 0,
+      "control_frame": true,
+      "fields": [
+        "session_id",
+        "lease_generation",
+        "sequence",
+        "issued_mono_client"
+      ]
+    },
+    "lease_grant": {
+      "direction": "server_to_client",
+      "payload": "text",
+      "queue": "lease",
+      "priority": 0,
+      "control_frame": false,
+      "fields": [
+        "session_id",
+        "lease_generation",
+        "expiry_mono_server",
+        "sequence",
+        "issued_mono_client"
+      ]
+    },
+    "lease_reject": {
+      "direction": "server_to_client",
+      "payload": "text",
+      "queue": "lease",
+      "priority": 0,
+      "control_frame": false,
+      "fields": [
+        "session_id",
+        "lease_generation",
+        "reason"
+      ]
+    },
+    "rearm_issue": {
+      "direction": "server_to_client",
+      "payload": "text",
+      "queue": "lease",
+      "priority": 0,
+      "control_frame": false,
+      "fields": [
+        "session_id",
+        "lease_generation"
+      ]
+    },
+    "rearm_confirm": {
+      "direction": "client_to_server",
+      "payload": "text",
+      "queue": "lease",
+      "priority": 0,
+      "control_frame": true,
+      "fields": [
+        "session_id",
+        "lease_generation"
+      ]
+    },
+    "rearm_accept": {
+      "direction": "server_to_client",
+      "payload": "text",
+      "queue": "lease",
+      "priority": 0,
+      "control_frame": false,
+      "fields": [
+        "session_id",
+        "lease_generation",
+        "expiry_mono_server",
+        "sequence",
+        "issued_mono_client"
+      ]
+    }
+  },
+  "lease": {
+    "canon": "backend.deadman (WP-2A-02)",
+    "expiry_field": "expiry_mono_server",
+    "issued_field": "issued_mono_client",
+    "generation_field": "lease_generation",
+    "generation_field_maps_to_canon": "generation",
+    "sequence_field": "sequence",
+    "session_field": "session_id",
+    "expiry_judge_role": "server",
+    "client_frame_carries_no_expiry": true,
+    "age_filter": {
+      "max_lease_age_field": "max_lease_age",
+      "age_input_role": "client"
+    },
+    "reject_reasons": [
+      "rejected_latched",
+      "rejected_unarmed",
+      "rejected_stale_generation",
+      "rejected_unknown_generation",
+      "rejected_replay",
+      "discarded_aged"
+    ],
+    "rearm_handshake": {
+      "frames": [
+        "rearm_issue",
+        "rearm_confirm",
+        "rearm_accept"
+      ]
+    }
+  },
+  "queues": {
+    "priority_classes": {
+      "lease": 0,
+      "command": 1,
+      "telemetry": 2,
+      "camera": 3
+    },
+    "lease_is_highest_priority": true,
+    "bindings": {
+      "telemetry": "telemetry",
+      "command": "command",
+      "camera": "camera_preview",
+      "lease_renew": "lease",
+      "lease_grant": "lease",
+      "lease_reject": "lease",
+      "rearm_issue": "lease",
+      "rearm_confirm": "lease",
+      "rearm_accept": "lease"
+    }
+  },
+  "backpressure": {
+    "signal": "bufferedAmount",
+    "threshold_bytes": 1048576,
+    "drop_on_exceed": [
+      "camera"
+    ],
+    "protected_frames": [
+      "lease_renew",
+      "lease_grant",
+      "lease_reject",
+      "command",
+      "telemetry"
+    ]
+  },
+  "security": {
+    "scheme": "wss",
+    "plaintext_scheme_forbidden": "ws",
+    "origin_allowlist_required": true,
+    "wildcard_origin_forbidden": true,
+    "csrf_cors_required": true
+  },
+  "roles": {
+    "values": [
+      "observer",
+      "operator",
+      "admin"
+    ],
+    "control_holder_role": "operator",
+    "observer_may_send_control_frame": false,
+    "single_control_authority": true
+  },
+  "health": {
+    "public": true,
+    "forbidden_fields": [
+      "control_holder",
+      "active_profile"
+    ]
+  }
+}

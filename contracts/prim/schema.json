@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://openarm/contracts/CTR-PRIM@v1",
+  "contract": "CTR-PRIM@v1",
+  "title": "OpenArm shared 3A primitives (CTR-PRIM@v1)",
+  "description": "The single definition point of the six primitives the five 3A schemas (CTR-CAM/CAP/TEL/WS/REC) share. Frozen by content hash (WP-3A-00); a byte change is a CI-09 freeze violation. This is the language-agnostic mirror of contracts/prim/schema.py; the two must not diverge (02b §5.0b).",
+  "schema_version": 1,
+  "consumed_contracts": ["CTR-ACT@v1", "CTR-ERR@v1", "CTR-UNIT@v1"],
+  "primitives": {
+    "camera_identifier": {
+      "description": "One slot-key grammar shared as the CAM registry key, the CAP sidecar column stem, the WS binary frame tag, and the REC observation.images.<slot> key.",
+      "slot_key_pattern": "^[a-z][a-z0-9_]*$",
+      "arm_prefixes": { "left": "left_", "right": "right_" },
+      "sim_namespace_prefix": "sim_",
+      "joins": {
+        "rec_image_key": "observation.images.<slot>",
+        "rec_depth_key": "observation.images.<slot>_depth",
+        "cap_sidecar_column": "<slot>_capture_ts",
+        "ws_binary_tag": "<slot>:<channel>"
+      }
+    },
+    "timestamp_domain": {
+      "description": "CLOCK_MONOTONIC nanoseconds. The server clock is the sole expiry judge; the client clock is an age input only. The synthetic dataset grid timestamp is orthogonal to a real capture timestamp.",
+      "clock_source": "CLOCK_MONOTONIC",
+      "unit": "ns",
+      "clock_roles": ["server", "client"],
+      "expiry_judge_role": "server",
+      "age_input_role": "client",
+      "lease_expiry_field": "expiry_mono_server",
+      "lease_issued_field": "issued_mono_client",
+      "domains": ["capture", "synthetic_grid"]
+    },
+    "frame_type": {
+      "description": "Image channel kinds. RGB is a required capability; depth is optional. One enum for CAM capability, WS channel tag and REC feature key.",
+      "types": ["rgb", "depth"],
+      "required": "rgb",
+      "optional": ["depth"],
+      "channels": { "rgb": 3, "depth": 1 },
+      "dtype": { "rgb": "uint8", "depth": "uint16" }
+    },
+    "action_payload": {
+      "description": "Position-only action, unit-tagged in degrees, re-exported from CTR-ACT@v1. Never carries velocity or torque dimensions.",
+      "re_export_of": "CTR-ACT@v1",
+      "position_only": true,
+      "position_unit": "deg",
+      "single_arm_dim": 8,
+      "bimanual_dim": 16
+    },
+    "queue_semantics": {
+      "description": "Every real-time queue is bounded, priority-classed, and carries both a drop policy and a drop classification (normal/defect/counted) so a dropped frame means one thing across every quality report.",
+      "priority_classes": { "lease": 0, "command": 1, "telemetry": 2, "camera": 3 },
+      "drop_policies": ["latest_wins", "drop_oldest", "block"],
+      "drop_classifications": ["normal", "defect", "counted"],
+      "profiles": {
+        "lease": {
+          "bounded_capacity": 1,
+          "priority": "lease",
+          "drop_policy": "latest_wins",
+          "drop_classification": "defect"
+        },
+        "command": {
+          "bounded_capacity": 8,
+          "priority": "command",
+          "drop_policy": "drop_oldest",
+          "drop_classification": "counted"
+        },
+        "telemetry": {
+          "bounded_capacity": 16,
+          "priority": "telemetry",
+          "drop_policy": "latest_wins",
+          "drop_classification": "normal"
+        },
+        "camera_preview": {
+          "bounded_capacity": 1,
+          "priority": "camera",
+          "drop_policy": "latest_wins",
+          "drop_classification": "normal"
+        },
+        "capture_match": {
+          "bounded_capacity": 4,
+          "priority": "camera",
+          "drop_policy": "drop_oldest",
+          "drop_classification": "counted"
+        }
+      }
+    },
+    "error_envelope": {
+      "description": "One wrapper around a registered CTR-ERR@v1 code: {code, reason, severity}. Surfaced identically by all five contracts.",
+      "wraps": "CTR-ERR@v1",
+      "code_pattern": "^OA-[A-Z]+-[0-9A-F]{3}$",
+      "fields": ["code", "reason", "severity"],
+      "severity_levels": { "OK": 0, "WARN": 1, "ERROR": 2, "STALE": 3 }
+    }
+  }
+}
