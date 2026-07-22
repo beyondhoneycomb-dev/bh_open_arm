@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@109b551
+spine_ref: docs/plan/00-실행계획-개요.md@6f82c0b
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -12445,7 +12445,11 @@ entries:
   - id: ART-EVIDENCE-2D02C
     kind: report
     path: registry/build/evidence/CG-2D-02c/
-  owns: []
+  owns:
+  - glob: backend/singularity/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2d02/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -12517,7 +12521,11 @@ entries:
   - id: ART-EVIDENCE-2D06D
     kind: report
     path: registry/build/evidence/CG-2D-06d/
-  owns: []
+  owns:
+  - glob: backend/replay/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2d06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -12553,6 +12561,9 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 홈복귀(WP-2D-07)는 "전 구간 사전 검증 통과 후에만 실행" 계약을 소비하되, backend/home/preverify.py가 공유 WP-2C-08
+    프리플라이트(backend.collision_preflight)를 직접 재사용하고 홈 경로를 자체 조밀화하므로 backend.replay를 코드 import하지 않는다 — DAG
+    간선은 실재하나 정적 import 그래프에 미가시(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -12571,7 +12582,11 @@ entries:
   - id: ART-EVIDENCE-2D07C
     kind: report
     path: registry/build/evidence/CG-2D-07c/
-  owns: []
+  owns:
+  - glob: backend/home/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2d07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -16332,7 +16347,11 @@ entries:
   - id: ART-EVIDENCE-2D09B
     kind: report
     path: registry/build/evidence/CG-2D-09b/
-  owns: []
+  owns:
+  - glob: backend/moveto/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2d09/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -16429,7 +16448,11 @@ entries:
   - id: ART-EVIDENCE-2D08B
     kind: report
     path: registry/build/evidence/CG-2D-08b/
-  owns: []
+  owns:
+  - glob: backend/mirror/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2d08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -16515,7 +16538,11 @@ entries:
   - id: ART-EVIDENCE-2D01G
     kind: report
     path: registry/build/evidence/CG-2D-01g/
-  owns: []
+  owns:
+  - glob: backend/cartesian_jog/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2d01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -16651,7 +16678,11 @@ entries:
   - id: ART-EVIDENCE-2D02C
     kind: report
     path: registry/build/evidence/CG-2D-02c/
-  owns: []
+  owns:
+  - glob: backend/singularity/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2d02/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -16780,7 +16811,11 @@ entries:
   - id: ART-EVIDENCE-2D03E
     kind: report
     path: registry/build/evidence/CG-2D-03e/
-  owns: []
+  owns:
+  - glob: backend/freedrive/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2d03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -17164,7 +17199,11 @@ entries:
   - id: ART-EVIDENCE-2D04D
     kind: report
     path: registry/build/evidence/CG-2D-04d/
-  owns: []
+  owns:
+  - glob: backend/freedrive_walls/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2d04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -17246,7 +17285,11 @@ entries:
   - id: ART-EVIDENCE-2D05C
     kind: report
     path: registry/build/evidence/CG-2D-05c/
-  owns: []
+  owns:
+  - glob: backend/teaching/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2d05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -17310,7 +17353,11 @@ entries:
   - id: ART-EVIDENCE-2D06D
     kind: report
     path: registry/build/evidence/CG-2D-06d/
-  owns: []
+  owns:
+  - glob: backend/replay/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2d06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -17346,6 +17393,9 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 홈복귀(WP-2D-07)는 "전 구간 사전 검증 통과 후에만 실행" 계약을 소비하되, backend/home/preverify.py가 공유 WP-2C-08
+    프리플라이트(backend.collision_preflight)를 직접 재사용하고 홈 경로를 자체 조밀화하므로 backend.replay를 코드 import하지 않는다 — DAG
+    간선은 실재하나 정적 import 그래프에 미가시(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -17490,7 +17540,11 @@ entries:
   - id: ART-EVIDENCE-2D08B
     kind: report
     path: registry/build/evidence/CG-2D-08b/
-  owns: []
+  owns:
+  - glob: backend/mirror/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2d08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -17528,7 +17582,11 @@ entries:
   - id: ART-EVIDENCE-2D07C
     kind: report
     path: registry/build/evidence/CG-2D-07c/
-  owns: []
+  owns:
+  - glob: backend/home/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2d07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -45108,7 +45166,11 @@ entries:
   - id: ART-EVIDENCE-2D01G
     kind: report
     path: registry/build/evidence/CG-2D-01g/
-  owns: []
+  owns:
+  - glob: backend/cartesian_jog/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2d01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
