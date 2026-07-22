@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@d1da47e
+spine_ref: docs/plan/00-실행계획-개요.md@cf80bba
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -29590,7 +29590,11 @@ entries:
   - id: ART-EVIDENCE-3B11G
     kind: report
     path: registry/build/evidence/CG-3B-11g/
-  owns: []
+  owns:
+  - glob: backend/recorder/embed/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b11/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -29632,6 +29636,9 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 WP-3B-12/WP-3C-07/WP-G-S07은 레코더의 산출물(parquet 데이터·에피소드 버퍼·info.json)을 데이터 조인·파일 판독으로
+    소비하며 backend.recorder.embed API를 정적 import하지 않는다(푸터 없는 parquet 검출·사이드카 라벨·GUI 표시는 import 그래프에 안 보임,
+    06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -29965,7 +29972,11 @@ entries:
   - id: ART-EVIDENCE-3B12F
     kind: report
     path: registry/build/evidence/CG-3B-12f/
-  owns: []
+  owns:
+  - glob: backend/recorder/quality/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b12/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -30001,6 +30012,9 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 GUI WP-G-S07(S-07 수집 창구)는 품질 리포트·에피소드 라벨·저장소 상태를 CTR-WS@v1 엔벨로프의 문자열 키로 구독하고 에피소드
+    사이드카 JSON을 데이터로 직독하므로 backend.recorder.quality를 정적 import하지 않으며, 상류 WP-3B-11 레코더도 프레임 버퍼·parquet 산출물로만
+    연결되어 import 경계를 만들지 않는다(정적 그래프 미가시, 06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -30196,7 +30210,11 @@ entries:
   - id: ART-EVIDENCE-3B12F
     kind: report
     path: registry/build/evidence/CG-3B-12f/
-  owns: []
+  owns:
+  - glob: backend/recorder/quality/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b12/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -30232,6 +30250,9 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 GUI WP-G-S07(S-07 수집 창구)는 품질 리포트·에피소드 라벨·저장소 상태를 CTR-WS@v1 엔벨로프의 문자열 키로 구독하고 에피소드
+    사이드카 JSON을 데이터로 직독하므로 backend.recorder.quality를 정적 import하지 않으며, 상류 WP-3B-11 레코더도 프레임 버퍼·parquet 산출물로만
+    연결되어 import 경계를 만들지 않는다(정적 그래프 미가시, 06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -44850,7 +44871,11 @@ entries:
   - id: ART-EVIDENCE-3B07D
     kind: report
     path: registry/build/evidence/CG-3B-07d/
-  owns: []
+  owns:
+  - glob: backend/teleop/vr_udp/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -44881,6 +44906,11 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 에지 WP-3B-09·WP-3C-04·WP-3C-05·WP-G-S05는 정적 import가 아니라 계약 조인이다 — WP-3B-09(클러치·스케일·스무더·정렬)는
+    VR 소스를 backend.teleop.vr_udp import가 아니라 동결된 CTR-TEL@v1 포즈 표본(TeleopSample·TeleopValidity)과 월드프레임
+    포즈 값(numpy 배열)으로 소비하고 구체 UDP 소스는 루프/플러그인 조립 지점에서 데이터로 주입되므로 backend.teleop.clutch가 backend.teleop.vr_udp를
+    import하지 않는다. WP-G-S05는 CTR-WS@v1 엔벨로프 문자열 키 구독이고 WP-3C-04/WP-3C-05는 사람보조 실기 실행이라 코드 에지가 없다(정적 import
+    그래프 미가시, 06 §5.6)
   planned: true
   provenance:
     wp_rule: doc06-section6
@@ -44905,7 +44935,11 @@ entries:
   - id: ART-EVIDENCE-3B08E
     kind: report
     path: registry/build/evidence/CG-3B-08e/
-  owns: []
+  owns:
+  - glob: backend/teleop/webxr/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -45375,7 +45409,11 @@ entries:
   - id: ART-EVIDENCE-3B09D
     kind: report
     path: registry/build/evidence/CG-3B-09d/
-  owns: []
+  owns:
+  - glob: backend/teleop/clutch/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b09/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -45694,7 +45732,11 @@ entries:
   - id: ART-EVIDENCE-3B10F
     kind: report
     path: registry/build/evidence/CG-3B-10f/
-  owns: []
+  owns:
+  - glob: backend/teleop/safety_gate/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b10/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -46004,7 +46046,11 @@ entries:
   - id: ART-EVIDENCE-3B14E
     kind: report
     path: registry/build/evidence/CG-3B-14e/
-  owns: []
+  owns:
+  - glob: backend/teleop/ker/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b14/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -46509,7 +46555,11 @@ entries:
   - id: ART-EVIDENCE-3B09D
     kind: report
     path: registry/build/evidence/CG-3B-09d/
-  owns: []
+  owns:
+  - glob: backend/teleop/clutch/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b09/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -53874,7 +53924,11 @@ entries:
   - id: ART-EVIDENCE-3B12F
     kind: report
     path: registry/build/evidence/CG-3B-12f/
-  owns: []
+  owns:
+  - glob: backend/recorder/quality/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b12/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -53910,6 +53964,9 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 GUI WP-G-S07(S-07 수집 창구)는 품질 리포트·에피소드 라벨·저장소 상태를 CTR-WS@v1 엔벨로프의 문자열 키로 구독하고 에피소드
+    사이드카 JSON을 데이터로 직독하므로 backend.recorder.quality를 정적 import하지 않으며, 상류 WP-3B-11 레코더도 프레임 버퍼·parquet 산출물로만
+    연결되어 import 경계를 만들지 않는다(정적 그래프 미가시, 06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
