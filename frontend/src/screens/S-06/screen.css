@@ -1,0 +1,423 @@
+/* Camera console styling. Quiet and dense like the other operator screens; the
+   one deliberate colour decision is a status language shared with the rest of the
+   app — WARN/stale/blocked are amber-to-red, OK/fresh are calm — so a camera
+   problem reads the same way a safety or connection problem does. Themed for both
+   colour schemes off the shell tokens. */
+
+.oa-cam {
+  --oa-cam-bg: #f5f6f8;
+  --oa-cam-panel: #ffffff;
+  --oa-cam-border: #d3d8e0;
+  --oa-cam-ink: #1a2330;
+  --oa-cam-muted: #5c6675;
+  --oa-cam-calm: #0f8f7e;
+  --oa-cam-warn: #b8730a;
+  --oa-cam-warn-bg: #fdf3e2;
+  --oa-cam-danger: #c8362f;
+  --oa-cam-danger-bg: #fdecea;
+  --oa-cam-accent: #0b7285;
+  --oa-cam-grid: #e5e9ef;
+
+  color: var(--oa-cam-ink);
+  background: var(--oa-cam-bg);
+  padding: 1.25rem clamp(1rem, 3vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+@media (prefers-color-scheme: dark) {
+  .oa-cam {
+    --oa-cam-bg: #10151b;
+    --oa-cam-panel: #171e26;
+    --oa-cam-border: #2a333f;
+    --oa-cam-ink: #e6ebf2;
+    --oa-cam-muted: #93a0b1;
+    --oa-cam-calm: #3fd0b8;
+    --oa-cam-warn: #e0a03a;
+    --oa-cam-warn-bg: #2a2110;
+    --oa-cam-danger: #ff6b64;
+    --oa-cam-danger-bg: #2c1614;
+    --oa-cam-accent: #3fb6cf;
+    --oa-cam-grid: #232c37;
+  }
+}
+
+.oa-cam__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.oa-cam__id {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.8rem;
+  color: var(--oa-cam-muted);
+  letter-spacing: 0.04em;
+}
+
+.oa-cam__title {
+  font-size: 1.4rem;
+  font-weight: 650;
+  margin: 0;
+}
+
+.oa-cam__gate-banner {
+  margin: 0;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--oa-cam-warn);
+  background: var(--oa-cam-warn-bg);
+  color: var(--oa-cam-warn);
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.oa-cam__panel {
+  background: var(--oa-cam-panel);
+  border: 1px solid var(--oa-cam-border);
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.oa-cam__panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.oa-cam__panel-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.oa-cam__panel-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--oa-cam-muted);
+  line-height: 1.5;
+}
+
+.oa-cam__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.1rem;
+}
+
+.oa-cam__tile-count {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.8rem;
+  color: var(--oa-cam-accent);
+}
+
+/* Tile grid — auto-fill so the column count follows the derived tile count. */
+.oa-cam__tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.9rem;
+}
+
+.oa-cam__tile {
+  border: 1px solid var(--oa-cam-border);
+  border-radius: 9px;
+  padding: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--oa-cam-bg);
+}
+
+.oa-cam__tile-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.oa-cam__tile-label {
+  font-weight: 620;
+  font-size: 0.95rem;
+}
+
+.oa-cam__tile-key {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.72rem;
+  color: var(--oa-cam-muted);
+  word-break: break-all;
+}
+
+.oa-cam__tile-prefix {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--oa-cam-accent);
+}
+
+.oa-cam__tile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.oa-cam__tile-preview {
+  aspect-ratio: 4 / 3;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--oa-cam-grid), var(--oa-cam-panel));
+  border: 1px dashed var(--oa-cam-border);
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  color: var(--oa-cam-muted);
+  text-align: center;
+  padding: 0.4rem;
+}
+
+.oa-cam__tile-off {
+  color: var(--oa-cam-warn);
+}
+
+.oa-cam__tile-blocked {
+  border: 1px solid var(--oa-cam-danger);
+  background: var(--oa-cam-danger-bg);
+  color: var(--oa-cam-danger);
+  border-radius: 6px;
+  padding: 0.6rem;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.oa-cam__tile-pending {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--oa-cam-warn);
+}
+
+.oa-cam__tile-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--oa-cam-muted);
+}
+
+.oa-cam__badge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  border: 1px solid var(--oa-cam-border);
+}
+
+.oa-cam__badge--depth {
+  color: var(--oa-cam-accent);
+  border-color: var(--oa-cam-accent);
+}
+
+.oa-cam__badge--rgb {
+  color: var(--oa-cam-muted);
+}
+
+.oa-cam__badge--stale {
+  color: var(--oa-cam-warn);
+  border-color: var(--oa-cam-warn);
+  background: var(--oa-cam-warn-bg);
+}
+
+.oa-cam__badge--fresh {
+  color: var(--oa-cam-calm);
+  border-color: var(--oa-cam-calm);
+}
+
+/* Depth colormap grid. */
+.oa-cam__depth {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.oa-cam__depth-grid {
+  display: grid;
+  gap: 1px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.oa-cam__depth-cell {
+  aspect-ratio: 1 / 1;
+}
+
+.oa-cam__depth-legend {
+  margin: 0;
+  font-size: 0.68rem;
+  color: var(--oa-cam-muted);
+}
+
+/* Tables (stream stats, preview isolation, hand-eye). */
+.oa-cam__stats {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.oa-cam__stats th,
+.oa-cam__stats td {
+  text-align: right;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--oa-cam-grid);
+}
+
+.oa-cam__stats th:first-child,
+.oa-cam__stats td:first-child {
+  text-align: left;
+}
+
+.oa-cam__stats-key {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.72rem;
+  word-break: break-all;
+}
+
+.oa-cam__level {
+  display: inline-block;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.oa-cam__level--ok {
+  color: var(--oa-cam-calm);
+}
+
+.oa-cam__level--warn {
+  color: var(--oa-cam-warn);
+  background: var(--oa-cam-warn-bg);
+}
+
+.oa-cam__level--unknown {
+  color: var(--oa-cam-muted);
+}
+
+.oa-cam__master,
+.oa-cam__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+/* Hand-eye compare. */
+.oa-cam__handeye-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.8rem;
+}
+
+.oa-cam__handeye-card {
+  border: 1px solid var(--oa-cam-border);
+  border-radius: 8px;
+  padding: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  background: var(--oa-cam-bg);
+}
+
+.oa-cam__handeye-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+}
+
+.oa-cam__handeye-slot {
+  font-weight: 620;
+}
+
+.oa-cam__handeye-setup,
+.oa-cam__handeye-poses {
+  color: var(--oa-cam-muted);
+}
+
+.oa-cam__handeye-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+
+.oa-cam__handeye-table th,
+.oa-cam__handeye-table td {
+  text-align: right;
+  padding: 0.25rem 0.4rem;
+  border-bottom: 1px solid var(--oa-cam-grid);
+}
+
+.oa-cam__handeye-table th:first-child,
+.oa-cam__handeye-table td:first-child {
+  text-align: left;
+}
+
+.oa-cam__handeye-agreement {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--oa-cam-accent);
+}
+
+.oa-cam__handeye-warn {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--oa-cam-danger);
+}
+
+/* Frustum status. */
+.oa-cam__frustum-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.oa-cam__frustum-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+}
+
+.oa-cam__frustum-slot {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.74rem;
+  min-width: 6.5rem;
+}
+
+.oa-cam__frustum-when {
+  color: var(--oa-cam-muted);
+  font-size: 0.74rem;
+}
+
+.oa-cam__frustum-reduced {
+  margin: 0.3rem 0 0;
+  font-size: 0.75rem;
+  color: var(--oa-cam-warn);
+}
+
+.oa-cam__empty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--oa-cam-muted);
+}

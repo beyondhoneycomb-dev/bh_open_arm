@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@cf80bba
+spine_ref: docs/plan/00-실행계획-개요.md@f2e110c
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -7461,7 +7461,9 @@ entries:
   - id: ART-EVIDENCE-GS05G
     kind: report
     path: registry/build/evidence/CG-G-S05g/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-05/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-TEL@v1
@@ -8428,7 +8430,9 @@ entries:
   - id: ART-EVIDENCE-GS06G
     kind: report
     path: registry/build/evidence/CG-G-S06g/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-06/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-CAM@v1
@@ -11858,7 +11862,9 @@ entries:
   - id: ART-EVIDENCE-GS07G
     kind: report
     path: registry/build/evidence/CG-G-S07g/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-07/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-REC@v1
@@ -12058,7 +12064,9 @@ entries:
   - id: ART-EVIDENCE-GS05G
     kind: report
     path: registry/build/evidence/CG-G-S05g/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-05/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-TEL@v1
@@ -12152,7 +12160,9 @@ entries:
   - id: ART-EVIDENCE-GS05G
     kind: report
     path: registry/build/evidence/CG-G-S05g/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-05/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-TEL@v1
@@ -29479,7 +29489,9 @@ entries:
   - id: ART-EVIDENCE-GS07G
     kind: report
     path: registry/build/evidence/CG-G-S07g/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-07/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-REC@v1
@@ -46398,7 +46410,9 @@ entries:
   - id: ART-EVIDENCE-GS05G
     kind: report
     path: registry/build/evidence/CG-G-S05g/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-05/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-TEL@v1

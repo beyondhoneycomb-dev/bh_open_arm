@@ -1,0 +1,329 @@
+/* S-07 data-collection styles. Self-hosted only — no url() to any external origin,
+   so the bundle stays air-gapped (FR-GUI-008). Colours reuse the shell/safety
+   design tokens (shell.css, safety.css) with literal fallbacks, and inherit the
+   viewer's light/dark theme through those tokens. */
+
+.oa-collect {
+  padding: 1.25rem;
+  color: var(--oa-text, #1b1f24);
+  display: grid;
+  gap: 1rem;
+}
+
+.oa-collect__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+}
+
+.oa-collect__id {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  color: var(--oa-muted, #57606a);
+  width: 100%;
+}
+
+.oa-collect__title {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.oa-collect__section-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.oa-collect__dataset,
+.oa-collect__task,
+.oa-collect__loop,
+.oa-collect__storage,
+.oa-collect__drops,
+.oa-collect__resume,
+.oa-collect__gates {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--oa-border, #d8dee4);
+  border-radius: 8px;
+  background: var(--oa-surface, #ffffff);
+}
+
+.oa-collect__dataset-name {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.oa-collect__dataset-label {
+  font-size: 0.8rem;
+  color: var(--oa-muted, #57606a);
+}
+
+.oa-collect__dataset-id {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.oa-collect__dataset-request {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  color: var(--oa-muted, #57606a);
+}
+
+.oa-collect__task-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.oa-collect__task-input {
+  flex: 1 1 16rem;
+  min-width: 0;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--oa-border, #d8dee4);
+  border-radius: 6px;
+  background: var(--oa-bg, #f6f8fa);
+  color: inherit;
+}
+
+.oa-collect__phase {
+  margin: 0 0 0.6rem;
+}
+
+.oa-collect__episode-count {
+  color: var(--oa-muted, #57606a);
+}
+
+.oa-collect__loop-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.oa-collect__loop-btn,
+.oa-collect__task-apply,
+.oa-collect__resume-btn {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--oa-border, #d8dee4);
+  border-radius: 6px;
+  background: var(--oa-bg, #f6f8fa);
+  color: inherit;
+  cursor: pointer;
+}
+
+.oa-collect__loop-btn:disabled,
+.oa-collect__task-apply:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.oa-collect__loop-btn--success {
+  border-color: var(--oa-nominal, #2f7d32);
+}
+
+.oa-collect__loop-btn--fail,
+.oa-collect__loop-btn--stop {
+  border-color: var(--oa-warning, #b45309);
+}
+
+.oa-collect__events {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0 0 0.6rem;
+}
+
+.oa-collect__event {
+  display: flex;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.oa-collect__event dt {
+  color: var(--oa-muted, #57606a);
+}
+
+.oa-collect__event dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.oa-collect__loop-note,
+.oa-collect__drops-frames,
+.oa-collect__resume-empty,
+.oa-collect__drop-empty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--oa-muted, #57606a);
+}
+
+.oa-collect__drop-grid,
+.oa-collect__storage-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.oa-collect__drop-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  margin-top: 0.6rem;
+}
+
+.oa-collect__drop-card {
+  padding: 0.75rem;
+  border: 1px solid var(--oa-border, #d8dee4);
+  border-radius: 6px;
+  background: var(--oa-bg, #f6f8fa);
+}
+
+.oa-collect__drop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.oa-collect__drop-title {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.oa-collect__drop-total {
+  margin: 0 0 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.oa-collect__drop-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.oa-collect__drop-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.oa-collect__drop-ch {
+  min-width: 5rem;
+  color: var(--oa-muted, #57606a);
+}
+
+.oa-collect__drop-flag,
+.oa-collect__gate-state {
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--oa-border, #d8dee4);
+  border-radius: 999px;
+  font-size: 0.78rem;
+}
+
+.oa-collect__drop-flag--warn {
+  border-color: var(--oa-warning, #b45309);
+  background: var(--oa-warning-bg, #fff4e5);
+}
+
+.oa-collect__drop-flag--overload {
+  border-color: var(--oa-danger, #b42318);
+  color: var(--oa-danger, #b42318);
+}
+
+.oa-collect__drop-flag--ok {
+  border-color: var(--oa-nominal, #2f7d32);
+}
+
+.oa-collect__storage-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.oa-collect__storage-row dt {
+  color: var(--oa-muted, #57606a);
+}
+
+.oa-collect__storage-row dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.oa-collect__storage-block,
+.oa-collect__resume-judgment {
+  color: var(--oa-danger, #b42318);
+}
+
+.oa-collect__storage-block {
+  margin: 0.6rem 0 0;
+  font-weight: 600;
+}
+
+.oa-collect__resume-list,
+.oa-collect__gate-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.oa-collect__resume-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--oa-border, #d8dee4);
+  border-radius: 6px;
+}
+
+.oa-collect__resume-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.oa-collect__resume-detail {
+  font-size: 0.85rem;
+  color: var(--oa-muted, #57606a);
+}
+
+.oa-collect__gate-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.oa-collect__gate-id {
+  font-weight: 600;
+  min-width: 6rem;
+}
+
+.oa-collect__gate-label {
+  color: var(--oa-muted, #57606a);
+}
+
+.oa-collect__gate-state--pending,
+.oa-collect__gate-state--unavailable {
+  color: var(--oa-muted, #57606a);
+}
+
+.oa-collect__gate-state--degraded_accepted {
+  border-color: var(--oa-warning, #b45309);
+  background: var(--oa-warning-bg, #fff4e5);
+}
+
+.oa-collect__gate-detail {
+  font-size: 0.8rem;
+  color: var(--oa-muted, #57606a);
+  width: 100%;
+}
