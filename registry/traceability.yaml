@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@52c83a6
+spine_ref: docs/plan/00-실행계획-개요.md@e02181e
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -16891,7 +16891,11 @@ entries:
   - id: ART-EVIDENCE-2B02C
     kind: report
     path: registry/build/evidence/CG-2B-02c/
-  owns: []
+  owns:
+  - glob: backend/gravity/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2b02/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -16941,7 +16945,11 @@ entries:
   - id: ART-EVIDENCE-2B04C
     kind: report
     path: registry/build/evidence/CG-2B-04c/
-  owns: []
+  owns:
+  - glob: backend/payload/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2b04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -16995,7 +17003,11 @@ entries:
   - id: ART-EVIDENCE-2B07D
     kind: report
     path: registry/build/evidence/CG-2B-07d/
-  owns: []
+  owns:
+  - glob: backend/friction/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2b07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -17053,6 +17065,9 @@ entries:
   env_hash: null
   workflow: SHAPE-IG
   exec_class: AI-offline
+  justification: 하류 소비자(WP-2B-09 감지/제어 스케일 분리 · WP-2C-01 GMO)는 식별된 마찰 파라미터를 friction.yaml 데이터 파일 조인으로
+    소비한다 — friction_scale/coriolis_scale를 마찰값에 곱하거나 잔차 항으로 읽을 뿐 backend.friction을 코드 import하지 않는다(정적 import
+    그래프 미가시, 06 §5.6)
   planned: true
   provenance:
     wp_rule: coverage-fill
@@ -17077,7 +17092,11 @@ entries:
   - id: ART-EVIDENCE-2B06D
     kind: report
     path: registry/build/evidence/CG-2B-06d/
-  owns: []
+  owns:
+  - glob: backend/excitation/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2b06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -17107,8 +17126,19 @@ entries:
   - WP-2B-07
   stale_on: []
   env_hash: null
-  workflow: SHAPE-HG
-  exec_class: Human-assisted-HW
+  phases:
+  - workflow: SHAPE-IM
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-HG
+    exec_class: Human-assisted-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: WP-2B-07은 주입 세션이 남긴 pos/vel/tau 로그를 파일로 소비한다(정적 임포트 아님) — 데이터 조인이라 임포트 그래프에 보이지 않음(06
+    §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -33039,7 +33069,11 @@ entries:
   - id: ART-EVIDENCE-2B08C
     kind: report
     path: registry/build/evidence/CG-2B-08c/
-  owns: []
+  owns:
+  - glob: backend/pathb/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2b08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -33063,6 +33097,8 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 WP-2B-09(감지/제어 보상 스케일 분리)는 경로 B를 PG-FRIC-001 실패 분기에서만 소비하고 보상 기준을 WP-2B-07(마찰)과 WP-2B-08(경로
+    B) 중 런타임 택일하므로, backend.pathb를 무조건적 정적 import로 참조하지 않는 조건부 폴백/조정 에지다(06 §5.6)
   planned: true
   provenance:
     wp_rule: coverage-fill
@@ -33082,7 +33118,11 @@ entries:
   - id: ART-EVIDENCE-2B10B
     kind: report
     path: registry/build/evidence/CG-2B-10b/
-  owns: []
+  owns:
+  - glob: backend/seed_profile/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2b10/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -33138,7 +33178,11 @@ entries:
   - id: ART-EVIDENCE-2B01C
     kind: report
     path: registry/build/evidence/CG-2B-01c/
-  owns: []
+  owns:
+  - glob: backend/dynamics/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2b01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -33180,7 +33224,11 @@ entries:
   - id: ART-EVIDENCE-2B02C
     kind: report
     path: registry/build/evidence/CG-2B-02c/
-  owns: []
+  owns:
+  - glob: backend/gravity/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2b02/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -33227,7 +33275,11 @@ entries:
   - id: ART-EVIDENCE-2B09B
     kind: report
     path: registry/build/evidence/CG-2B-09b/
-  owns: []
+  owns:
+  - glob: backend/compscale/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2b09/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -33269,7 +33321,11 @@ entries:
   - id: ART-EVIDENCE-2B04C
     kind: report
     path: registry/build/evidence/CG-2B-04c/
-  owns: []
+  owns:
+  - glob: backend/payload/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2b04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -34178,7 +34234,11 @@ entries:
   - id: ART-EVIDENCE-2B03C
     kind: report
     path: registry/build/evidence/CG-2B-03c/
-  owns: []
+  owns:
+  - glob: backend/gravity_verify/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2b03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -34208,8 +34268,17 @@ entries:
   terminal: true
   stale_on: []
   env_hash: null
-  workflow: SHAPE-HG
-  exec_class: Human-assisted-HW
+  phases:
+  - workflow: SHAPE-IM
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-HG
+    exec_class: Human-assisted-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
   planned: true
   provenance:
     wp_rule: coverage-fill
@@ -50546,7 +50615,11 @@ entries:
   - id: ART-EVIDENCE-2B05G
     kind: report
     path: registry/build/evidence/CG-2B-05g/
-  owns: []
+  owns:
+  - glob: backend/friction_log/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2b05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -50616,8 +50689,19 @@ entries:
   - WP-2B-06
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-CF
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
+  justification: WP-2B-06은 달성 로깅 대역을 값으로만 소비한다(여기궤적 설계) — 로그 싱크 API를 정적 import하지 않으므로 그 간선은 정적 그래프에 보이지
+    않는다(06 §5.6 데이터 간선)
   planned: true
   provenance:
     wp_rule: sole-citation

@@ -472,10 +472,10 @@ GUI 교차스트림 네임스페이스는 `WP-G-*` (`WP-G-00`~`04`, `WP-G-S01`~`
 | **2A** | `WP-2A-09` | 조그 세션 프리플라이트 | `AI-on-HW` | — |
 | **2B** | `WP-2B-01` | v1→v2 동역학 변환기 + provenance 강제 | `AI-offline` | — |
 | **2B** | `WP-2B-02` | 중력·코리올리 백엔드 (`MUJOCO_V2` 기본 / `URDF_KDL`) | `AI-offline` | — |
-| **2B** | `WP-2B-03` | **v2 중력모델 검증** (정적 자세 격자) | `Human-assisted-HW` | — |
+| **2B** | `WP-2B-03` | **v2 중력모델 검증** (정적 자세 격자) | `AI-offline` → `Human-assisted-HW` | — |
 | **2B** | `WP-2B-04` | 페이로드 모델 (질량·CoG 등록) | `AI-offline` → `Human-assisted-HW` | — |
 | **2B** | `WP-2B-05` | **1 kHz 로깅 하네스** — `f_max_python` 종속. 🔴 **`robot.bus` 직접 접근 금지 · 송신하는 두 번째 writer 없음**: (a) 스케줄러 내부 탭(로깅 레이트 = 틱 레이트) 또는 (b) 완전 수동 RX 탭(read-only 소켓, 송신 0) 두 경로만 (`05` §6.3.1) | `AI-on-HW` | **`PG-RT-001a`** **소비**(값 — **잠정**, `stale_on: PG-RT-001b:PASS`) |
-| **2B** | `WP-2B-06` | 여기 궤적(exciting trajectory) 설계·주입 | `Human-assisted-HW` | — |
+| **2B** | `WP-2B-06` | 여기 궤적(exciting trajectory) 설계·주입 | `AI-offline` → `Human-assisted-HW` | — |
 | **2B** | `WP-2B-07` | **마찰 최소자승 식별** | `AI-offline` | **`PG-FRIC-001`** |
 | **2B** | `WP-2B-08` | **경로 B 부트스트랩** (조건부 대체 WP — `PG-FRIC-001` 음성분기가 생성) | `AI-offline` | — |
 | **2B** | `WP-2B-09` | 감지용/제어용 보상 스케일 분리 | `AI-offline` | — |

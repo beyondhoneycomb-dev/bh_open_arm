@@ -1,0 +1,27 @@
+# The isolated v1 seed profile (WP-2B-10, FR-SAF-031/067).
+#
+# READ-ONLY. This file is the frozen v1 origin the v2 asset is promoted from. It is never
+# rewritten in place: SeedProfileStore.save() refuses every write, and the forward path is an
+# explicit, approved v1->v2 promotion into a NEW v2 asset (backend.seed_profile.promotion).
+#
+# The pose/torque numbers below are ILLUSTRATIVE placeholders standing in for the real
+# openarm_teleop config/follower.yaml, which is not vendored into this repository. The isolation
+# machinery — not these values — is what WP-2B-10 delivers; the sentinel commit_sha in the
+# provenance records that the source is the not-yet-vendored v1 seed, matching the WP-2B-01
+# fixtures. When the real follower.yaml is available on the robot host, its values replace these.
+
+provenance:
+  source_repo: openarm_teleop
+  commit_sha: "0000000000000000000000000000000000000001"
+  path: config/follower.yaml
+  robot_version: "1.0"
+  identified_on: "2025-07-23"
+
+# Seven arm joints, v1 zero convention (radians). joint2 (index 1) sits inside the v1 range
+# [-1.745329, 1.745329]; promotion applies its +pi/2 shift, which the per-joint relative-error
+# report surfaces as a large error at joint2 and ~zero elsewhere.
+seed_pose_rad: [0.10, 0.30, -0.15, -1.20, 0.20, 0.90, -0.05]
+
+# Seven arm joints, v1 convention (Nm). A zero-frame shift does not move a moment, so promotion
+# carries the axis sign only; these are illustrative nominal holding torques.
+seed_torque_nm: [0.00, 2.40, 0.00, 1.10, 0.00, 0.35, 0.00]

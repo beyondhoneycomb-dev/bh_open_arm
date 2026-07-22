@@ -1,0 +1,176 @@
+schema: openarm.friction/v1
+model: tau_fric(omega) = Fo + Fv*omega + Fc*tanh(k_eff*omega)
+k_convention:
+  applied: k_eff = 0.1 * k
+  scale: 0.1
+  note: The runtime applies k_eff = 0.1 * k (control.cpp ComputeFriction coef_tmp=0.1,
+    spec 04 FR-MAN-034); the stored k equals fitted k_eff / 0.1. Writing the raw slope
+    as k would deploy a friction ten times too soft in the stiction knee.
+status:
+  pg_fric_001: NOT_PASSED_DEFERRED_TO_HARDWARE
+  provisional: true
+  basis: SYNTHETIC_EXCITATION_LOG
+  reason: 'Identified from a synthetic excitation log to prove convergence and residual
+    separation. This is NOT a PG-FRIC-001 pass: real friction values need real excitation
+    logs (WP-2B-06 on hardware) and a PG-J7-001 torque-scale pass, without which the
+    identified Fc/Fv/Fo are unverified and the J7 scale may be off by 2x.'
+  real_pass_requires:
+  - 'PG-J7-001 PASS (RID 23 read: DM4310 vs DM3507 torque scale)'
+  - WP-2B-06 real excitation logs captured no-transmit (WP-2B-05)
+  - J2 zero +pi/2 shift applied (WP-2B-01)
+  reverify_hook:
+    module: backend.friction.reverify
+    env_var: OPENARM_FRICTION_REAL_FIXTURE
+provenance:
+  source_repo: bh_open_arm
+  commit_sha: SYNTHETIC-NO-HARDWARE
+  path: backend/friction/friction.provisional.yaml
+  robot_version: '2.0'
+  identified_on: '2026-07-22'
+identification_band:
+  log_freq_hz: 1000.0
+  omega_lo_rad_s: 0.01
+  omega_hi_rad_s: 2.174428
+  knee_omega_rad_s: 0.179773
+  knee_resolved: true
+  note: 'omega_lo is a function of the logging frequency: a lower rate raises it and
+    eats into the stiction knee first (spec 12 §2.1). knee_resolved is false when
+    the tightest tanh knee falls below omega_lo, i.e. the low-rate log did not cover
+    it.'
+joints:
+- index: 1
+  Fo: 0.054971
+  Fv: 0.339376
+  Fc: 1.500402
+  k: 43.978474
+  k_eff: 4.397847
+  fit_residual_rms_nm: 0.020131
+  converged: true
+  separated: true
+  corr_gravity: -0.0135
+  corr_coriolis: 0.006437
+  corr_inertia: 0.014815
+  r2: 0.99986
+- index: 2
+  Fo: 0.065206
+  Fv: 0.425441
+  Fc: 1.874927
+  k: 44.016774
+  k_eff: 4.401677
+  fit_residual_rms_nm: 0.020024
+  converged: true
+  separated: true
+  corr_gravity: -0.0093
+  corr_coriolis: 0.012241
+  corr_inertia: 0.009666
+  r2: 0.999901
+- index: 3
+  Fo: 0.043732
+  Fv: 0.254265
+  Fc: 1.126139
+  k: 49.548403
+  k_eff: 4.95484
+  fit_residual_rms_nm: 0.019797
+  converged: true
+  separated: true
+  corr_gravity: -0.002974
+  corr_coriolis: -0.0135
+  corr_inertia: 0.000532
+  r2: 0.999729
+- index: 4
+  Fo: 0.033017
+  Fv: 0.209491
+  Fc: 1.003533
+  k: 49.239496
+  k_eff: 4.92395
+  fit_residual_rms_nm: 0.01994
+  converged: true
+  separated: true
+  corr_gravity: -0.011308
+  corr_coriolis: -0.015961
+  corr_inertia: 0.01668
+  r2: 0.999623
+- index: 5
+  Fo: 0.022169
+  Fv: 0.127586
+  Fc: 0.499838
+  k: 55.026758
+  k_eff: 5.502676
+  fit_residual_rms_nm: 0.019846
+  converged: true
+  separated: true
+  corr_gravity: 0.024199
+  corr_coriolis: 0.000282
+  corr_inertia: 0.020543
+  r2: 0.998512
+- index: 6
+  Fo: 0.022045
+  Fv: 0.101999
+  Fc: 0.374781
+  k: 55.625714
+  k_eff: 5.562571
+  fit_residual_rms_nm: 0.019727
+  converged: true
+  separated: true
+  corr_gravity: 0.02168
+  corr_coriolis: -0.003489
+  corr_inertia: 0.013122
+  r2: 0.997405
+- index: 7
+  Fo: 0.011636
+  Fv: 0.063386
+  Fc: 0.254506
+  k: 53.734915
+  k_eff: 5.373491
+  fit_residual_rms_nm: 0.019421
+  converged: true
+  separated: true
+  corr_gravity: 0.006849
+  corr_coriolis: -0.02003
+  corr_inertia: 0.007847
+  r2: 0.994028
+seed_comparison:
+  seed: v1 follower.yaml (robot_version 1.0, not vendored)
+  joints:
+  - index: 1
+    rel_Fo: 0.099413
+    rel_Fv: 0.15156
+    rel_Fc: 0.250335
+    rel_k_eff: 0.099462
+    rel_l2: 0.119703
+  - index: 2
+    rel_Fo: 0.086773
+    rel_Fv: 0.149118
+    rel_Fc: 0.249951
+    rel_k_eff: 0.100419
+    rel_l2: 0.128913
+  - index: 3
+    rel_Fo: 0.093311
+    rel_Fv: 0.152449
+    rel_Fc: 0.251265
+    rel_k_eff: 0.101076
+    rel_l2: 0.110897
+  - index: 4
+    rel_Fo: 0.100555
+    rel_Fv: 0.162036
+    rel_Fc: 0.254416
+    rel_k_eff: 0.094211
+    rel_l2: 0.103119
+  - index: 5
+    rel_Fo: 0.108427
+    rel_Fv: 0.149428
+    rel_Fc: 0.249596
+    rel_k_eff: 0.100535
+    rel_l2: 0.102225
+  - index: 6
+    rel_Fo: 0.102254
+    rel_Fv: 0.150012
+    rel_Fc: 0.249271
+    rel_k_eff: 0.112514
+    rel_l2: 0.113325
+  - index: 7
+    rel_Fo: 0.163607
+    rel_Fv: 0.207672
+    rel_Fc: 0.272531
+    rel_k_eff: 0.074698
+    rel_l2: 0.075493
