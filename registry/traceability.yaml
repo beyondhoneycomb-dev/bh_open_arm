@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@69df09b
+spine_ref: docs/plan/00-실행계획-개요.md@d1da47e
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -1092,7 +1092,11 @@ entries:
   - id: ART-EVIDENCE-3B04D
     kind: report
     path: registry/build/evidence/CG-3B-04d/
-  owns: []
+  owns:
+  - glob: backend/sensing/timesync/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -1524,7 +1528,11 @@ entries:
   - id: ART-EVIDENCE-3B13D
     kind: report
     path: registry/build/evidence/CG-3B-13d/
-  owns: []
+  owns:
+  - glob: backend/sensing/calibration/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b13/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -1550,8 +1558,17 @@ entries:
   terminal: true
   stale_on: []
   env_hash: null
-  workflow: SHAPE-HG
-  exec_class: Human-assisted-HW
+  phases:
+  - workflow: SHAPE-IM
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-HG
+    exec_class: Human-assisted-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -1684,7 +1701,11 @@ entries:
   - id: ART-EVIDENCE-3B05E
     kind: report
     path: registry/build/evidence/CG-3B-05e/
-  owns: []
+  owns:
+  - glob: backend/sensing/encoding/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -1956,7 +1977,11 @@ entries:
   - id: ART-EVIDENCE-3B03C
     kind: report
     path: registry/build/evidence/CG-3B-03c/
-  owns: []
+  owns:
+  - glob: backend/sensing/depth/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -2059,7 +2084,11 @@ entries:
   - id: ART-EVIDENCE-3B06D
     kind: report
     path: registry/build/evidence/CG-3B-06d/
-  owns: []
+  owns:
+  - glob: backend/sensing/preview/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b06/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-WS@v1
@@ -2649,7 +2678,11 @@ entries:
   - id: ART-EVIDENCE-3B01C
     kind: report
     path: registry/build/evidence/CG-3B-01c/
-  owns: []
+  owns:
+  - glob: backend/sensing/connect/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -29244,7 +29277,11 @@ entries:
   - id: ART-EVIDENCE-3B01C
     kind: report
     path: registry/build/evidence/CG-3B-01c/
-  owns: []
+  owns:
+  - glob: backend/sensing/connect/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -30437,7 +30474,11 @@ entries:
   - id: ART-EVIDENCE-3B05E
     kind: report
     path: registry/build/evidence/CG-3B-05e/
-  owns: []
+  owns:
+  - glob: backend/sensing/encoding/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -30760,7 +30801,11 @@ entries:
   - id: ART-EVIDENCE-3B03C
     kind: report
     path: registry/build/evidence/CG-3B-03c/
-  owns: []
+  owns:
+  - glob: backend/sensing/depth/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -49678,7 +49723,11 @@ entries:
   - id: ART-EVIDENCE-3B02D
     kind: report
     path: registry/build/evidence/CG-3B-02d/
-  owns: []
+  owns:
+  - glob: backend/sensing/bandwidth/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b02/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -53939,7 +53988,11 @@ entries:
   - id: ART-EVIDENCE-3B05E
     kind: report
     path: registry/build/evidence/CG-3B-05e/
-  owns: []
+  owns:
+  - glob: backend/sensing/encoding/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
