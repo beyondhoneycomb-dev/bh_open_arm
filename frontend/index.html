@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- The Content-Security-Policy is injected at build time from
+         src/config/csp.ts (openarm-csp-manifest plugin, vite.config.ts) so the
+         production bundle enforces same-origin-only while dev HMR keeps its
+         inline preamble. Air-gap invariant: no external origin anywhere. -->
+    <meta name="referrer" content="no-referrer" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <title>OpenArm</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

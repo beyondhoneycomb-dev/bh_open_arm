@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@60f9409
+spine_ref: docs/plan/00-실행계획-개요.md@243c969
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -6981,7 +6981,33 @@ entries:
   - id: ART-EVIDENCE-G00E
     kind: report
     path: registry/build/evidence/CG-G-00e/
-  owns: []
+  owns:
+  - glob: frontend/package.json
+    mode: EXCLUSIVE
+  - glob: frontend/package-lock.json
+    mode: EXCLUSIVE
+  - glob: frontend/vite.config.ts
+    mode: EXCLUSIVE
+  - glob: frontend/tsconfig.json
+    mode: EXCLUSIVE
+  - glob: frontend/index.html
+    mode: EXCLUSIVE
+  - glob: frontend/eslint.config.js
+    mode: EXCLUSIVE
+  - glob: frontend/vitest.config.ts
+    mode: EXCLUSIVE
+  - glob: frontend/src/main.tsx
+    mode: EXCLUSIVE
+  - glob: frontend/src/test-setup.ts
+    mode: EXCLUSIVE
+  - glob: frontend/src/app/**
+    mode: EXCLUSIVE
+  - glob: frontend/src/routes/**
+    mode: EXCLUSIVE
+  - glob: frontend/src/config/**
+    mode: EXCLUSIVE
+  - glob: frontend/public/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-OWN@v1
@@ -7060,7 +7086,33 @@ entries:
   - id: ART-EVIDENCE-G00E
     kind: report
     path: registry/build/evidence/CG-G-00e/
-  owns: []
+  owns:
+  - glob: frontend/package.json
+    mode: EXCLUSIVE
+  - glob: frontend/package-lock.json
+    mode: EXCLUSIVE
+  - glob: frontend/vite.config.ts
+    mode: EXCLUSIVE
+  - glob: frontend/tsconfig.json
+    mode: EXCLUSIVE
+  - glob: frontend/index.html
+    mode: EXCLUSIVE
+  - glob: frontend/eslint.config.js
+    mode: EXCLUSIVE
+  - glob: frontend/vitest.config.ts
+    mode: EXCLUSIVE
+  - glob: frontend/src/main.tsx
+    mode: EXCLUSIVE
+  - glob: frontend/src/test-setup.ts
+    mode: EXCLUSIVE
+  - glob: frontend/src/app/**
+    mode: EXCLUSIVE
+  - glob: frontend/src/routes/**
+    mode: EXCLUSIVE
+  - glob: frontend/src/config/**
+    mode: EXCLUSIVE
+  - glob: frontend/public/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-OWN@v1
@@ -7151,7 +7203,9 @@ entries:
   - id: ART-EVIDENCE-G02I
     kind: report
     path: registry/build/evidence/CG-G-02i/
-  owns: []
+  owns:
+  - glob: frontend/src/viewport/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-UNIT@v1
@@ -7263,7 +7317,33 @@ entries:
   - id: ART-EVIDENCE-G00E
     kind: report
     path: registry/build/evidence/CG-G-00e/
-  owns: []
+  owns:
+  - glob: frontend/package.json
+    mode: EXCLUSIVE
+  - glob: frontend/package-lock.json
+    mode: EXCLUSIVE
+  - glob: frontend/vite.config.ts
+    mode: EXCLUSIVE
+  - glob: frontend/tsconfig.json
+    mode: EXCLUSIVE
+  - glob: frontend/index.html
+    mode: EXCLUSIVE
+  - glob: frontend/eslint.config.js
+    mode: EXCLUSIVE
+  - glob: frontend/vitest.config.ts
+    mode: EXCLUSIVE
+  - glob: frontend/src/main.tsx
+    mode: EXCLUSIVE
+  - glob: frontend/src/test-setup.ts
+    mode: EXCLUSIVE
+  - glob: frontend/src/app/**
+    mode: EXCLUSIVE
+  - glob: frontend/src/routes/**
+    mode: EXCLUSIVE
+  - glob: frontend/src/config/**
+    mode: EXCLUSIVE
+  - glob: frontend/public/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-OWN@v1
@@ -7662,7 +7742,9 @@ entries:
   - id: ART-EVIDENCE-G02I
     kind: report
     path: registry/build/evidence/CG-G-02i/
-  owns: []
+  owns:
+  - glob: frontend/src/viewport/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-UNIT@v1
@@ -7919,7 +8001,9 @@ entries:
   - id: ART-EVIDENCE-G02I
     kind: report
     path: registry/build/evidence/CG-G-02i/
-  owns: []
+  owns:
+  - glob: frontend/src/viewport/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-UNIT@v1
@@ -8424,7 +8508,9 @@ entries:
   - id: ART-EVIDENCE-G02I
     kind: report
     path: registry/build/evidence/CG-G-02i/
-  owns: []
+  owns:
+  - glob: frontend/src/viewport/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-UNIT@v1
@@ -8782,7 +8868,9 @@ entries:
   - id: ART-EVIDENCE-G01G
     kind: report
     path: registry/build/evidence/CG-G-01g/
-  owns: []
+  owns:
+  - glob: frontend/src/ws/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ACT@v1
@@ -8956,7 +9044,9 @@ entries:
   - id: ART-EVIDENCE-G01G
     kind: report
     path: registry/build/evidence/CG-G-01g/
-  owns: []
+  owns:
+  - glob: frontend/src/ws/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ACT@v1
@@ -9050,7 +9140,9 @@ entries:
   - id: ART-EVIDENCE-G03H
     kind: report
     path: registry/build/evidence/CG-G-03h/
-  owns: []
+  owns:
+  - glob: frontend/src/global/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ERR@v1
@@ -9148,7 +9240,9 @@ entries:
   - id: ART-EVIDENCE-G03H
     kind: report
     path: registry/build/evidence/CG-G-03h/
-  owns: []
+  owns:
+  - glob: frontend/src/global/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ERR@v1
@@ -9245,7 +9339,9 @@ entries:
   - id: ART-EVIDENCE-G03H
     kind: report
     path: registry/build/evidence/CG-G-03h/
-  owns: []
+  owns:
+  - glob: frontend/src/global/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ERR@v1
@@ -9342,7 +9438,9 @@ entries:
   - id: ART-EVIDENCE-G03H
     kind: report
     path: registry/build/evidence/CG-G-03h/
-  owns: []
+  owns:
+  - glob: frontend/src/global/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ERR@v1
@@ -9440,7 +9538,9 @@ entries:
   - id: ART-EVIDENCE-G03H
     kind: report
     path: registry/build/evidence/CG-G-03h/
-  owns: []
+  owns:
+  - glob: frontend/src/global/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ERR@v1
@@ -9537,7 +9637,9 @@ entries:
   - id: ART-EVIDENCE-G03H
     kind: report
     path: registry/build/evidence/CG-G-03h/
-  owns: []
+  owns:
+  - glob: frontend/src/global/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ERR@v1
@@ -9635,7 +9737,9 @@ entries:
   - id: ART-EVIDENCE-G03H
     kind: report
     path: registry/build/evidence/CG-G-03h/
-  owns: []
+  owns:
+  - glob: frontend/src/global/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ERR@v1
@@ -9732,7 +9836,9 @@ entries:
   - id: ART-EVIDENCE-G03H
     kind: report
     path: registry/build/evidence/CG-G-03h/
-  owns: []
+  owns:
+  - glob: frontend/src/global/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ERR@v1
@@ -9830,7 +9936,9 @@ entries:
   - id: ART-EVIDENCE-G03H
     kind: report
     path: registry/build/evidence/CG-G-03h/
-  owns: []
+  owns:
+  - glob: frontend/src/global/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ERR@v1
@@ -9927,7 +10035,9 @@ entries:
   - id: ART-EVIDENCE-G03H
     kind: report
     path: registry/build/evidence/CG-G-03h/
-  owns: []
+  owns:
+  - glob: frontend/src/global/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ERR@v1
@@ -10024,7 +10134,9 @@ entries:
   - id: ART-EVIDENCE-G03H
     kind: report
     path: registry/build/evidence/CG-G-03h/
-  owns: []
+  owns:
+  - glob: frontend/src/global/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ERR@v1
@@ -10121,7 +10233,9 @@ entries:
   - id: ART-EVIDENCE-G03H
     kind: report
     path: registry/build/evidence/CG-G-03h/
-  owns: []
+  owns:
+  - glob: frontend/src/global/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ERR@v1
@@ -10218,7 +10332,9 @@ entries:
   - id: ART-EVIDENCE-G03H
     kind: report
     path: registry/build/evidence/CG-G-03h/
-  owns: []
+  owns:
+  - glob: frontend/src/global/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ERR@v1
@@ -10315,7 +10431,9 @@ entries:
   - id: ART-EVIDENCE-G03H
     kind: report
     path: registry/build/evidence/CG-G-03h/
-  owns: []
+  owns:
+  - glob: frontend/src/global/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ERR@v1
@@ -10412,7 +10530,9 @@ entries:
   - id: ART-EVIDENCE-G03H
     kind: report
     path: registry/build/evidence/CG-G-03h/
-  owns: []
+  owns:
+  - glob: frontend/src/global/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ERR@v1
@@ -10509,7 +10629,9 @@ entries:
   - id: ART-EVIDENCE-G04H
     kind: report
     path: registry/build/evidence/CG-G-04h/
-  owns: []
+  owns:
+  - glob: frontend/src/mode/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-GW@v1
@@ -10598,7 +10720,9 @@ entries:
   - id: ART-EVIDENCE-G04H
     kind: report
     path: registry/build/evidence/CG-G-04h/
-  owns: []
+  owns:
+  - glob: frontend/src/mode/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-GW@v1
@@ -10687,7 +10811,9 @@ entries:
   - id: ART-EVIDENCE-G04H
     kind: report
     path: registry/build/evidence/CG-G-04h/
-  owns: []
+  owns:
+  - glob: frontend/src/mode/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-GW@v1
@@ -10776,7 +10902,9 @@ entries:
   - id: ART-EVIDENCE-G04H
     kind: report
     path: registry/build/evidence/CG-G-04h/
-  owns: []
+  owns:
+  - glob: frontend/src/mode/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-GW@v1
@@ -10865,7 +10993,9 @@ entries:
   - id: ART-EVIDENCE-G04H
     kind: report
     path: registry/build/evidence/CG-G-04h/
-  owns: []
+  owns:
+  - glob: frontend/src/mode/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-GW@v1
@@ -10954,7 +11084,9 @@ entries:
   - id: ART-EVIDENCE-G04H
     kind: report
     path: registry/build/evidence/CG-G-04h/
-  owns: []
+  owns:
+  - glob: frontend/src/mode/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-GW@v1
@@ -11043,7 +11175,9 @@ entries:
   - id: ART-EVIDENCE-G04H
     kind: report
     path: registry/build/evidence/CG-G-04h/
-  owns: []
+  owns:
+  - glob: frontend/src/mode/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-GW@v1
@@ -11132,7 +11266,9 @@ entries:
   - id: ART-EVIDENCE-G04H
     kind: report
     path: registry/build/evidence/CG-G-04h/
-  owns: []
+  owns:
+  - glob: frontend/src/mode/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-GW@v1
@@ -11221,7 +11357,9 @@ entries:
   - id: ART-EVIDENCE-G04H
     kind: report
     path: registry/build/evidence/CG-G-04h/
-  owns: []
+  owns:
+  - glob: frontend/src/mode/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-GW@v1
@@ -11310,7 +11448,9 @@ entries:
   - id: ART-EVIDENCE-G04H
     kind: report
     path: registry/build/evidence/CG-G-04h/
-  owns: []
+  owns:
+  - glob: frontend/src/mode/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-GW@v1
@@ -11399,7 +11539,9 @@ entries:
   - id: ART-EVIDENCE-G04H
     kind: report
     path: registry/build/evidence/CG-G-04h/
-  owns: []
+  owns:
+  - glob: frontend/src/mode/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-GW@v1
@@ -37385,7 +37527,9 @@ entries:
   - id: ART-EVIDENCE-G02I
     kind: report
     path: registry/build/evidence/CG-G-02i/
-  owns: []
+  owns:
+  - glob: frontend/src/viewport/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-UNIT@v1
@@ -50427,7 +50571,9 @@ entries:
   - id: ART-EVIDENCE-G02I
     kind: report
     path: registry/build/evidence/CG-G-02i/
-  owns: []
+  owns:
+  - glob: frontend/src/viewport/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-UNIT@v1

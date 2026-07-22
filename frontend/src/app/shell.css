@@ -1,0 +1,137 @@
+/* Shell chrome styles. Self-hosted only: a system font stack (no web font
+   fetch) and no url() to any external origin, so the bundle stays air-gapped. */
+
+:root {
+  --oa-bg: #f6f8fa;
+  --oa-surface: #ffffff;
+  --oa-text: #1b1f24;
+  --oa-muted: #57606a;
+  --oa-border: #d8dee4;
+  --oa-accent: #0b7285;
+  --oa-nav-width: 232px;
+  --oa-font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --oa-bg: #0d1117;
+    --oa-surface: #161b22;
+    --oa-text: #e6edf3;
+    --oa-muted: #8b949e;
+    --oa-border: #30363d;
+    --oa-accent: #3fb6cf;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--oa-font);
+  color: var(--oa-text);
+  background: var(--oa-bg);
+}
+
+.oa-shell {
+  display: grid;
+  grid-template-columns: var(--oa-nav-width) 1fr;
+  min-height: 100vh;
+}
+
+.oa-shell--compact {
+  --oa-nav-width: 188px;
+  font-size: 0.92rem;
+}
+
+.oa-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 0.75rem;
+  border-right: 1px solid var(--oa-border);
+  background: var(--oa-surface);
+}
+
+.oa-nav--collapsed {
+  --oa-nav-width: 64px;
+}
+
+.oa-nav__brand {
+  margin: 0 0.5rem 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--oa-accent);
+}
+
+.oa-nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.oa-nav__link {
+  display: block;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  color: var(--oa-text);
+  text-decoration: none;
+}
+
+.oa-nav__link:hover {
+  background: var(--oa-bg);
+}
+
+.oa-nav__link.active {
+  background: var(--oa-accent);
+  color: #fff;
+}
+
+.oa-nav__status {
+  margin-top: auto;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8rem;
+  color: var(--oa-muted);
+}
+
+.oa-main {
+  padding: 1.5rem 2rem;
+  overflow-x: auto;
+}
+
+.oa-scaffold__id {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--oa-muted);
+}
+
+.oa-scaffold__title {
+  margin: 0.1rem 0 1rem;
+  font-size: 1.5rem;
+}
+
+.oa-scaffold__pending {
+  color: var(--oa-muted);
+}
+
+.oa-scaffold__spec {
+  margin-top: 1.5rem;
+}
+
+.oa-scaffold__spec-title {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.oa-scaffold__spec-list {
+  padding-left: 1.1rem;
+  margin: 0;
+}
+
+.oa-scaffold__spec-link {
+  color: var(--oa-accent);
+}

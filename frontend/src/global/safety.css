@@ -1,0 +1,278 @@
+/* Always-on safety element styles (WP-G-03). Self-hosted only: no url() to any
+   external origin and no web-font fetch, so the bundle stays air-gapped. The two
+   stops are deliberately styled as opposite controls — a muted soft stop and a
+   loud red hard E-Stop — so an operator can never confuse a torque hold with a
+   power cut (CG-G-03a). Tones reuse the shell's --oa-* variables and add the
+   safety palette below. */
+
+:root {
+  --oa-danger: #b42318;
+  --oa-danger-fg: #ffffff;
+  --oa-warning: #b45309;
+  --oa-warning-bg: #fff4e5;
+  --oa-nominal: #2f7d32;
+  --oa-soft-stop: #475467;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --oa-danger: #f04438;
+    --oa-danger-fg: #1b1f24;
+    --oa-warning: #f79009;
+    --oa-warning-bg: #2b2113;
+    --oa-nominal: #4ea45a;
+    --oa-soft-stop: #98a2b3;
+  }
+}
+
+/* The safety bar sticks to the top so the stop controls and the standing drop
+   warning stay visible regardless of screen scroll (CG-G-03a). */
+.oa-safety-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--oa-surface);
+  border-bottom: 1px solid var(--oa-border);
+}
+
+.oa-badge-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.oa-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--oa-border);
+  font-size: 12px;
+  line-height: 1.6;
+  background: var(--oa-bg);
+}
+
+.oa-badge__key {
+  color: var(--oa-muted);
+}
+
+.oa-badge__value {
+  font-weight: 600;
+}
+
+.oa-badge--nominal {
+  border-color: var(--oa-nominal);
+}
+
+.oa-badge--muted {
+  color: var(--oa-muted);
+}
+
+.oa-badge--warning {
+  border-color: var(--oa-warning);
+  background: var(--oa-warning-bg);
+  color: var(--oa-warning);
+}
+
+.oa-badge--danger {
+  border-color: var(--oa-danger);
+  background: var(--oa-danger);
+  color: var(--oa-danger-fg);
+}
+
+.oa-badge__intruders,
+.oa-badge__warning {
+  font-weight: 600;
+}
+
+/* Two stops, opposite looks. */
+.oa-stops {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.oa-stop {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.oa-stop__label {
+  font-weight: 700;
+}
+
+.oa-stop__effect {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+/* Soft stop: muted, secondary. Holds pose with torque — not an emergency look. */
+.oa-stop--soft {
+  border: 1px solid var(--oa-soft-stop);
+  background: var(--oa-surface);
+  color: var(--oa-soft-stop);
+}
+
+.oa-stop--soft:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Hard E-Stop: loud red, unmistakable. Cuts power -> the arm drops. */
+.oa-stop--hard {
+  border: 2px solid var(--oa-danger);
+  background: var(--oa-danger);
+  color: var(--oa-danger-fg);
+  font-size: 15px;
+}
+
+.oa-stop-hard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 280px;
+}
+
+/* Standing drop warning: always visible next to the hard E-Stop. */
+.oa-stop__drop-warning {
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--oa-danger);
+  color: var(--oa-danger);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.oa-dummy-banner {
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--oa-warning-bg);
+  border: 1px solid var(--oa-warning);
+  color: var(--oa-warning);
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Preflight banner. */
+.oa-preflight {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--oa-border);
+}
+
+.oa-preflight--blocked {
+  border-color: var(--oa-danger);
+}
+
+.oa-preflight--ready {
+  border-color: var(--oa-nominal);
+}
+
+.oa-preflight__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.oa-preflight__item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.oa-preflight__item--pass .oa-preflight__mark {
+  color: var(--oa-nominal);
+}
+
+.oa-preflight__item--fail .oa-preflight__mark {
+  color: var(--oa-danger);
+}
+
+.oa-preflight__detail {
+  color: var(--oa-muted);
+  font-size: 12px;
+}
+
+.oa-preflight__blocked-note {
+  margin: 0;
+  color: var(--oa-danger);
+  font-weight: 600;
+}
+
+.oa-preflight__start:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Notification center. */
+.oa-notifications__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.oa-notification {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--oa-border);
+}
+
+.oa-notification--error,
+.oa-notification--stale {
+  border-color: var(--oa-danger);
+}
+
+.oa-notification--warn {
+  border-color: var(--oa-warning);
+}
+
+/* push_to_hub confirmation dialog. */
+.oa-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 2px solid var(--oa-danger);
+  background: var(--oa-surface);
+}
+
+.oa-confirm__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.oa-confirm__accept--danger {
+  background: var(--oa-danger);
+  color: var(--oa-danger-fg);
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
