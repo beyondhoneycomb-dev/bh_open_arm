@@ -468,7 +468,7 @@ GUI 교차스트림 네임스페이스는 `WP-G-*` (`WP-G-00`~`04`, `WP-G-S01`~`
 | **2A** | `WP-2A-05` | 감사 링버퍼 (변환 전 단계 + **원 요청 보존**) | `AI-offline` | — |
 | **2A** | `WP-2A-06` | 정지경로 지연 재확인 (2A 구성 하의 회귀) | `AI-on-HW` | `PG-STOP-001` **소비** |
 | **2A** | `WP-2A-07` | ERR 니블 디코더 + 통신두절 감지 → 홀드 | `AI-offline` → `AI-on-HW` | — |
-| **2A** | `WP-2A-08` | 그리퍼 J8 엔드포인트 캡처 + 부호반사 스키마 강제 | `Human-assisted-HW` | — |
+| **2A** | `WP-2A-08` | 그리퍼 J8 엔드포인트 캡처 + 부호반사 스키마 강제 | `AI-offline` → `Human-assisted-HW` | — |
 | **2A** | `WP-2A-09` | 조그 세션 프리플라이트 | `AI-on-HW` | — |
 | **2B** | `WP-2B-01` | v1→v2 동역학 변환기 + provenance 강제 | `AI-offline` | — |
 | **2B** | `WP-2B-02` | 중력·코리올리 백엔드 (`MUJOCO_V2` 기본 / `URDF_KDL`) | `AI-offline` | — |

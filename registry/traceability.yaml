@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@62fcab6
+spine_ref: docs/plan/00-실행계획-개요.md@52c83a6
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -15862,7 +15862,11 @@ entries:
   - id: ART-EVIDENCE-2A09E
     kind: report
     path: registry/build/evidence/CG-2A-09e/
-  owns: []
+  owns:
+  - glob: backend/preflight/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2a09/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -15955,7 +15959,11 @@ entries:
   - id: ART-EVIDENCE-2A05C
     kind: report
     path: registry/build/evidence/CG-2A-05c/
-  owns: []
+  owns:
+  - glob: backend/audit/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2a05/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-ACT@v1
@@ -15982,6 +15990,9 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 정지경로 벤치(WP-2A-06)는 감사 링버퍼를 코드 import가 아니라 캡처 파일 타임스탬프 조인으로 소비한다 — 스케줄러측 이벤트 시각(홀드
+    프레임 방출 tick의 at)을 candump·커널 타임스탬프와 상관해 경로 분해하며 backend.audit를 import하지 않는다(정적 import 그래프 미가시 데이터
+    조인, 06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -16039,7 +16050,11 @@ entries:
   - id: ART-EVIDENCE-2A03D
     kind: report
     path: registry/build/evidence/CG-2A-03d/
-  owns: []
+  owns:
+  - glob: backend/jogclamp/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2a03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -16090,7 +16105,11 @@ entries:
   - id: ART-EVIDENCE-2A01C
     kind: report
     path: registry/build/evidence/CG-2A-01c/
-  owns: []
+  owns:
+  - glob: backend/jog/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2a01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -16181,7 +16200,11 @@ entries:
   - id: ART-EVIDENCE-2A04F
     kind: report
     path: registry/build/evidence/CG-2A-04f/
-  owns: []
+  owns:
+  - glob: backend/velocity/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2a04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -16233,6 +16256,9 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 조그 클램프(WP-2A-03)는 정본 안전 봉투를 소비하되 위치·스텝만 집행하고 속도는 형제 단계(게이트웨이/리미터)가 집행한다(03 FR-MOT-036
+    스텝델타·속도 독립) — 따라서 backend.velocity를 코드 import하지 않고 공유 정본 한계 세트를 데이터로 조정할 뿐이다(정적 import 그래프 미가시, 06
+    §5.6)
   planned: true
   provenance:
     wp_rule: doc06-section6
@@ -16343,7 +16369,11 @@ entries:
   - id: ART-EVIDENCE-2A08D
     kind: report
     path: registry/build/evidence/CG-2A-08d/
-  owns: []
+  owns:
+  - glob: backend/gripper_endpoint/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2a08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -16369,8 +16399,17 @@ entries:
   - WP-G-S03
   stale_on: []
   env_hash: null
-  workflow: SHAPE-HG
-  exec_class: Human-assisted-HW
+  phases:
+  - workflow: SHAPE-IM
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-HG
+    exec_class: Human-assisted-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -17578,7 +17617,11 @@ entries:
   - id: ART-EVIDENCE-2A06C
     kind: report
     path: registry/build/evidence/CG-2A-06c/
-  owns: []
+  owns:
+  - glob: backend/stopbench/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2a06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -17608,8 +17651,17 @@ entries:
   terminal: true
   stale_on: []
   env_hash: null
-  workflow: SHAPE-MS
-  exec_class: AI-on-HW
+  phases:
+  - workflow: SHAPE-CF
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-MS
+    exec_class: AI-on-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -17708,7 +17760,11 @@ entries:
   - id: ART-EVIDENCE-2A07D
     kind: report
     path: registry/build/evidence/CG-2A-07d/
-  owns: []
+  owns:
+  - glob: backend/commloss/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2a07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -22466,7 +22522,11 @@ entries:
   - id: ART-EVIDENCE-2A08D
     kind: report
     path: registry/build/evidence/CG-2A-08d/
-  owns: []
+  owns:
+  - glob: backend/gripper_endpoint/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2a08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -22492,8 +22552,17 @@ entries:
   - WP-G-S03
   stale_on: []
   env_hash: null
-  workflow: SHAPE-HG
-  exec_class: Human-assisted-HW
+  phases:
+  - workflow: SHAPE-IM
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-HG
+    exec_class: Human-assisted-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -30478,7 +30547,11 @@ entries:
   - id: ART-EVIDENCE-2A09E
     kind: report
     path: registry/build/evidence/CG-2A-09e/
-  owns: []
+  owns:
+  - glob: backend/preflight/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2a09/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -32841,7 +32914,11 @@ entries:
   - id: ART-EVIDENCE-2A07D
     kind: report
     path: registry/build/evidence/CG-2A-07d/
-  owns: []
+  owns:
+  - glob: backend/commloss/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2a07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -33516,7 +33593,11 @@ entries:
   - id: ART-EVIDENCE-2A03D
     kind: report
     path: registry/build/evidence/CG-2A-03d/
-  owns: []
+  owns:
+  - glob: backend/jogclamp/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2a03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -35438,7 +35519,11 @@ entries:
   - id: ART-EVIDENCE-2A00D
     kind: report
     path: registry/build/evidence/CG-2A-00d/
-  owns: []
+  owns:
+  - glob: backend/interlock/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2a00/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -45311,7 +45396,11 @@ entries:
   - id: ART-EVIDENCE-2A08D
     kind: report
     path: registry/build/evidence/CG-2A-08d/
-  owns: []
+  owns:
+  - glob: backend/gripper_endpoint/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2a08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -45337,8 +45426,17 @@ entries:
   - WP-G-S03
   stale_on: []
   env_hash: null
-  workflow: SHAPE-HG
-  exec_class: Human-assisted-HW
+  phases:
+  - workflow: SHAPE-IM
+    exec_class: AI-offline
+    owns: []
+    cancel_policy: finish-step
+    after: null
+  - workflow: SHAPE-HG
+    exec_class: Human-assisted-HW
+    owns: []
+    cancel_policy: latch-to-hold
+    after: 0
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -50553,7 +50651,11 @@ entries:
   - id: ART-EVIDENCE-2A02H
     kind: report
     path: registry/build/evidence/CG-2A-02h/
-  owns: []
+  owns:
+  - glob: backend/deadman/**
+    mode: EXCLUSIVE
+  - glob: tests/wp2a02/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
