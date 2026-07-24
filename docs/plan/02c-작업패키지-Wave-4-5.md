@@ -142,7 +142,7 @@
 | **실행 클래스** | `AI-offline` |
 | **입력** | Wave 0-Env: LeRobot v0.6.0 commit SHA 핀 + 락파일 · Wave 0-Ops: 구조화 로그·크래시 워치독 · Wave 0-C: 합성 48차원 픽스처 데이터셋 |
 | **산출** | 잡 큐 서비스 · `lerobot-train` subprocess 런처 · 로그 스트리밍/영속 계층 · 재개 경로 · GPU 배타 가드 1줄 |
-| **인터페이스 계약** | `JobSpec{job_id, name, config_snapshot, dataset.repo_id, dataset.revision, requested_gpus, state, created/started/ended, output_dir}` (`FR-TRN-027` 필드 그대로 — 발명 금지) · `JobState ∈ {QUEUED, PREFLIGHT, RUNNING, CANCELLED, FAILED, DONE}` (`10` §4 상태표 준수) · 잡 로그는 **잡 종료 후에도 조회 가능**(`FR-TRN-029`) |
+| **인터페이스 계약** | `JobSpec{job_id, name, config_snapshot, dataset.repo_id, dataset.revision, requested_gpus, state, created/started/ended, output_dir}` (`FR-TRN-027` 필드 그대로 — 발명 금지) · `JobState ∈ {QUEUED, PREFLIGHT, RUNNING, CANCELLED, FAILED, DONE}` (`10` §4 상태표 준수) · 잡 로그는 **잡 종료 후에도 조회 가능**(`FR-TRN-029`) · 소유 경로 = `backend/training/orchestrator/**`, `tests/wp4a01/**` (**`EXCLUSIVE`**) |
 | **수용 게이트** | ① `CG-4A-01a` 동일 GPU에 2잡 스케줄 시도 → 두 번째 잡이 반드시 `QUEUED`로 남는다(예외 없이·타이밍 무관, 100회 반복 결정론) ② `CG-4A-01b` 취소 → 마지막 체크포인트 파일이 존재하고 중단 step이 계보에 기록됨 ③ `CG-4A-01c` `resume=true` 재개 후 optimizer·scheduler·step 카운터가 복원됨(재개 전후 step 연속) ④ `CG-4A-01d` `resume=false` + 기존 `output_dir` → **시작하지 않고** 3택 요구(LeRobot `validate()`의 `FileExistsError`를 사용자에게 그대로 던지지 않는다) |
 | **음성 분기** | ①실패 → 큐를 단일 스케줄러 스레드로 직렬화(락 경합 제거). 그래도 `FAIL`이면 이 WP는 끝나지 않는다 — GPU 공유는 조용한 OOM과 지터를 동시에 만든다 / ③실패 → LeRobot 재개 경로의 실제 복원 범위를 소스로 재확인 후 UI 문구를 사실에 맞춰 축소(`FR-TRN-033`은 복원을 **UI에 명시**하라는 요구이지 우리가 복원을 구현하라는 요구가 아니다) |
 | **워크플로우 형상** | **SHAPE-IM(1)** — 단일 빌더 + verify 루프. **`FR-TRN-072`는 잡 스케줄러의 1줄 가드로 끝낸다** — 스핀 §7: 제어 호스트와 학습 호스트는 자연히 분리되므로(동시 실행 안 함) 설계 제약으로 격상하지 않는다 |
@@ -156,7 +156,7 @@
 | **실행 클래스** | `AI-offline` |
 | **입력** | Wave 0-A 액션/관측 계약 동결(스핀 §6: `rawObservation` 48채널·`trainingFeatureProjection`) · Wave 0-C 픽스처 · `FR-OPS-087` 인덱스↔채널 매핑 레지스트리(Wave 0-Ops) |
 | **산출** | `preflight(dataset, policy) -> PreflightReport` · 결함 주입 픽스처 세트 |
-| **인터페이스 계약** | `ObservationConfig{use_velocity_and_torque: bool, state_dim: 8\|16\|24\|48, action_dim: 8\|16, names: list[str]}` — **`names`가 정본이고 `state_dim`은 파생이다**(`FR-TRN-061`) · `PreflightReport{verdict: PASS\|BLOCK, findings: [{code, channel_name, component: .pos\|.vel\|.torque, joint}]}` — 발견은 **관절 이름과 성분을 명시**해야 한다 |
+| **인터페이스 계약** | `ObservationConfig{use_velocity_and_torque: bool, state_dim: 8\|16\|24\|48, action_dim: 8\|16, names: list[str]}` — **`names`가 정본이고 `state_dim`은 파생이다**(`FR-TRN-061`) · `PreflightReport{verdict: PASS\|BLOCK, findings: [{code, channel_name, component: .pos\|.vel\|.torque, joint}]}` — 발견은 **관절 이름과 성분을 명시**해야 한다 · 소유 경로 = `backend/training/preflight/**`, `tests/wp4a02/**` (**`EXCLUSIVE`**) |
 | **수용 게이트** | **전부 "결함 주입 픽스처에서 반드시 BLOCK"으로 정의한다**(§0.5): ① `CG-4A-02a` `names`에서 `.torque` 제거하고 shape만 48로 유지한 픽스처 → 관측 구성 오판정 없이 BLOCK ② `CG-4A-02b` `rename_map`으로 `names` 순서를 1칸 회전시킨 픽스처 → BLOCK (이 케이스가 **조용한 실패의 원형**이므로 이 게이트가 없으면 WP 전체가 무의미) ③ `CG-4A-02c` `q01`/`q99` 제거 + `pi05` 선택 → BLOCK + 보강 스크립트 제시 ④ `CG-4A-02d` `timestamp`를 정책 feature로 승격하려는 설정 → BLOCK ⑤ `CG-4A-02e` 정상 픽스처 → PASS이며 **findings가 공집합** |
 | **음성 분기** | ②실패(순서 회전을 못 잡음) → `FAIL`. `names` 순서 검증은 대체 경로가 없다 — `build_dataset_frame`이 순서로 인덱싱하는 이상, 순서를 안 보면 정본이 없다 / ③실패 → `FAIL`, 고쳐서 다시 돌린다: 보강 스크립트를 프리플라이트 내부에서 자동 실행하지 말고 **사용자 확인 후 실행**으로 변경(자동 보강은 stats 해시를 조용히 바꿔 §0.4 stale 전파를 유발한다) |
 | **워크플로우 형상** | **SHAPE-IM(2)** — 2 병렬 빌더(검사기 / 결함주입 픽스처 생성기) + 교차 verify 루프 — **픽스처 생성기가 검사기를 못 속이면 픽스처가 약한 것이고, 속이면 검사기가 약한 것이다.** 두 빌더는 서로의 실패를 정의한다 |

@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@c75c807
+spine_ref: docs/plan/00-실행계획-개요.md@45b4928
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -6110,7 +6110,11 @@ entries:
   - id: ART-EVIDENCE-4A02E
     kind: report
     path: registry/build/evidence/CG-4A-02e/
-  owns: []
+  owns:
+  - glob: backend/training/preflight/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a02/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -47355,7 +47359,11 @@ entries:
   - id: ART-EVIDENCE-4A01D
     kind: report
     path: registry/build/evidence/CG-4A-01d/
-  owns: []
+  owns:
+  - glob: backend/training/orchestrator/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -47456,7 +47464,11 @@ entries:
   - id: ART-EVIDENCE-4A01D
     kind: report
     path: registry/build/evidence/CG-4A-01d/
-  owns: []
+  owns:
+  - glob: backend/training/orchestrator/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -47642,7 +47654,11 @@ entries:
   - id: ART-EVIDENCE-4A01D
     kind: report
     path: registry/build/evidence/CG-4A-01d/
-  owns: []
+  owns:
+  - glob: backend/training/orchestrator/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -47707,7 +47723,11 @@ entries:
   - id: ART-EVIDENCE-4A01D
     kind: report
     path: registry/build/evidence/CG-4A-01d/
-  owns: []
+  owns:
+  - glob: backend/training/orchestrator/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -47772,7 +47792,11 @@ entries:
   - id: ART-EVIDENCE-4A01D
     kind: report
     path: registry/build/evidence/CG-4A-01d/
-  owns: []
+  owns:
+  - glob: backend/training/orchestrator/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -47855,7 +47879,11 @@ entries:
   - id: ART-EVIDENCE-4A01D
     kind: report
     path: registry/build/evidence/CG-4A-01d/
-  owns: []
+  owns:
+  - glob: backend/training/orchestrator/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -47920,7 +47948,11 @@ entries:
   - id: ART-EVIDENCE-4A01D
     kind: report
     path: registry/build/evidence/CG-4A-01d/
-  owns: []
+  owns:
+  - glob: backend/training/orchestrator/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -47985,7 +48017,11 @@ entries:
   - id: ART-EVIDENCE-4A01D
     kind: report
     path: registry/build/evidence/CG-4A-01d/
-  owns: []
+  owns:
+  - glob: backend/training/orchestrator/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -48752,7 +48788,11 @@ entries:
   - id: ART-EVIDENCE-4A02E
     kind: report
     path: registry/build/evidence/CG-4A-02e/
-  owns: []
+  owns:
+  - glob: backend/training/preflight/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a02/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -48842,7 +48882,11 @@ entries:
   - id: ART-EVIDENCE-4A02E
     kind: report
     path: registry/build/evidence/CG-4A-02e/
-  owns: []
+  owns:
+  - glob: backend/training/preflight/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a02/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -49506,7 +49550,11 @@ entries:
   - id: ART-EVIDENCE-4A01D
     kind: report
     path: registry/build/evidence/CG-4A-01d/
-  owns: []
+  owns:
+  - glob: backend/training/orchestrator/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -49662,7 +49710,11 @@ entries:
   - id: ART-EVIDENCE-4A02E
     kind: report
     path: registry/build/evidence/CG-4A-02e/
-  owns: []
+  owns:
+  - glob: backend/training/preflight/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a02/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
