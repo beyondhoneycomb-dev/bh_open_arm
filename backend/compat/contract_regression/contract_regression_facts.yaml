@@ -1,0 +1,72 @@
+# WP-4B-05 — contract-regression facts the 4A/4B band registers with the Wave 0-Env
+# checker (02c §2.5, FR-OPS-089). This is registration DATA, not checker code: each
+# fact names a check_predicate that registry.env.upstream resolves and runs. The
+# predicates live in backend/compat/contract_regression/predicates.py and are
+# injected into the checker's resolver table at runtime by register.register_predicates
+# — the Wave 0-Env checker file is never edited (cross-wave ownership, 02c §2.5).
+#
+# Only the items the committed checker does NOT already carry appear here. Items
+# (b) use_velocity_and_torque, (d) side, (e) send_action tau, and max_state_dim are
+# already in contracts/upstream_facts.yaml and are referenced from there by the
+# merged run (register.merged_facts_document), not restated.
+#
+# severity mirrors the base file: FAIL_BLOCKING = a premise a downstream WP is built
+# on has moved; HIGH = a silent-failure defence lost its ground; MEDIUM = a numeric
+# fact drifted. Any failed fact blocks deployment regardless of severity.
+version: 1
+facts:
+  - fact_id: CONNECT_CALLS_SET_ZERO
+    cited_source: "02c §2.5 FR-OPS-089 (a); 16 §10.1 (openarm_follower connect)"
+    check_line: "robots/openarm_follower.py connect()"
+    check_predicate: connect_calls_set_zero_position
+    severity: FAIL_BLOCKING
+    affected_frs: [FR-OPS-089, FR-CON-061]
+
+  - fact_id: PUSH_TO_HUB_DEFAULT_TRUE
+    cited_source: "02c §2.5 FR-OPS-089 (c); FR-TRN-070/FR-TRN-075/FR-OPS-082"
+    check_line: "configs/dataset.py DatasetRecordConfig.push_to_hub"
+    check_predicate: push_to_hub_default_true
+    severity: HIGH
+    affected_frs: [FR-TRN-070, FR-TRN-075, FR-OPS-082]
+
+  - fact_id: FOLLOWER_FEATURE_KEYSETS
+    cited_source: "02c §2.5 FR-OPS-089 (f)"
+    check_line: "robots/openarm_follower.py action_features/observation_features"
+    check_predicate: follower_feature_keysets_stable
+    severity: HIGH
+    affected_frs: [FR-OPS-089]
+
+  - fact_id: FEATURE_UTILS_OBS_STATE_FLATTEN
+    cited_source: "02c §2.5 FR-OPS-089 (g); FR-TRN-061 (names is canonical)"
+    check_line: "utils/feature_utils.py hw_to_dataset_features"
+    check_predicate: feature_utils_observation_state_flatten
+    severity: HIGH
+    affected_frs: [FR-OPS-089, FR-TRN-061]
+
+  - fact_id: MAX_ACTION_DIM_32
+    cited_source: "02c §2.5 (max_state_dim/max_action_dim 실측값); 10 FR-TRN-064"
+    check_line: "policies/smolvla/configuration_smolvla.py max_action_dim"
+    check_predicate: max_action_dim_default_32
+    severity: MEDIUM
+    affected_frs: [FR-TRN-064]
+
+  - fact_id: NORMALIZE_DENOM_STD_EPS
+    cited_source: "02c §2.5 (normalize_processor denom = std + eps); WP-4A-03 전제"
+    check_line: "processor/normalize_processor.py NormalizerProcessorStep"
+    check_predicate: normalize_processor_denom_std_plus_eps
+    severity: HIGH
+    affected_frs: [FR-TRN-024]
+
+  - fact_id: ROLLOUT_RTC_DEFAULTS
+    cited_source: "02c §2.5 (RolloutConfig RTC 기본값 4종); WP-4A-07 FR-INF-016"
+    check_line: "rollout/inference/rtc.py RTCConfig"
+    check_predicate: rollout_rtc_defaults
+    severity: HIGH
+    affected_frs: [FR-INF-016]
+
+  - fact_id: EVAL_ENV_REQUIRED
+    cited_source: "02c §2.5 (configs/eval.py env 필수); 4C 전제 §3.0"
+    check_line: "configs/eval.py EvalPipelineConfig.env"
+    check_predicate: eval_pipeline_env_required
+    severity: FAIL_BLOCKING
+    affected_frs: [FR-INF-075]

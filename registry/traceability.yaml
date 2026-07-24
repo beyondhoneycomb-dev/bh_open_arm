@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@98e4a9d
+spine_ref: docs/plan/00-실행계획-개요.md@25d8365
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -14523,8 +14523,8 @@ entries:
     'on': FAIL
     action: ④실패 → FAIL. shape만 보는 정합은 정합이 아니다 — FR-TRN-061이 이미 "shape만 보고 판단해서는 안 된다"고 못 박았고 이 게이트는 그
       규율의 체크포인트 측 대칭이다
-  downstream: []
-  terminal: true
+  downstream:
+  - WP-4B-03
   stale_on: []
   env_hash: null
   workflow: SHAPE-IM
@@ -14588,8 +14588,8 @@ entries:
     'on': FAIL
     action: ④실패 → FAIL. shape만 보는 정합은 정합이 아니다 — FR-TRN-061이 이미 "shape만 보고 판단해서는 안 된다"고 못 박았고 이 게이트는 그
       규율의 체크포인트 측 대칭이다
-  downstream: []
-  terminal: true
+  downstream:
+  - WP-4B-03
   stale_on: []
   env_hash: null
   workflow: SHAPE-IM
@@ -14624,7 +14624,11 @@ entries:
   - id: ART-EVIDENCE-4B03G
     kind: report
     path: registry/build/evidence/CG-4B-03g/
-  owns: []
+  owns:
+  - glob: backend/inference/load_preflight/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4b03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -14701,7 +14705,11 @@ entries:
   - id: ART-EVIDENCE-4B03G
     kind: report
     path: registry/build/evidence/CG-4B-03g/
-  owns: []
+  owns:
+  - glob: backend/inference/load_preflight/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4b03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -14778,7 +14786,11 @@ entries:
   - id: ART-EVIDENCE-4B03G
     kind: report
     path: registry/build/evidence/CG-4B-03g/
-  owns: []
+  owns:
+  - glob: backend/inference/load_preflight/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4b03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -14855,7 +14867,11 @@ entries:
   - id: ART-EVIDENCE-4B03G
     kind: report
     path: registry/build/evidence/CG-4B-03g/
-  owns: []
+  owns:
+  - glob: backend/inference/load_preflight/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4b03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -14932,7 +14948,11 @@ entries:
   - id: ART-EVIDENCE-4B03G
     kind: report
     path: registry/build/evidence/CG-4B-03g/
-  owns: []
+  owns:
+  - glob: backend/inference/load_preflight/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4b03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -15009,7 +15029,11 @@ entries:
   - id: ART-EVIDENCE-4B03G
     kind: report
     path: registry/build/evidence/CG-4B-03g/
-  owns: []
+  owns:
+  - glob: backend/inference/load_preflight/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4b03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -15086,7 +15110,11 @@ entries:
   - id: ART-EVIDENCE-4B03G
     kind: report
     path: registry/build/evidence/CG-4B-03g/
-  owns: []
+  owns:
+  - glob: backend/inference/load_preflight/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4b03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -15826,7 +15854,11 @@ entries:
   - id: ART-EVIDENCE-4B03G
     kind: report
     path: registry/build/evidence/CG-4B-03g/
-  owns: []
+  owns:
+  - glob: backend/inference/load_preflight/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4b03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -26994,7 +27026,11 @@ entries:
   - id: ART-EVIDENCE-4B05C
     kind: report
     path: registry/build/evidence/CG-4B-05c/
-  owns: []
+  owns:
+  - glob: backend/compat/contract_regression/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4b05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -28476,7 +28512,11 @@ entries:
   - id: ART-EVIDENCE-4B05C
     kind: report
     path: registry/build/evidence/CG-4B-05c/
-  owns: []
+  owns:
+  - glob: backend/compat/contract_regression/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4b05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -49541,7 +49581,11 @@ entries:
   - id: ART-EVIDENCE-4B05C
     kind: report
     path: registry/build/evidence/CG-4B-05c/
-  owns: []
+  owns:
+  - glob: backend/compat/contract_regression/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4b05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -49771,7 +49815,11 @@ entries:
   - id: ART-EVIDENCE-4B05C
     kind: report
     path: registry/build/evidence/CG-4B-05c/
-  owns: []
+  owns:
+  - glob: backend/compat/contract_regression/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4b05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []

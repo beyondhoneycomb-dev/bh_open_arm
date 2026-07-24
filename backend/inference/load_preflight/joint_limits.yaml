@@ -1,0 +1,37 @@
+# v2 URDF mechanical joint limits — the clamp canon (FR-INF-036, 16 D-3).
+#
+# This is the ONE source read once and written to two places: the LeRobot follower
+# config's joint_limits (degrees) AND the IK MJCF jnt_range (radians). If those two
+# places each read their own source they become two truths, and mink.ConfigurationLimit
+# (which reads only jnt_range) would then constrain IK on a different limit than
+# send_action clamps to. So the loader reads this file once and derives both.
+#
+# Values are radians (the URDF/openarm_control unit); degrees are stated in the
+# trailing comment for audit. They transcribe the committed sim/mjcf/v2/
+# openarm_bimanual.xml native jnt ranges, which are the v2 SoT and equal the URDF
+# joint_limits.yaml (03 §11 trap 7). NOT the LeRobot deg defaults, which are v1-era
+# soft-calib limits (j2 right (-9,+90) vs the canon (-10,+190)).
+#
+# Per side, because the limits are not a blanket sign-mirror: j1/j2/gripper mirror
+# left<->right, the symmetric joints mirror onto themselves, but j4 is identical on
+# both sides (0..140deg) and a naive mirror would flip it to (-140..0).
+unit: rad
+joint_limits:
+  right:
+    joint_1: [-1.3962634015954636, 3.490658503988659]     # -80deg .. 200deg
+    joint_2: [-0.17453292519943295, 3.3161255787892263]   # -10deg .. 190deg (v1 was +/-100deg)
+    joint_3: [-1.5707963267948966, 1.5707963267948966]    # -90deg .. 90deg
+    joint_4: [0.0, 2.443460952792061]                     # 0deg .. 140deg
+    joint_5: [-1.5707963267948966, 1.5707963267948966]    # -90deg .. 90deg
+    joint_6: [-0.7853981633974483, 0.7853981633974483]    # -45deg .. 45deg (narrow)
+    joint_7: [-1.5707963267948966, 1.5707963267948966]    # -90deg .. 90deg
+    gripper: [-0.7853981633974483, 0.0]                   # -45deg .. 0deg (v2 pinch)
+  left:
+    joint_1: [-3.490658503988659, 1.3962634015954636]     # -200deg .. 80deg (mirror of right)
+    joint_2: [-3.3161255787892263, 0.17453292519943295]   # -190deg .. 10deg (mirror of right)
+    joint_3: [-1.5707963267948966, 1.5707963267948966]    # -90deg .. 90deg
+    joint_4: [0.0, 2.443460952792061]                     # 0deg .. 140deg (NOT mirrored)
+    joint_5: [-1.5707963267948966, 1.5707963267948966]    # -90deg .. 90deg
+    joint_6: [-0.7853981633974483, 0.7853981633974483]    # -45deg .. 45deg
+    joint_7: [-1.5707963267948966, 1.5707963267948966]    # -90deg .. 90deg
+    gripper: [0.0, 0.7853981633974483]                    # 0deg .. 45deg (sign-mirror of right)
