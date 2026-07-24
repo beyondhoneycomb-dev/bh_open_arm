@@ -38,8 +38,9 @@ def test_orin_ceiling_is_the_best_supported_mode() -> None:
 def test_nano_has_no_sourced_ceiling() -> None:
     """Jetson Nano has NO §2.6 row: the honest value is None, never Orin's 4.6.
 
-    This is the entry that separates a faithful §2.6 lookup from the runtime guard's
-    `(jetson_nano, groot): 4.6`, which §2.6 does not support.
+    A faithful §2.6 lookup returns None (self-bench required) for Nano — copying Orin's
+    4.6 would be the guess FR-TRN-004 / NFR-TEL-004 forbid (the runtime guard's
+    INFERENCE_CEILING_HZ omits the Nano pair for the same reason).
     """
     result = expected_hz(DeploymentTarget.JETSON_NANO, "groot")
     assert result.hz is None

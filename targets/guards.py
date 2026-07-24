@@ -22,9 +22,12 @@ from typing import Any
 # The set is intentionally small: it is the evidence table FR-INF-034 cites, not a
 # guess. A pair absent from the table has no measured ceiling and is not blocked by
 # frequency here — that is a missing measurement, reported, never a silent pass.
+# Jetson Nano is deliberately ABSENT: `11` §2.6 carries no Nano row, so its GR00T
+# ceiling is unmeasured (a weaker device than Orin — copying Orin's 4.6 would be the
+# very guess this table forbids, NFR-TEL-004). It stays unmeasured until a target self-
+# bench lands (WP-4B-04), which is honest under this guard's own absent-pair rule above.
 INFERENCE_CEILING_HZ: dict[tuple[str, str], float] = {
     ("jetson_orin", "groot"): 4.6,
-    ("jetson_nano", "groot"): 4.6,
 }
 
 TRT_FULL_PIPELINE = "trt_full_pipeline"
