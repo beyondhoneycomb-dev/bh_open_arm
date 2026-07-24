@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@45b4928
+spine_ref: docs/plan/00-실행계획-개요.md@fa996e6
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -6183,7 +6183,11 @@ entries:
   - id: ART-EVIDENCE-4A03E
     kind: report
     path: registry/build/evidence/CG-4A-03e/
-  owns: []
+  owns:
+  - glob: backend/training/degenerate/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -15883,7 +15887,11 @@ entries:
   - id: ART-EVIDENCE-4A06C
     kind: report
     path: registry/build/evidence/CG-4A-06c/
-  owns: []
+  owns:
+  - glob: backend/training/projection/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -15910,6 +15918,8 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: WP-4B-01(사용 가능 정책 매트릭스)은 이 WP가 도입한 trainingFeatureProjection 축(FULL/POS_ONLY)을 매트릭스의
+    세 번째 축으로 소비한다(§2.1 입력·§1.6 대가) — 정적 import가 아니라 프로젝션 축 데이터 조인이라 그래프에 보이지 않는다(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -28230,7 +28240,11 @@ entries:
   - id: ART-EVIDENCE-4A03E
     kind: report
     path: registry/build/evidence/CG-4A-03e/
-  owns: []
+  owns:
+  - glob: backend/training/degenerate/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -49256,7 +49270,11 @@ entries:
   - id: ART-EVIDENCE-4A03E
     kind: report
     path: registry/build/evidence/CG-4A-03e/
-  owns: []
+  owns:
+  - glob: backend/training/degenerate/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -49317,7 +49335,11 @@ entries:
   - id: ART-EVIDENCE-4A03E
     kind: report
     path: registry/build/evidence/CG-4A-03e/
-  owns: []
+  owns:
+  - glob: backend/training/degenerate/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -49378,7 +49400,11 @@ entries:
   - id: ART-EVIDENCE-4A03E
     kind: report
     path: registry/build/evidence/CG-4A-03e/
-  owns: []
+  owns:
+  - glob: backend/training/degenerate/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []

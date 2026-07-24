@@ -170,7 +170,7 @@
 | **실행 클래스** | `AI-offline` |
 | **입력** | WP-4A-02 `PreflightReport` · Wave 0-C 픽스처 · `meta/stats.json` |
 | **산출** | 퇴화 감지기 · σ_min/δ_min **도출 하네스**(값이 아니라 하네스) · 3택 결정 기록기 |
-| **인터페이스 계약** | `DegenerateFinding{channel_name, joint, component, norm_mode: MEAN_STD\|MIN_MAX\|QUANTILES, statistic, threshold, amplification_estimate}` · `DegenerateDecision{finding, choice: EXCLUDE\|MANUAL_STATS\|PROCEED, rationale}` → **계보 레코드 `FR-TRN-054`(h)에 불변 기록** |
+| **인터페이스 계약** | `DegenerateFinding{channel_name, joint, component, norm_mode: MEAN_STD\|MIN_MAX\|QUANTILES, statistic, threshold, amplification_estimate}` · `DegenerateDecision{finding, choice: EXCLUDE\|MANUAL_STATS\|PROCEED, rationale}` → **계보 레코드 `FR-TRN-054`(h)에 불변 기록** · 소유 경로 = `backend/training/degenerate/**`, `tests/wp4a03/**` (**`EXCLUSIVE`**) |
 
 > 🔴 **이 WP가 방어하는 실패의 물리.** `use_velocity_and_torque=True`면 관측 벡터에 `.vel`(deg/s)과 `.torque`(Nm)가 들어온다. 그런데 **정지 상태의 관절은 `.vel`이 상수 0**이고, **무접촉 구간의 `.torque`는 상수에 가깝다** — 둘 다 `std ≈ 0`이 된다. LeRobot의 `normalize_processor.py:97, 349-395`는 `denom = std + eps`와 `torch.where(denom == 0, eps, denom)`으로 **`eps = 1e-8`을 분모에 넣을 뿐 경고하지 않는다**(`FR-TRN-067`). 그 결과 그 채널의 **잔여 노이즈가 10⁶ 규모로 증폭되어 손실을 지배한다.** 예외는 없고, 스택 트레이스도 없고, 학습은 끝까지 돈다. 나쁜 정책이 나올 뿐이다.
 >
@@ -220,7 +220,7 @@
 | **실행 클래스** | `AI-offline` |
 | **입력** | WP-4A-02 `ObservationConfig` · Wave 0-A 액션 스키마 동결 · Wave 0-C 픽스처 |
 | **산출** | `names` 기반 `.pos` 인덱스 추출기(observation·action 양쪽) · 쌍둥이 학습 잡 생성기(FR-TRN-073의 (a)~(d) 강제) |
-| **인터페이스 계약** | `select_pos_indices(names) -> list[int]` — **인덱스는 `names` 문자열에서 파생하며 위치 슬라이싱으로 구하지 않는다**(`FR-TRN-063`과 동일한 함정: 순서 가정 금지) · `PairedExperiment{repo_id, revision, seed, rollout_set_id, success_criterion_id, arm_a: FULL_48, arm_b: POS_ONLY_16}` — (a)~(d)를 **타입으로 강제**해 사람이 어길 수 없게 한다 |
+| **인터페이스 계약** | `select_pos_indices(names) -> list[int]` — **인덱스는 `names` 문자열에서 파생하며 위치 슬라이싱으로 구하지 않는다**(`FR-TRN-063`과 동일한 함정: 순서 가정 금지) · `PairedExperiment{repo_id, revision, seed, rollout_set_id, success_criterion_id, arm_a: FULL_48, arm_b: POS_ONLY_16}` — (a)~(d)를 **타입으로 강제**해 사람이 어길 수 없게 한다 · 소유 경로 = `backend/training/projection/**`, `tests/wp4a06/**` (**`EXCLUSIVE`**) · 참조근거 = WP-4B-01(사용 가능 정책 매트릭스)은 이 WP가 도입한 `trainingFeatureProjection` 축(FULL/POS_ONLY)을 매트릭스의 세 번째 축으로 소비한다(§2.1 입력·§1.6 대가) — 정적 import가 아니라 프로젝션 축 데이터 조인이라 그래프에 보이지 않는다(`06` §5.6) |
 | **수용 게이트** | ① `CG-4A-06a` `names` 순서를 회전시킨 픽스처에서도 `.pos` 인덱스가 **정확히 같은 채널 집합**을 가리킴(위치 슬라이싱 금지의 증명) ② `CG-4A-06b` 쌍둥이 잡 생성 시 (a)~(d) 중 하나라도 어긋나면 생성 거부 ③ `CG-4A-06c` `action` 타깃에 `.vel`/`.torque`가 들어가는 경로가 정적 검사로 0개(`FR-TRN-066`/`FR-TRN-074`/`FR-INF-074` 3중 정본) |
 | **음성 분기** | ③실패 → `FAIL`. `.vel`/`.torque`를 action 타깃에 넣으면 **실기에서 실행되지 않는 차원을 학습**하는 것이고(`send_action`이 tau=0 하드코딩), 정책은 아무 피드백 없는 출력 헤드를 학습한다 |
 | **워크플로우 형상** | **SHAPE-IM(1)** — 단일 빌더 + verify. **이 WP는 D-8을 재개하지 않는다** — `10` §5-Q1은 "토크 기록은 CAN 추가 비용이 없으므로(`sync_read_all_states`가 한 refresh 사이클) 이 실험의 유일한 비용은 학습·롤아웃 시간"이라고 이미 판정했다. 우리는 **실험 인프라만 만들고 결론은 4C가 낸다** |
