@@ -28,9 +28,17 @@ from __future__ import annotations
 import contextlib
 import threading
 import time
-from dataclasses import dataclass
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 
+from backend.training.degenerate import (
+    DegenerateDecision,
+    TrainingClearance,
+    clear_for_training,
+    undecided_findings,
+)
+from backend.training.lineage import LineageRecorder, TrainingLineageError
 from backend.training.orchestrator.checkpoints import Checkpoint, find_last
 from backend.training.orchestrator.constants import (
     LOG_READER_JOIN_TIMEOUT_S,
@@ -46,6 +54,11 @@ from backend.training.orchestrator.launcher import (
     classify_exit,
 )
 from backend.training.orchestrator.logstore import LogStore
+from backend.training.orchestrator.preflight_gate import (
+    GateState,
+    LaunchLineagePlanner,
+    PreflightProvider,
+)
 from backend.training.orchestrator.spec import (
     JobFilter,
     JobSpec,
@@ -53,6 +66,7 @@ from backend.training.orchestrator.spec import (
     apply_filter,
     can_transition,
 )
+from backend.training.preflight import Verdict, preflight
 
 FINISHED_STATES = frozenset({JobState.DONE, JobState.CANCELLED, JobState.FAILED})
 
@@ -84,6 +98,9 @@ class JobRuntime:
         stopped_step: The step of the last preserved checkpoint, or None.
         last_checkpoint: Path to that checkpoint, or "".
         exit_code: The subprocess return code once it has exited, or None.
+        gate: The PREFLIGHT-gate bookkeeping (preflight verdict, degenerate findings
+            and decisions, the minted clearance). A job reaches RUNNING only once its
+            gate holds a `TrainingClearance` (OBS-1).
     """
 
     spec: JobSpec
@@ -98,6 +115,7 @@ class JobRuntime:
     stopped_step: int | None = None
     last_checkpoint: str = ""
     exit_code: int | None = None
+    gate: GateState = field(default_factory=GateState)
 
 
 class TrainingOrchestrator:
@@ -114,20 +132,39 @@ class TrainingOrchestrator:
         launcher: TrainLauncher,
         log_store: LogStore,
         lineage_store: JobLineageStore,
+        preflight_provider: PreflightProvider,
+        lineage_recorder: LineageRecorder | None = None,
+        lineage_planner: LaunchLineagePlanner | None = None,
     ) -> None:
         """Create an orchestrator over a fixed GPU pool and its collaborators.
+
+        `preflight_provider` is required, not optional: post-OBS-1 there is no
+        orchestrator that runs jobs without a preflight-gate input source, so the
+        dependency is structural rather than a switch a caller can forget. The
+        WP-4A-05 lineage recorder/planner are optional — when both are wired a
+        `LineageRecord` is written on launch (`FR-TRN-054`); when absent, launch-time
+        lineage is simply not recorded (the cancel/crash `JobLineageStore` is
+        unaffected).
 
         Args:
             gpu_ids: The physical GPU ids this host schedules over.
             launcher: Builds and spawns trainer subprocesses.
             log_store: Hands out per-job log writers and reads logs back.
             lineage_store: Records where cancelled/crashed runs stopped.
+            preflight_provider: Resolves the dataset/policy/degenerate findings the
+                PREFLIGHT gate judges each job by.
+            lineage_recorder: WP-4A-05 recorder for the launch-time `LineageRecord`,
+                or None to record none.
+            lineage_planner: Assembles that record from a launching job, or None.
         """
         self.mLock = threading.Lock()
         self.mLedger = GpuLedger(gpu_ids)
         self.mLauncher = launcher
         self.mLogStore = log_store
         self.mLineage = lineage_store
+        self.mPreflightProvider = preflight_provider
+        self.mLineageRecorder = lineage_recorder
+        self.mLineagePlanner = lineage_planner
         self.mJobs: dict[str, JobRuntime] = {}
         self.mSequence = 0
 
@@ -288,8 +325,55 @@ class TrainingOrchestrator:
             runtime.handle = None
             runtime.monitor = None
             runtime.exit_code = None
+            # A resume is a fresh dispatch: it must re-run the PREFLIGHT gate rather
+            # than ride the previous run's clearance, so the gate bookkeeping resets.
+            runtime.gate = GateState()
             self._pump()
             return runtime
+
+    def decide(self, job_id: str, decisions: Sequence[DegenerateDecision]) -> JobState:
+        """Record three-way decisions for a job parked awaiting a degeneracy choice.
+
+        `FR-TRN-068`: a degenerate finding blocks training until an
+        EXCLUDE/MANUAL_STATS/PROCEED decision is recorded for it. A job whose findings
+        are undecided parks in PREFLIGHT (holding its GPU); this supplies the missing
+        decisions and re-attempts the gate. When every finding is then decided the job
+        is cleared and launches in the same call; otherwise it stays parked. The lock
+        is held throughout, so the launch is atomic with the decision.
+
+        Args:
+            job_id: The parked job.
+            decisions: The three-way decisions to add.
+
+        Returns:
+            (JobState) The job's state after the decisions are applied — RUNNING once
+                cleared, still PREFLIGHT while findings remain undecided.
+
+        Raises:
+            OrchestratorError: When the job is unknown, or is not parked in PREFLIGHT
+                awaiting a decision.
+        """
+        with self.mLock:
+            runtime = self.mJobs.get(job_id)
+            if runtime is None:
+                raise OrchestratorError(f"unknown job {job_id}")
+            gate = runtime.gate
+            if runtime.spec.state is not JobState.PREFLIGHT or not gate.awaiting_decisions:
+                raise OrchestratorError(
+                    f"job {job_id} is not awaiting a degeneracy decision "
+                    f"(state={runtime.spec.state})"
+                )
+            if gate.report is None:
+                raise OrchestratorError(f"job {job_id} has no preflight report to clear against")
+
+            gate.decisions = tuple(gate.decisions) + tuple(decisions)
+            if undecided_findings(gate.degenerate_findings, gate.decisions):
+                return runtime.spec.state
+
+            clearance = clear_for_training(gate.report, gate.degenerate_findings, gate.decisions)
+            gate.awaiting_decisions = False
+            self._launch_running(runtime, clearance)
+            return runtime.spec.state
 
     def wait(self, job_id: str, timeout: float) -> JobState:
         """Block until a job reaches a finished state, returning that state.
@@ -360,21 +444,93 @@ class TrainingOrchestrator:
             self._dispatch(runtime, gpus)
 
     def _dispatch(self, runtime: JobRuntime, gpus: tuple[int, ...]) -> None:
-        """Reserve GPUs and start the trainer subprocess for one job.
+        """Reserve GPUs, enter PREFLIGHT, and run the gate for one job.
 
-        Must be called holding `mLock`. Reserving before spawning is what makes the
-        GPU busy synchronously, so the next `submit` sees it (CG-4A-01a). A build or
-        spawn failure returns the GPUs and lands the job in FAILED rather than
-        leaking the reservation.
+        Must be called holding `mLock`. Reserving before anything else is what makes
+        the GPU busy synchronously, so the next `submit` sees it (CG-4A-01a). Entering
+        PREFLIGHT holds the GPU while the checks run; the gate then decides whether the
+        job launches, is rejected, or parks awaiting a degeneracy decision. No launch
+        happens here — that is `_launch_running`, reachable only with a clearance.
 
         Args:
             runtime: The queued job to start.
             gpus: The GPUs reserved for it.
         """
-        spec = runtime.spec
-        self.mLedger.reserve(gpus, spec.job_id)
+        self.mLedger.reserve(gpus, runtime.spec.job_id)
         runtime.assigned_gpus = gpus
         self._set_state(runtime, JobState.PREFLIGHT)
+        self._run_preflight_gate(runtime)
+
+    def _run_preflight_gate(self, runtime: JobRuntime) -> None:
+        """Run WP-4A-02 preflight and the WP-4A-03 clearance for a PREFLIGHT job.
+
+        This is the wiring OBS-1 was missing: the PREFLIGHT state now actually
+        preflights, in-process (a pure check; the trainer subprocess is separate). A
+        BLOCK verdict rejects the job — it never launches; a degenerate finding with no
+        decision parks the job in PREFLIGHT, holding its GPU, until `decide` supplies
+        the three-way choice; only a PASS with every finding decided mints a
+        `TrainingClearance` and proceeds to launch. Must hold `mLock`.
+
+        Args:
+            runtime: The job in PREFLIGHT.
+        """
+        gate = runtime.gate
+        if gate.context is None:
+            gate.context = self.mPreflightProvider.context_for(runtime.spec)
+            gate.decisions = gate.context.initial_decisions
+        context = gate.context
+        gate.degenerate_findings = context.degenerate_findings
+
+        report = preflight(context.dataset, context.policy)
+        gate.report = report
+        if report.verdict is not Verdict.PASS:
+            self._reject_preflight(runtime)
+            return
+
+        if undecided_findings(context.degenerate_findings, gate.decisions):
+            # Park in PREFLIGHT holding the GPU: the degeneracy review is one of the
+            # checks `10` §4.1 keeps a GPU held through, and the job must not start
+            # without a decision (FR-TRN-068). It resumes only via `decide` — never
+            # through `_pump`, since it is no longer QUEUED.
+            gate.awaiting_decisions = True
+            return
+
+        clearance = clear_for_training(report, context.degenerate_findings, gate.decisions)
+        gate.awaiting_decisions = False
+        self._launch_running(runtime, clearance)
+
+    def _reject_preflight(self, runtime: JobRuntime) -> None:
+        """Reject a job that failed preflight: release its GPU, land it in FAILED.
+
+        Must hold `mLock`. The BLOCK findings stay on `runtime.gate.report`, so the
+        rejection carries what to fix, and no subprocess is ever spawned (`02c` §1.2).
+
+        Args:
+            runtime: The job whose preflight blocked.
+        """
+        self.mLedger.release(runtime.spec.job_id)
+        runtime.assigned_gpus = ()
+        runtime.spec.ended = time.time()
+        self._set_state(runtime, JobState.FAILED)
+
+    def _launch_running(self, runtime: JobRuntime, clearance: TrainingClearance) -> None:
+        """Spawn the trainer and transition to RUNNING — the ONLY launch site.
+
+        Must hold `mLock`. The `clearance` parameter is the whole point of OBS-1: this
+        function is structurally unreachable without a `TrainingClearance`, and the
+        only site that mints that token is `clear_for_training` (proven statically by
+        `tests/wp4a01/test_preflight_gate_no_bypass.py`), so there is no path from
+        submit to RUNNING that skips the gate. A build or spawn failure releases the
+        GPUs and lands the job in FAILED rather than leaking the reservation.
+
+        Args:
+            runtime: The cleared job to launch.
+            clearance: Proof preflight passed and every degenerate finding was decided
+                — required, so a caller cannot launch without it.
+        """
+        spec = runtime.spec
+        gpus = runtime.assigned_gpus
+        runtime.gate.clearance = clearance
 
         try:
             resume_checkpoint = find_last(Path(spec.output_dir)) if spec.resume else None
@@ -392,12 +548,36 @@ class TrainingOrchestrator:
         runtime.resume_checkpoint = resume_checkpoint
         spec.started = time.time()
         self._set_state(runtime, JobState.RUNNING)
+        self._record_launch_lineage(runtime, clearance)
 
         monitor = threading.Thread(
             target=self._monitor, args=(runtime,), name=f"monitor-{spec.job_id}", daemon=True
         )
         runtime.monitor = monitor
         monitor.start()
+
+    def _record_launch_lineage(self, runtime: JobRuntime, clearance: TrainingClearance) -> None:
+        """Write the WP-4A-05 `LineageRecord` for a run at launch, when wired.
+
+        `FR-TRN-054`: a checkpoint-producing run records its immutable eight-element
+        snapshot. The record is assembled by the injected planner (the element (c)/(a)
+        facts a `JobSpec` does not carry) and written through the imported
+        `LineageRecorder`. A re-launch (resume) of a checkpoint whose lineage already
+        exists keeps its first record — the store refuses the rewrite because a
+        snapshot is immutable (CG-4A-05b) — so that one collision is suppressed rather
+        than crashing an already-launched run. Must hold `mLock`.
+
+        Args:
+            runtime: The job that just reached RUNNING.
+            clearance: The clearance whose decisions are element (h).
+        """
+        if self.mLineageRecorder is None or self.mLineagePlanner is None:
+            return
+        plan = self.mLineagePlanner.plan(runtime.spec, clearance)
+        if plan is None:
+            return
+        with contextlib.suppress(TrainingLineageError):
+            self.mLineageRecorder.record(plan.record, plan.checkpoint, plan.dataset_content_hash)
 
     def _monitor(self, runtime: JobRuntime) -> None:
         """Wait for a job's subprocess to exit, then finalise and pump the next.

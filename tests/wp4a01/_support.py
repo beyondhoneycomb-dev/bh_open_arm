@@ -5,6 +5,13 @@ Every test drives a real `TrainingOrchestrator` against the dummy trainer
 and lineage are exercised end to end. Helpers here only assemble that wiring and
 poll for observable subprocess milestones (a checkpoint appearing); they inject no
 behaviour into the code under test.
+
+Since OBS-1 the orchestrator routes every dispatch through the PREFLIGHT gate, so it
+needs a `PreflightProvider`. The default here describes the committed synthetic 48-dim
+fixture (`tests.wp4a02.fixtures.clean_pair`) — the real dataset these jobs stand for —
+which genuinely PASSes `preflight` with no degenerate findings, so the launch-machinery
+tests reach RUNNING through the real gate, not around it. Faulted providers for the
+BLOCK / undecided / lineage scenarios live in the gate tests themselves.
 """
 
 from __future__ import annotations
@@ -13,16 +20,21 @@ import sys
 import time
 from pathlib import Path
 
+from backend.training.lineage import LineageRecorder
 from backend.training.orchestrator import (
     DatasetRef,
     JobLineageStore,
     JobSpec,
     JobState,
+    LaunchLineagePlanner,
     LogStore,
+    PreflightContext,
+    PreflightProvider,
     TrainingOrchestrator,
     TrainLauncher,
     find_last,
 )
+from tests.wp4a02.fixtures import clean_pair
 
 _DUMMY_TRAIN = Path(__file__).resolve().parent / "_dummy_train.py"
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -32,14 +44,40 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 SINGLE_GPU = (0,)
 
 
+class CleanFixtureProvider:
+    """A `PreflightProvider` that describes the clean synthetic 48-dim fixture.
+
+    Every job resolves to the same committed clean dataset/policy pair, which PASSes
+    preflight with no degenerate findings — a genuine clearance, not a fabricated one.
+    The pair is built once and shared, so `context_for` is cheap under the scheduler
+    lock.
+    """
+
+    def __init__(self) -> None:
+        dataset, policy = clean_pair()
+        self.mContext = PreflightContext(dataset=dataset, policy=policy)
+
+    def context_for(self, spec: JobSpec) -> PreflightContext:
+        """Return the clean-fixture context for any job."""
+        return self.mContext
+
+
 def make_orchestrator(
-    tmp_path: Path, gpu_ids: tuple[int, ...] = SINGLE_GPU
+    tmp_path: Path,
+    gpu_ids: tuple[int, ...] = SINGLE_GPU,
+    preflight_provider: PreflightProvider | None = None,
+    lineage_recorder: LineageRecorder | None = None,
+    lineage_planner: LaunchLineagePlanner | None = None,
 ) -> TrainingOrchestrator:
     """Build an orchestrator whose launcher runs the dummy trainer.
 
     Args:
         tmp_path: The test's temp directory; logs and lineage live under it.
         gpu_ids: The GPU pool.
+        preflight_provider: The PREFLIGHT-gate input source; defaults to the clean
+            synthetic-fixture provider so launch-machinery tests reach RUNNING.
+        lineage_recorder: WP-4A-05 recorder for launch-time lineage, or None.
+        lineage_planner: Assembles that record, or None.
 
     Returns:
         (TrainingOrchestrator) A ready orchestrator.
@@ -48,7 +86,13 @@ def make_orchestrator(
     log_store = LogStore(tmp_path / "logs")
     lineage = JobLineageStore(tmp_path / "lineage.json")
     return TrainingOrchestrator(
-        gpu_ids=gpu_ids, launcher=launcher, log_store=log_store, lineage_store=lineage
+        gpu_ids=gpu_ids,
+        launcher=launcher,
+        log_store=log_store,
+        lineage_store=lineage,
+        preflight_provider=preflight_provider or CleanFixtureProvider(),
+        lineage_recorder=lineage_recorder,
+        lineage_planner=lineage_planner,
     )
 
 

@@ -25,6 +25,13 @@ from backend.training.orchestrator.orchestrator import (
     OrchestratorError,
     TrainingOrchestrator,
 )
+from backend.training.orchestrator.preflight_gate import (
+    GateState,
+    LaunchLineage,
+    LaunchLineagePlanner,
+    PreflightContext,
+    PreflightProvider,
+)
 from backend.training.orchestrator.spec import (
     DatasetRef,
     JobFilter,
@@ -38,6 +45,7 @@ from backend.training.orchestrator.spec import (
 __all__ = [
     "Checkpoint",
     "DatasetRef",
+    "GateState",
     "GpuBusyError",
     "GpuLedger",
     "JobFilter",
@@ -48,10 +56,14 @@ __all__ = [
     "JobSpecError",
     "JobState",
     "LaunchHandle",
+    "LaunchLineage",
+    "LaunchLineagePlanner",
     "LogStore",
     "LogWriter",
     "OrchestratorError",
     "OutputDirDecision",
+    "PreflightContext",
+    "PreflightProvider",
     "TrainLauncher",
     "TrainingOrchestrator",
     "apply_filter",
