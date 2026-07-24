@@ -310,7 +310,7 @@
 | **실행 클래스** | `AI-offline` |
 | **입력** | WP-4A-04 `StatsHash` 정준화 계약 · WP-4A-05 `LineageRecord` · WP-4B-01 매트릭스 |
 | **산출** | 정합 게이트 · `OA-DAT-002` 발행 경로 · stale 전파 훅 |
-| **인터페이스 계약** | `CompatibilityCheck(checkpoint, dataset) -> Verdict` — **shape 비교는 `names` 기반**(WP-4A-02와 동일 규율: shape만 보면 `.torque` 유무를 놓친다) · 해시 불일치는 **경고가 아니라 차단**이다(`FR-TRN-025`는 "배포를 차단", `FR-DAT-032`는 "추론 시 경고" — **둘이 다르다**) |
+| **인터페이스 계약** | `CompatibilityCheck(checkpoint, dataset) -> Verdict` — **shape 비교는 `names` 기반**(WP-4A-02와 동일 규율: shape만 보면 `.torque` 유무를 놓친다) · 해시 불일치는 **경고가 아니라 차단**이다(`FR-TRN-025`는 "배포를 차단", `FR-DAT-032`는 "추론 시 경고" — **둘이 다르다**) · 소유 경로 = `backend/compat/checkpoint_dataset/**`, `tests/wp4b02/**` (**`EXCLUSIVE`**) |
 
 > ⚠️ **명세 간 강도 불일치 — 계획이 강한 쪽을 택한다.** `FR-TRN-025`는 서빙 통계 해시 불일치 시 **"배포를 차단"**하라고 하고, `FR-DAT-032`는 동일 상황에 **"추론 시 경고"**(`OA-DAT-002`)하라고 한다. 계획은 **차단**을 택한다 — 통계가 다르면 역정규화가 다르고, 역정규화가 다르면 정책 출력은 **다른 물리량**이다. 경고를 띄우고 진행하는 것은 잘못된 단위의 관절 명령을 내보내는 것과 같다. `OA-DAT-002`는 차단의 **에러 코드**로 쓰되(코드 정본 = `14` §2.10), 그 심각도를 `W`가 아니라 차단으로 격상한다. **Wave −1 정규화 원장에 등록**: 승리 요구사항 = `FR-TRN-025`(차단), 폐기 텍스트 = `FR-DAT-032`의 "경고" 강도.
 
@@ -343,7 +343,7 @@
 | **실행 클래스** | `AI-offline` (매트릭스 엔진 + 타깃별 연산 벤치 — GPU/연산타깃 조회, 리그 배타 자원 미점유, `00` §4) |
 | **입력** | WP-4A-07 백엔드 팩토리 · WP-4B-01 매트릭스 · `11` §2.6 GR00T 실측표 · 스핀 §7 배포 타깃 매트릭스 |
 | **산출** | 타깃 인지기 · 경로 차단 매트릭스 · 타깃별 IK/추론 벤치 러너 |
-| **인터페이스 계약** | `DeploymentTarget ∈ {JETSON_NANO, JETSON_ORIN, RTX_5090, RTX_A6000}` — 스핀 §7 이기종 플릿 그대로. **A100/H100은 열거에 없다**(§5.1) · `TargetPolicyVerdict{target, policy, expected_hz_source, blocked_backends: [SYNC?], blocked_optimizations: [TRT_FULL_PIPELINE?], ik_gate: PG-IK-001 상태}` · **`expected_hz`는 우리가 계산하지 않는다 — `11` §2.6 표에서 조회하고 출처를 표기한다**(`FR-TRN-004` 규율: 추정값 표시 금지) · **타깃 = `jetson_nano`·`jetson_orin`·`rtx_5090`·`rtx_a6000`** (전 타깃 필수 — `03` §5.11) |
+| **인터페이스 계약** | `DeploymentTarget ∈ {JETSON_NANO, JETSON_ORIN, RTX_5090, RTX_A6000}` — 스핀 §7 이기종 플릿 그대로. **A100/H100은 열거에 없다**(§5.1) · `TargetPolicyVerdict{target, policy, expected_hz_source, blocked_backends: [SYNC?], blocked_optimizations: [TRT_FULL_PIPELINE?], ik_gate: PG-IK-001 상태}` · **`expected_hz`는 우리가 계산하지 않는다 — `11` §2.6 표에서 조회하고 출처를 표기한다**(`FR-TRN-004` 규율: 추정값 표시 금지) · **타깃 = `jetson_nano`·`jetson_orin`·`rtx_5090`·`rtx_a6000`** (전 타깃 필수 — `03` §5.11) · 소유 경로 = `backend/compat/deploy_matrix/**`, `tests/wp4b04/**` (**`EXCLUSIVE`**) |
 | **수용 게이트** | ① `CG-4B-04a` **Jetson Orin × GR00T** → `expected_hz = 4.6` (출처 = `11` §2.6, Isaac-GR00T 배포 README) && `fps > 4.6` 설정 시 **`sync` 차단** && RTC/비동기 청킹 요구 ② `CG-4B-04b` **Jetson Orin × 임의 정책** → `trt_full_pipeline` **차단**, DiT-only만 허용 ③ `CG-4B-04c` TRT 엔진 코사인 < 0.99 → 승격 거부 ④ `CG-4B-04d` fp16 경로가 기본 노출되지 않음(정적 검사) ⑤ `CG-4B-04e` 각 타깃에서 **`PG-IK-001`이 실제로 실행됨** — 타깃별 p50/p99 + **무제약 폴백 발동 횟수** + 충돌검사 지연이 산출됨 ⑥ `CG-4B-04f` `expected_hz` 값 중 우리가 추정한 것 0개(전부 출처 있는 조회값) |
 | **음성 분기** | ①`FAIL` → **그 타깃에 한정된다.** 이것이 이 WP의 핵심 형상이다 — 타깃 게이트의 실패는 **전역 실패가 아니라 그 타깃의 미지원 표시**다(스핀 §3 `PG-IK-001` 분기: "그 타깃 미지원 표시") / ⑤ `PG-IK-001` 미달 → 스핀 §3 분기 순서 그대로: **VR 타깃레이트를 액추에이션 레이트와 분리** → `max_iters` 축소(**정확도 회귀 후에만**) → 네이티브 워커 → 그래도 미달이면 **그 타깃 미지원 표시** |
 | **워크플로우 형상** | **SHAPE-IM(4)** — 매트릭스 엔진 = 단일 빌더. 벤치 러너 = **타깃 수만큼 병렬 fan-out**(4 타깃 = 4 워커, 서로 독립 — 이것이 이 대역에서 가장 자연스러운 병렬화다). 각 워커는 `AI-on-HW`(측정만, 물리 조작 없음)이므로 **Human 게이트 없음** |
