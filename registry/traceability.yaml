@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@d38c2e0
+spine_ref: docs/plan/00-실행계획-개요.md@156f818
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -6612,7 +6612,11 @@ entries:
   - id: ART-EVIDENCE-3D07D
     kind: report
     path: registry/build/evidence/CG-3D-07d/
-  owns: []
+  owns:
+  - glob: backend/dataset/import_export/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3d07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -6640,6 +6644,10 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 GUI WP-G-S08(S-08 데이터셋 창구)는 import 스키마 차이 표시·병합 거부·import 유효성 판정을 CTR-WS@v1 엔벨로프의
+    문자열 키로 구독하고 그 산출을 데이터로 소비하므로 backend.dataset.import_export를 정적 import하지 않으며, 레거시 컨버터(openarm_dataset)는
+    격리된 별도 환경에서만 실행되어 네이티브 런타임에 아예 import되지 않고(FR-DAT-040), 이 밴드는 상류 CTR-REC@v1 채널 계약만 코드로 재사용(재구현 아님)한다(06
+    §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -6733,7 +6741,11 @@ entries:
   - id: ART-EVIDENCE-3D06D
     kind: report
     path: registry/build/evidence/CG-3D-06d/
-  owns: []
+  owns:
+  - glob: backend/dataset/merge/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3d06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -6941,7 +6953,11 @@ entries:
   - id: ART-EVIDENCE-3D05C
     kind: report
     path: registry/build/evidence/CG-3D-05c/
-  owns: []
+  owns:
+  - glob: backend/dataset/integrity/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3d05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -50339,7 +50355,11 @@ entries:
   - id: ART-EVIDENCE-3D05C
     kind: report
     path: registry/build/evidence/CG-3D-05c/
-  owns: []
+  owns:
+  - glob: backend/dataset/integrity/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3d05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -54171,7 +54191,11 @@ entries:
   - id: ART-EVIDENCE-3D07D
     kind: report
     path: registry/build/evidence/CG-3D-07d/
-  owns: []
+  owns:
+  - glob: backend/dataset/import_export/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3d07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -54199,6 +54223,10 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 GUI WP-G-S08(S-08 데이터셋 창구)는 import 스키마 차이 표시·병합 거부·import 유효성 판정을 CTR-WS@v1 엔벨로프의
+    문자열 키로 구독하고 그 산출을 데이터로 소비하므로 backend.dataset.import_export를 정적 import하지 않으며, 레거시 컨버터(openarm_dataset)는
+    격리된 별도 환경에서만 실행되어 네이티브 런타임에 아예 import되지 않고(FR-DAT-040), 이 밴드는 상류 CTR-REC@v1 채널 계약만 코드로 재사용(재구현 아님)한다(06
+    §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
