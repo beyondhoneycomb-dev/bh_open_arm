@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@fa996e6
+spine_ref: docs/plan/00-실행계획-개요.md@abf1307
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -6266,7 +6266,11 @@ entries:
   - id: ART-EVIDENCE-4A04E
     kind: report
     path: registry/build/evidence/CG-4A-04e/
-  owns: []
+  owns:
+  - glob: backend/training/normstats/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -6351,7 +6355,11 @@ entries:
   - id: ART-EVIDENCE-4A04E
     kind: report
     path: registry/build/evidence/CG-4A-04e/
-  owns: []
+  owns:
+  - glob: backend/training/normstats/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4a04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []

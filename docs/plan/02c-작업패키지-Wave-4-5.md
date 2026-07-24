@@ -192,7 +192,7 @@
 | **실행 클래스** | `AI-offline` |
 | **입력** | WP-4A-02/03 · Wave 0-C 픽스처 · Wave −1 정규화 원장 해시 |
 | **산출** | stats 해시 계산기(정준화 규칙 포함) · train-split-only fit 강제 경로 · 서빙 역정규화 해시 검증기 · 근사↔정확 분위수 편차 리포터 |
-| **인터페이스 계약** | `StatsHash = H(정준직렬화(stats.json))` — **정준화 규칙(키 정렬·부동소수 표현·인코딩)을 계약으로 동결한다.** 정준화가 없으면 같은 통계가 다른 해시를 낳고, 해시 게이트는 조용히 무력해진다 · `NormalizationContract{stats_hash, fit_split: "train", applied_to: ["train","val","test","real"], quantile_approx: true, quantile_bins: 5000}` · 이 계약은 **체크포인트 `input_features`의 버전·해시로 고정된 모델 입력 계약**이다(`FR-TRN-024` 원문) |
+| **인터페이스 계약** | `StatsHash = H(정준직렬화(stats.json))` — **정준화 규칙(키 정렬·부동소수 표현·인코딩)을 계약으로 동결한다.** 정준화가 없으면 같은 통계가 다른 해시를 낳고, 해시 게이트는 조용히 무력해진다 · `NormalizationContract{stats_hash, fit_split: "train", applied_to: ["train","val","test","real"], quantile_approx: true, quantile_bins: 5000}` · 이 계약은 **체크포인트 `input_features`의 버전·해시로 고정된 모델 입력 계약**이다(`FR-TRN-024` 원문) · 소유 경로 = `backend/training/normstats/**`, `tests/wp4a04/**` (**`EXCLUSIVE`**) |
 | **수용 게이트** | ① `CG-4A-04a` 동일 stats → 동일 해시(정준화 반복 1000회 결정론) ② `CG-4A-04b` stats 1비트 변경 → 해시 변경 → **그 stats로 학습된 체크포인트 전량이 자동 stale**(§0.4 stats 축) ③ `CG-4A-04c` split별 통계 재계산으로 정규화하려는 경로가 **정적 검사로 0개**임을 증명 ④ `CG-4A-04d` 서빙 해시 ≠ 학습 해시 → **배포 차단** + `OA-DAT-002` ⑤ `CG-4A-04e` 근사 분위수와 정확 분위수의 편차가 리포트에 존재(값 판정 아님 — 존재 판정) |
 | **음성 분기** | ①실패 → 정준화 규칙 결함. `FAIL` → 고쳐서 다시 돌린다(부동소수 직렬화를 십진 고정폭으로) / ③실패 → `FAIL`. split-local 정규화는 **검증셋 누수**이고, 누수된 val loss는 4C의 체크포인트 선택 근거를 오염시킨다(이미 `FR-INF-062`가 val loss를 못 믿는다고 하는데, 여기에 누수까지 얹히면 그 지표는 방향조차 잃는다) |
 | **워크플로우 형상** | **SHAPE-CF** — **단일 소유자 WP — 병렬 빌더 금지.** stats 해시는 §0.4의 3개 stale 축 중 하나를 정의하므로, 두 빌더가 정준화 규칙을 각자 정하면 stale 전파가 갈라진다 |
