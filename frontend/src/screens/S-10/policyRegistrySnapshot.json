@@ -1,0 +1,69 @@
+{
+  "_provenance": "A captured snapshot of the backend's introspection of the INSTALLED lerobot registry (WP-4B-01 source-derived capability registry). This is DATA, not UI code: the policy names and dimension ceilings are read at runtime from the installed config classes, never authored in the screen. This file stands in for the live WS response in the AI-offline lane. On a lerobot upgrade the backend re-emits this; the UI renders whatever it is sent, so a hardcoded UI list can never go stale (CG-4A-G1a / CG-G-S10a).",
+  "lerobotVersion": "0.6.0",
+  "policies": [
+    {
+      "id": "smolvla",
+      "configClass": "SmolVLAConfig",
+      "maxStateDim": 32,
+      "maxActionDim": 32,
+      "capSource": "lerobot.policies.smolvla.configuration_smolvla:SmolVLAConfig.max_state_dim",
+      "available": true,
+      "unavailableReason": null
+    },
+    {
+      "id": "pi0",
+      "configClass": "PI0Config",
+      "maxStateDim": 32,
+      "maxActionDim": 32,
+      "capSource": "lerobot.policies.pi0.configuration_pi0:PI0Config.max_state_dim",
+      "available": true,
+      "unavailableReason": null
+    },
+    {
+      "id": "pi05",
+      "configClass": "PI05Config",
+      "maxStateDim": 32,
+      "maxActionDim": 32,
+      "capSource": "lerobot.policies.pi05.configuration_pi05:PI05Config.max_state_dim",
+      "available": true,
+      "unavailableReason": null
+    },
+    {
+      "id": "groot",
+      "configClass": "GrootConfig",
+      "maxStateDim": 132,
+      "maxActionDim": 132,
+      "capSource": "lerobot.policies.groot.configuration_groot:GrootConfig.max_state_dim",
+      "available": true,
+      "unavailableReason": null
+    },
+    {
+      "id": "act",
+      "configClass": "ACTConfig",
+      "maxStateDim": null,
+      "maxActionDim": null,
+      "capSource": "lerobot.policies.act.configuration_act:ACTConfig (no fixed max_state_dim — input dim is derived from the dataset features)",
+      "available": true,
+      "unavailableReason": null
+    },
+    {
+      "id": "diffusion",
+      "configClass": "DiffusionConfig",
+      "maxStateDim": null,
+      "maxActionDim": null,
+      "capSource": "lerobot.policies.diffusion.configuration_diffusion:DiffusionConfig (no fixed max_state_dim)",
+      "available": true,
+      "unavailableReason": null
+    },
+    {
+      "id": "vqbet",
+      "configClass": "VQBeTConfig",
+      "maxStateDim": null,
+      "maxActionDim": null,
+      "capSource": "lerobot.policies.vqbet.configuration_vqbet:VQBeTConfig",
+      "available": false,
+      "unavailableReason": "Marked unavailable by the backend registry for this platform (residual-VQ codebook instability under the OpenArm data regime). Selection is blocked; the reason is rendered, not decided, by the screen (CG-G-S10g)."
+    }
+  ]
+}
