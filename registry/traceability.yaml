@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@156f818
+spine_ref: docs/plan/00-실행계획-개요.md@c75c807
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -1768,7 +1768,11 @@ entries:
   - id: ART-EVIDENCE-3C06F
     kind: report
     path: registry/build/evidence/CG-3C-06f/
-  owns: []
+  owns:
+  - glob: backend/capture_interlock/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3c06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -1813,6 +1817,11 @@ entries:
   env_hash: null
   workflow: SHAPE-IG
   exec_class: AI-offline
+  justification: 도출된 downstream 간선(WP-3D-05 무결성 검증기·WP-G-S07 수집 화면)은 정적 import로 역방향이다 — 실제 코드 간선은 backend.capture_interlock이
+    커밋된 backend.dataset.integrity.ensure_training_ready(WP-3D-05)와 WP-3D-01 뷰어 레이아웃을 정적 import하는 소비자 방향이고(CI-16
+    그래프 가시), 계획이 WP-3D-05 입력을 WP-3C-06으로 적어 downstream 화살표가 반대로 서므로 integrity·S-07 모듈에서 backend.capture_interlock으로의
+    참조는 그래프에 없다 · 상류 입력 WP-3C-02(하드웨어 캡처, 코드 간선 없음)는 그 원본 캡처 산출(프레임 수 + CTR-CAP@v1 capture_ts 사이드카)을 파일
+    데이터로 가드할 뿐 캡처 코드를 import하지 않는다(정적 import 그래프 미가시 데이터 조인, 06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -6887,7 +6896,11 @@ entries:
   - id: ART-EVIDENCE-3C07E
     kind: report
     path: registry/build/evidence/CG-3C-07e/
-  owns: []
+  owns:
+  - glob: backend/crash_recovery/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3c07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -6932,6 +6945,11 @@ entries:
     owns: []
     cancel_policy: finish-step
     after: 0
+  justification: 상류 WP-3B-11 레코더의 산출물을 소비한다 — stamped repo_id는 저널로, 패킹 data parquet·meta/episodes·info.json은
+    파일 직독·데이터 조인으로 읽으며 backend.recorder.embed 쓰기 API를 정적 import하지 않는다(재개는 기존 stamped id를 그대로 재사용하고 stamp_repo_id()를
+    재호출하지 않음 — 정적 스캔·런타임 스파이로 검증). WP-3B-12 품질 밴드(푸터 없는 parquet 검출·격리·PENDING_JUDGMENT 라벨)는 재구현이 아니라 정적
+    import로 재사용한다. 하류 GUI WP-G-S07(S-07 수집 창구)는 복구 저장/폐기 선택·저널 재개 상태를 CTR-WS@v1 엔벨로프의 문자열 키로 구독하므로 backend.crash_recovery를
+    정적 import하지 않는다 — 데이터·WS 조인 경계는 import 그래프에 미가시(06 §5.6)
   planned: true
   provenance:
     wp_rule: coverage-fill
@@ -11983,7 +12001,9 @@ entries:
   - id: ART-EVIDENCE-GS08G
     kind: report
     path: registry/build/evidence/CG-G-S08g/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -49992,7 +50012,11 @@ entries:
   - id: ART-EVIDENCE-3C06F
     kind: report
     path: registry/build/evidence/CG-3C-06f/
-  owns: []
+  owns:
+  - glob: backend/capture_interlock/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3c06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -50037,6 +50061,11 @@ entries:
   env_hash: null
   workflow: SHAPE-IG
   exec_class: AI-offline
+  justification: 도출된 downstream 간선(WP-3D-05 무결성 검증기·WP-G-S07 수집 화면)은 정적 import로 역방향이다 — 실제 코드 간선은 backend.capture_interlock이
+    커밋된 backend.dataset.integrity.ensure_training_ready(WP-3D-05)와 WP-3D-01 뷰어 레이아웃을 정적 import하는 소비자 방향이고(CI-16
+    그래프 가시), 계획이 WP-3D-05 입력을 WP-3C-06으로 적어 downstream 화살표가 반대로 서므로 integrity·S-07 모듈에서 backend.capture_interlock으로의
+    참조는 그래프에 없다 · 상류 입력 WP-3C-02(하드웨어 캡처, 코드 간선 없음)는 그 원본 캡처 산출(프레임 수 + CTR-CAP@v1 capture_ts 사이드카)을 파일
+    데이터로 가드할 뿐 캡처 코드를 import하지 않는다(정적 import 그래프 미가시 데이터 조인, 06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
