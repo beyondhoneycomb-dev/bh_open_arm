@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@f2e110c
+spine_ref: docs/plan/00-실행계획-개요.md@d38c2e0
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -5595,7 +5595,11 @@ entries:
   - id: ART-EVIDENCE-3D01E
     kind: report
     path: registry/build/evidence/CG-3D-01e/
-  owns: []
+  owns:
+  - glob: backend/dataset/viewer/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3d01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -5628,6 +5632,10 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 GUI 창구 WP-3D-08·WP-G-S08(S-08 데이터셋 화면)은 뷰어 산출을 CTR-WS@v1 엔벨로프 문자열 키 구독과 meta/info.json·parquet·mp4
+    파일 직독으로 소비하므로 backend.dataset.viewer를 정적 import하지 않으며(타임라인 스크럽·채널 플롯·라벨은 정적 import 그래프에 안 보임), 뷰어
+    자신도 CTR-REC@v1 데이터셋을 parquet/mp4 직독으로만 읽고 채널을 info.json의 names 문자열로 조회하여 contracts.recorder를 정적 import하지
+    않는다(CTR-PRIM@v1 카메라 슬롯·이미지 키 원시타입만 참조로 소비, 06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -5918,7 +5926,11 @@ entries:
   - id: ART-EVIDENCE-3D02F
     kind: report
     path: registry/build/evidence/CG-3D-02f/
-  owns: []
+  owns:
+  - glob: backend/dataset/edit/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3d02/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -5932,28 +5944,22 @@ entries:
   negative_branch:
   - gate: CG-3D-02a
     'on': FAIL
-    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 [결정필요](원본 불변 vs 파괴적 편집) 미해소 → 착수
-      불가
+    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 해소됨(CoW·원본 불변) — 착수 가능
   - gate: CG-3D-02b
     'on': FAIL
-    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 [결정필요](원본 불변 vs 파괴적 편집) 미해소 → 착수
-      불가
+    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 해소됨(CoW·원본 불변) — 착수 가능
   - gate: CG-3D-02c
     'on': FAIL
-    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 [결정필요](원본 불변 vs 파괴적 편집) 미해소 → 착수
-      불가
+    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 해소됨(CoW·원본 불변) — 착수 가능
   - gate: CG-3D-02d
     'on': FAIL
-    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 [결정필요](원본 불변 vs 파괴적 편집) 미해소 → 착수
-      불가
+    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 해소됨(CoW·원본 불변) — 착수 가능
   - gate: CG-3D-02e
     'on': FAIL
-    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 [결정필요](원본 불변 vs 파괴적 편집) 미해소 → 착수
-      불가
+    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 해소됨(CoW·원본 불변) — 착수 가능
   - gate: CG-3D-02f
     'on': FAIL
-    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 [결정필요](원본 불변 vs 파괴적 편집) 미해소 → 착수
-      불가
+    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 해소됨(CoW·원본 불변) — 착수 가능
   downstream:
   - WP-3D-06
   stale_on: []
@@ -6399,7 +6405,11 @@ entries:
   - id: ART-EVIDENCE-3D02F
     kind: report
     path: registry/build/evidence/CG-3D-02f/
-  owns: []
+  owns:
+  - glob: backend/dataset/edit/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3d02/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -6413,28 +6423,22 @@ entries:
   negative_branch:
   - gate: CG-3D-02a
     'on': FAIL
-    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 [결정필요](원본 불변 vs 파괴적 편집) 미해소 → 착수
-      불가
+    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 해소됨(CoW·원본 불변) — 착수 가능
   - gate: CG-3D-02b
     'on': FAIL
-    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 [결정필요](원본 불변 vs 파괴적 편집) 미해소 → 착수
-      불가
+    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 해소됨(CoW·원본 불변) — 착수 가능
   - gate: CG-3D-02c
     'on': FAIL
-    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 [결정필요](원본 불변 vs 파괴적 편집) 미해소 → 착수
-      불가
+    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 해소됨(CoW·원본 불변) — 착수 가능
   - gate: CG-3D-02d
     'on': FAIL
-    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 [결정필요](원본 불변 vs 파괴적 편집) 미해소 → 착수
-      불가
+    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 해소됨(CoW·원본 불변) — 착수 가능
   - gate: CG-3D-02e
     'on': FAIL
-    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 [결정필요](원본 불변 vs 파괴적 편집) 미해소 → 착수
-      불가
+    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 해소됨(CoW·원본 불변) — 착수 가능
   - gate: CG-3D-02f
     'on': FAIL
-    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 [결정필요](원본 불변 vs 파괴적 편집) 미해소 → 착수
-      불가
+    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 해소됨(CoW·원본 불변) — 착수 가능
   downstream:
   - WP-3D-06
   stale_on: []
@@ -6480,7 +6484,11 @@ entries:
   - id: ART-EVIDENCE-3D04D
     kind: report
     path: registry/build/evidence/CG-3D-04d/
-  owns: []
+  owns:
+  - glob: backend/dataset/lineage/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3d04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -6508,6 +6516,9 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 GUI WP-G-S08(S-08 데이터셋 창구)는 계보 양방향 조회를 CTR-WS@v1 엔벨로프의 문자열 키로 구독하고 계보 레코드를 데이터로 소비하므로
+    backend.dataset.lineage를 정적 import하지 않는다 — 계보는 상류 WP-3B-11 레코더의 stamped repo_id 규약과 CTR-REC@v1 채널
+    계약만 코드로 재사용(재구현 아님)하고, 계보를 읽는 화면은 WS 조인이라 정적 import 그래프에 미가시(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -29012,7 +29023,11 @@ entries:
   - id: ART-EVIDENCE-3D03E
     kind: report
     path: registry/build/evidence/CG-3D-03e/
-  owns: []
+  owns:
+  - glob: backend/dataset/stats/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3d03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -30788,7 +30803,11 @@ entries:
   - id: ART-EVIDENCE-3D04D
     kind: report
     path: registry/build/evidence/CG-3D-04d/
-  owns: []
+  owns:
+  - glob: backend/dataset/lineage/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3d04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -30816,6 +30835,9 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 GUI WP-G-S08(S-08 데이터셋 창구)는 계보 양방향 조회를 CTR-WS@v1 엔벨로프의 문자열 키로 구독하고 계보 레코드를 데이터로 소비하므로
+    backend.dataset.lineage를 정적 import하지 않는다 — 계보는 상류 WP-3B-11 레코더의 stamped repo_id 규약과 CTR-REC@v1 채널
+    계약만 코드로 재사용(재구현 아님)하고, 계보를 읽는 화면은 WS 조인이라 정적 import 그래프에 미가시(06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -50113,7 +50135,11 @@ entries:
   - id: ART-EVIDENCE-3D01E
     kind: report
     path: registry/build/evidence/CG-3D-01e/
-  owns: []
+  owns:
+  - glob: backend/dataset/viewer/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3d01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -50146,6 +50172,10 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
+  justification: 하류 GUI 창구 WP-3D-08·WP-G-S08(S-08 데이터셋 화면)은 뷰어 산출을 CTR-WS@v1 엔벨로프 문자열 키 구독과 meta/info.json·parquet·mp4
+    파일 직독으로 소비하므로 backend.dataset.viewer를 정적 import하지 않으며(타임라인 스크럽·채널 플롯·라벨은 정적 import 그래프에 안 보임), 뷰어
+    자신도 CTR-REC@v1 데이터셋을 parquet/mp4 직독으로만 읽고 채널을 info.json의 names 문자열로 조회하여 contracts.recorder를 정적 import하지
+    않는다(CTR-PRIM@v1 카메라 슬롯·이미지 키 원시타입만 참조로 소비, 06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -50170,7 +50200,11 @@ entries:
   - id: ART-EVIDENCE-3D03E
     kind: report
     path: registry/build/evidence/CG-3D-03e/
-  owns: []
+  owns:
+  - glob: backend/dataset/stats/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3d03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -50247,7 +50281,11 @@ entries:
   - id: ART-EVIDENCE-3D02F
     kind: report
     path: registry/build/evidence/CG-3D-02f/
-  owns: []
+  owns:
+  - glob: backend/dataset/edit/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3d02/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -50261,28 +50299,22 @@ entries:
   negative_branch:
   - gate: CG-3D-02a
     'on': FAIL
-    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 [결정필요](원본 불변 vs 파괴적 편집) 미해소 → 착수
-      불가
+    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 해소됨(CoW·원본 불변) — 착수 가능
   - gate: CG-3D-02b
     'on': FAIL
-    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 [결정필요](원본 불변 vs 파괴적 편집) 미해소 → 착수
-      불가
+    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 해소됨(CoW·원본 불변) — 착수 가능
   - gate: CG-3D-02c
     'on': FAIL
-    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 [결정필요](원본 불변 vs 파괴적 편집) 미해소 → 착수
-      불가
+    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 해소됨(CoW·원본 불변) — 착수 가능
   - gate: CG-3D-02d
     'on': FAIL
-    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 [결정필요](원본 불변 vs 파괴적 편집) 미해소 → 착수
-      불가
+    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 해소됨(CoW·원본 불변) — 착수 가능
   - gate: CG-3D-02e
     'on': FAIL
-    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 [결정필요](원본 불변 vs 파괴적 편집) 미해소 → 착수
-      불가
+    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 해소됨(CoW·원본 불변) — 착수 가능
   - gate: CG-3D-02f
     'on': FAIL
-    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 [결정필요](원본 불변 vs 파괴적 편집) 미해소 → 착수
-      불가
+    action: 재매핑 없이 실행 → FAIL_BLOCKING(라벨이 다른 에피소드에 들러붙는다). FR-DAT-022 해소됨(CoW·원본 불변) — 착수 가능
   downstream:
   - WP-3D-06
   stale_on: []
