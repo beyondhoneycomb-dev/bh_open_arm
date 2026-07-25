@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@ad36bf9
+spine_ref: docs/plan/00-실행계획-개요.md@d7cf14c
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -24913,7 +24913,11 @@ entries:
   - id: ART-EVIDENCE-508I
     kind: report
     path: registry/build/evidence/CG-5-08i/
-  owns: []
+  owns:
+  - glob: backend/security/**
+    mode: EXCLUSIVE
+  - glob: tests/wp5_08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -27344,7 +27348,11 @@ entries:
   - id: ART-EVIDENCE-508I
     kind: report
     path: registry/build/evidence/CG-5-08i/
-  owns: []
+  owns:
+  - glob: backend/security/**
+    mode: EXCLUSIVE
+  - glob: tests/wp5_08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -27455,7 +27463,11 @@ entries:
   - id: ART-EVIDENCE-508I
     kind: report
     path: registry/build/evidence/CG-5-08i/
-  owns: []
+  owns:
+  - glob: backend/security/**
+    mode: EXCLUSIVE
+  - glob: tests/wp5_08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -27566,7 +27578,11 @@ entries:
   - id: ART-EVIDENCE-508I
     kind: report
     path: registry/build/evidence/CG-5-08i/
-  owns: []
+  owns:
+  - glob: backend/security/**
+    mode: EXCLUSIVE
+  - glob: tests/wp5_08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -27713,7 +27729,11 @@ entries:
   - id: ART-EVIDENCE-508I
     kind: report
     path: registry/build/evidence/CG-5-08i/
-  owns: []
+  owns:
+  - glob: backend/security/**
+    mode: EXCLUSIVE
+  - glob: tests/wp5_08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -28431,7 +28451,11 @@ entries:
   - id: ART-EVIDENCE-508I
     kind: report
     path: registry/build/evidence/CG-5-08i/
-  owns: []
+  owns:
+  - glob: backend/security/**
+    mode: EXCLUSIVE
+  - glob: tests/wp5_08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -28591,7 +28615,11 @@ entries:
   - id: ART-EVIDENCE-508I
     kind: report
     path: registry/build/evidence/CG-5-08i/
-  owns: []
+  owns:
+  - glob: backend/security/**
+    mode: EXCLUSIVE
+  - glob: tests/wp5_08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -28702,7 +28730,11 @@ entries:
   - id: ART-EVIDENCE-508I
     kind: report
     path: registry/build/evidence/CG-5-08i/
-  owns: []
+  owns:
+  - glob: backend/security/**
+    mode: EXCLUSIVE
+  - glob: tests/wp5_08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -28813,7 +28845,11 @@ entries:
   - id: ART-EVIDENCE-508I
     kind: report
     path: registry/build/evidence/CG-5-08i/
-  owns: []
+  owns:
+  - glob: backend/security/**
+    mode: EXCLUSIVE
+  - glob: tests/wp5_08/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -37251,7 +37287,9 @@ entries:
   - id: ART-EVIDENCE-504F
     kind: report
     path: registry/build/evidence/CG-5-04f/
-  owns: []
+  owns:
+  - glob: frontend/src/audit/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -50815,7 +50853,11 @@ entries:
   - id: ART-EVIDENCE-505F
     kind: report
     path: registry/build/evidence/CG-5-05f/
-  owns: []
+  owns:
+  - glob: backend/loadtest/**
+    mode: EXCLUSIVE
+  - glob: tests/wp5_05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
