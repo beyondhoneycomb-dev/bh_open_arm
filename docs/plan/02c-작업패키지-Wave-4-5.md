@@ -423,7 +423,7 @@
 | **실행 클래스** | `AI-offline` (집계는 라벨이 있으면 사람 없이 돈다) |
 | **입력** | WP-4C-02 `EpisodeRecord` · WP-4C-04 실패 태그 · WP-4A-05 계보 |
 | **산출** | 통계 집계기 · CI 계산기(Wilson + Clopper-Pearson) · 리포트 렌더러 · self-baseline 표기 강제 |
-| **인터페이스 계약** | `SuccessRateReport{rollout_set_id, checkpoint_hash, n_trials, n_success, point_estimate, ci_wilson_95, ci_clopper_pearson_95, statistically_meaningful: bool, seeds: [...], episode_length_median, collision_count, torque_limit_hits, safety_stop_count, inference_latency_p95, baseline_kind: "self-baseline"}` — **`FR-SIM-058`의 6항목 + `NFR-PRF-050`의 4항목을 합집합으로 전부 담는다** · `statistically_meaningful = (n_trials >= 20)` — **`FR-SIM-056`/`NFR-PRF-050`의 N≥20이 이 필드의 유일한 근거다. 계획이 다른 수를 발명하지 않는다** |
+| **인터페이스 계약** | `SuccessRateReport{rollout_set_id, checkpoint_hash, n_trials, n_success, point_estimate, ci_wilson_95, ci_clopper_pearson_95, statistically_meaningful: bool, seeds: [...], episode_length_median, collision_count, torque_limit_hits, safety_stop_count, inference_latency_p95, baseline_kind: "self-baseline"}` — **`FR-SIM-058`의 6항목 + `NFR-PRF-050`의 4항목을 합집합으로 전부 담는다** · `statistically_meaningful = (n_trials >= 20)` — **`FR-SIM-056`/`NFR-PRF-050`의 N≥20이 이 필드의 유일한 근거다. 계획이 다른 수를 발명하지 않는다** · 소유 경로 = `backend/eval/stats/**`, `tests/wp4c03/**` (**`EXCLUSIVE`**) |
 
 > 🔴 **Wilson과 Clopper-Pearson을 둘 다 계산하는 이유 — 그리고 그 대가.**
 >
@@ -450,7 +450,7 @@
 | **실행 클래스** | `AI-offline` → `Human-judgment` (2 phase: 태그 스키마·상관 엔진 → 태그 부여) |
 | **입력** | WP-4A-08 이중 기록(`requestedPositionAction` vs `acceptedPositionAction`) · WP-4C-02 라벨 · Wave 2C GMO 이벤트 · Wave 0-Ops 구조화 로그 |
 | **산출** | 실패 태그 분류 체계 · 이벤트 상관 엔진 · 태그↔에러코드 매핑 |
-| **인터페이스 계약** | `FailureTag` — **분류 축은 "무엇이 실패했는가"가 아니라 "어느 계층이 실패했는가"다.** 계층별 축은 우리가 이미 가진 신호에서만 나온다(발명 금지): |
+| **인터페이스 계약** | `FailureTag` — **분류 축은 "무엇이 실패했는가"가 아니라 "어느 계층이 실패했는가"다.** 계층별 축은 우리가 이미 가진 신호에서만 나온다(발명 금지, 아래 표) · 소유 경로 = `backend/eval/taxonomy/**`, `tests/wp4c04/**` (**`EXCLUSIVE`**) · 참조근거 = 택소노미는 태그를 값으로만 노출한다 — 소비자(WP-4C-03 집계기·WP-4C-07 자동판정 비교·WP-5-12 Isaac 2단계)는 태그 enum을 정적 import하지 않고 태그 값으로 데이터 조인하므로(§3.3 데이터 조인) 정적 import 그래프에 보이지 않는 값-조인 의존이다(06 §5.6) |
 
 | 축 | 태그 | 판별 신호 (우리가 실제로 갖고 있는 것) |
 |---|---|---|

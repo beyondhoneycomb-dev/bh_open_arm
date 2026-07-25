@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@25d8365
+spine_ref: docs/plan/00-실행계획-개요.md@7c33d0c
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -13514,7 +13514,11 @@ entries:
   - id: ART-EVIDENCE-4C04E
     kind: report
     path: registry/build/evidence/CG-4C-04e/
-  owns: []
+  owns:
+  - glob: backend/eval/taxonomy/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4c04/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -13562,6 +13566,8 @@ entries:
     owns: []
     cancel_policy: finish-step
     after: 0
+  justification: 택소노미는 태그를 값으로만 노출한다 — 소비자(WP-4C-03 집계기·WP-4C-07 자동판정 비교·WP-5-12 Isaac 2단계)는 태그 enum을
+    정적 import하지 않고 태그 값으로 데이터 조인하므로(§3.3 데이터 조인) 정적 import 그래프에 보이지 않는 값-조인 의존이다(06 §5.6)
   planned: true
   provenance:
     wp_rule: coverage-fill
@@ -15677,7 +15683,11 @@ entries:
   - id: ART-EVIDENCE-4C03G
     kind: report
     path: registry/build/evidence/CG-4C-03g/
-  owns: []
+  owns:
+  - glob: backend/eval/stats/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4c03/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
