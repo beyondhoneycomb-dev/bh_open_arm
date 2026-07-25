@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@dae1b2b
+spine_ref: docs/plan/00-실행계획-개요.md@ad36bf9
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -51125,7 +51125,9 @@ entries:
   - id: ART-EVIDENCE-GS01E
     kind: report
     path: registry/build/evidence/CG-G-S01e/
-  owns: []
+  owns:
+  - glob: frontend/src/screens/S-01/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []

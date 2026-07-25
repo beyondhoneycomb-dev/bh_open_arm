@@ -1,0 +1,381 @@
+/* S-01 dashboard styles. Self-hosted only — no url() to any external origin, so
+   the bundle stays air-gapped (FR-GUI-008). Reuses the shell/safety design tokens
+   with literal fallbacks and inherits the viewer's light/dark theme. The four
+   diagnostic states plus UNAVAILABLE each get a distinct visual — UNAVAILABLE is
+   deliberately NOT green, so a not-landed source never reads as OK (CG-G-S01e). */
+
+.oa-dash {
+  padding: 1.25rem;
+  color: var(--oa-text, #1b1f24);
+  display: grid;
+  gap: 1rem;
+
+  --oa-ok: #1a7f37;
+  --oa-ok-bg: #eaf6ec;
+  --oa-stale: #6f42c1;
+  --oa-stale-bg: #f3eefb;
+  --oa-unavail: #57606a;
+  --oa-unavail-bg: #eef1f4;
+}
+
+@media (prefers-color-scheme: dark) {
+  .oa-dash {
+    --oa-ok: #3fb950;
+    --oa-ok-bg: #12261a;
+    --oa-stale: #b083f0;
+    --oa-stale-bg: #201830;
+    --oa-unavail: #8b949e;
+    --oa-unavail-bg: #1c2230;
+  }
+}
+
+.oa-dash__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+}
+
+.oa-dash__id {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  color: var(--oa-muted, #57606a);
+  width: 100%;
+}
+
+.oa-dash__title {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.oa-dash__cols {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  align-items: start;
+}
+
+.oa-dash__col {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.oa-dash__panel {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--oa-border, #d8dee4);
+  border-radius: 8px;
+  background: var(--oa-surface, #ffffff);
+}
+
+.oa-dash__panel-title {
+  margin: 0 0 0.6rem;
+  font-size: 1.05rem;
+}
+
+/* CRITICAL-only area — leads the page so a fall-risk banner is never lost among
+   metric tiles (02c §4.2 mitigation). */
+.oa-dash__critical {
+  padding: 0.9rem 1rem;
+  border: 2px solid var(--oa-danger, #b42318);
+  border-radius: 8px;
+  background: var(--oa-danger-bg, #ffebe9);
+}
+
+.oa-dash__critical-title {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  color: var(--oa-danger, #b42318);
+}
+
+.oa-dash__critical-empty {
+  margin: 0;
+  color: var(--oa-muted, #57606a);
+  font-size: 0.9rem;
+}
+
+.oa-dash__critical-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.oa-dash__critical-item {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--oa-border, #d8dee4);
+  background: var(--oa-surface, #ffffff);
+}
+
+.oa-dash__critical-label {
+  font-weight: 600;
+}
+
+.oa-dash__critical-detail,
+.oa-dash__subsys-detail {
+  font-size: 0.82rem;
+  color: var(--oa-muted, #57606a);
+}
+
+/* Subsystem grid — the nine §4.3 rows, severity-sorted. */
+.oa-dash__subsys-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.oa-dash__subsys {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.1rem 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  border-left: 4px solid var(--oa-border, #d8dee4);
+  background: var(--oa-bg, #f6f8fa);
+}
+
+.oa-dash__subsys-label {
+  font-weight: 600;
+}
+
+.oa-dash__subsys-state,
+.oa-dash__can-state,
+.oa-dash__cam-state,
+.oa-dash__tile-state {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  justify-self: end;
+}
+
+.oa-dash__subsys-detail {
+  grid-column: 1 / -1;
+}
+
+/* Tiles shared by the FR-GUI-100 metric panels. */
+.oa-dash__tile {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--oa-border, #d8dee4);
+  background: var(--oa-bg, #f6f8fa);
+  margin-bottom: 0.5rem;
+}
+
+.oa-dash__tile-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--oa-muted, #57606a);
+}
+
+.oa-dash__tile-value {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.oa-dash__tile-sub,
+.oa-dash__tile-source {
+  font-size: 0.82rem;
+  color: var(--oa-muted, #57606a);
+}
+
+.oa-dash__tile-source {
+  font-variant-numeric: tabular-nums;
+}
+
+.oa-dash__tile-warn {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--oa-warning, #b45309);
+}
+
+/* CAN interfaces. */
+.oa-dash__can-list {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.oa-dash__can {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0.1rem 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  border-left: 4px solid var(--oa-border, #d8dee4);
+  background: var(--oa-bg, #f6f8fa);
+}
+
+.oa-dash__can-name {
+  font-weight: 600;
+}
+
+.oa-dash__can-lock,
+.oa-dash__can-intruder {
+  grid-column: 1 / -1;
+  font-size: 0.82rem;
+  color: var(--oa-muted, #57606a);
+}
+
+.oa-dash__can-intruder[data-intruder-present="true"] {
+  color: var(--oa-danger, #b42318);
+  font-weight: 600;
+}
+
+.oa-dash__flags {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+/* Camera tiles — count derived from the active-stream array (CG-G-S01c). */
+.oa-dash__cam-grid {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.oa-dash__cam-tile {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  border-left: 4px solid var(--oa-border, #d8dee4);
+  background: var(--oa-bg, #f6f8fa);
+}
+
+.oa-dash__cam-uilabel {
+  font-weight: 600;
+}
+
+.oa-dash__cam-key {
+  font-size: 0.75rem;
+  color: var(--oa-muted, #57606a);
+  word-break: break-all;
+}
+
+.oa-dash__cam-fps {
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.oa-dash__cam-empty,
+.oa-dash__session-empty {
+  margin: 0;
+  color: var(--oa-muted, #57606a);
+  font-size: 0.9rem;
+}
+
+/* Cycle-time cause breakdown. */
+.oa-dash__cycle-cause {
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  background: var(--oa-warning-bg, #fff4e5);
+  color: var(--oa-warning, #b45309);
+  font-size: 0.82rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+/* Sessions. */
+.oa-dash__sessions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.oa-dash__session {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  background: var(--oa-bg, #f6f8fa);
+}
+
+.oa-dash__session-name {
+  font-weight: 600;
+}
+
+.oa-dash__session-meta {
+  font-size: 0.8rem;
+  color: var(--oa-muted, #57606a);
+}
+
+/* The four diagnostic states plus UNAVAILABLE. UNAVAILABLE is grey, never green
+   — a not-landed source must not read as OK (CG-G-S01e). */
+.oa-dash__state--ok {
+  border-left-color: var(--oa-ok, #1a7f37);
+}
+.oa-dash__state--ok .oa-dash__subsys-state,
+.oa-dash__state--ok .oa-dash__can-state,
+.oa-dash__state--ok .oa-dash__cam-state,
+.oa-dash__state--ok .oa-dash__tile-state {
+  color: var(--oa-ok, #1a7f37);
+}
+
+.oa-dash__state--warn {
+  border-left-color: var(--oa-warning, #b45309);
+  background: var(--oa-warning-bg, #fff4e5);
+}
+.oa-dash__state--warn .oa-dash__subsys-state,
+.oa-dash__state--warn .oa-dash__can-state,
+.oa-dash__state--warn .oa-dash__cam-state,
+.oa-dash__state--warn .oa-dash__tile-state {
+  color: var(--oa-warning, #b45309);
+}
+
+.oa-dash__state--error {
+  border-left-color: var(--oa-danger, #b42318);
+  background: var(--oa-danger-bg, #ffebe9);
+}
+.oa-dash__state--error .oa-dash__subsys-state,
+.oa-dash__state--error .oa-dash__can-state,
+.oa-dash__state--error .oa-dash__cam-state,
+.oa-dash__state--error .oa-dash__tile-state {
+  color: var(--oa-danger, #b42318);
+}
+
+.oa-dash__state--stale {
+  border-left-color: var(--oa-stale, #6f42c1);
+  background: var(--oa-stale-bg, #f3eefb);
+}
+.oa-dash__state--stale .oa-dash__subsys-state,
+.oa-dash__state--stale .oa-dash__can-state,
+.oa-dash__state--stale .oa-dash__cam-state,
+.oa-dash__state--stale .oa-dash__tile-state {
+  color: var(--oa-stale, #6f42c1);
+}
+
+.oa-dash__state--unavailable {
+  border-left-color: var(--oa-unavail, #57606a);
+  background: var(--oa-unavail-bg, #eef1f4);
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 6px,
+    rgba(87, 96, 106, 0.08) 6px,
+    rgba(87, 96, 106, 0.08) 12px
+  );
+}
+.oa-dash__state--unavailable .oa-dash__subsys-state,
+.oa-dash__state--unavailable .oa-dash__can-state,
+.oa-dash__state--unavailable .oa-dash__cam-state,
+.oa-dash__state--unavailable .oa-dash__tile-state,
+.oa-dash__state--unavailable .oa-dash__tile-value {
+  color: var(--oa-unavail, #57606a);
+}
