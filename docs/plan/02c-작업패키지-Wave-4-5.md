@@ -483,7 +483,7 @@
 | **실행 클래스** | `AI-offline` → `Human-assisted-HW` → `Human-judgment` (조건 정의 → 섭동 실행 → 판정) |
 | **입력** | WP-4C-01 `RolloutSet` · WP-4C-03 집계기 |
 | **산출** | 조건 정의 스키마 · 섭동 프로토콜 · 조건별 리포트 축 |
-| **인터페이스 계약** | `Condition ∈ {NOMINAL, PERTURBED}` — `RolloutSet.condition`(§3.1)이 이 값을 갖는다 · `NOMINAL` = 학습 데이터 수집 시의 초기 상태 분포에서 시드 추출 · `PERTURBED` = 사전 정의된 섭동 축을 적용한 분포 · 🔴 **두 조건은 같은 체크포인트·같은 시행 수·같은 성공 기준을 쓴다**(`FR-TRN-073` (c)·(d)의 규율을 조건 축으로 확장) · **섭동 축은 계획이 정하지 않는다** — 태스크별로 Wave 3C 수집 시 기록된 초기 상태 분포에서 도출된다. 분포를 모르면 "섭동"이 무엇인지 정의할 수 없다(스핀 §2-6) |
+| **인터페이스 계약** | `Condition ∈ {NOMINAL, PERTURBED}` — `RolloutSet.condition`(§3.1)이 이 값을 갖는다 · `NOMINAL` = 학습 데이터 수집 시의 초기 상태 분포에서 시드 추출 · `PERTURBED` = 사전 정의된 섭동 축을 적용한 분포 · 🔴 **두 조건은 같은 체크포인트·같은 시행 수·같은 성공 기준을 쓴다**(`FR-TRN-073` (c)·(d)의 규율을 조건 축으로 확장) · **섭동 축은 계획이 정하지 않는다** — 태스크별로 Wave 3C 수집 시 기록된 초기 상태 분포에서 도출된다. 분포를 모르면 "섭동"이 무엇인지 정의할 수 없다(스핀 §2-6) · 소유 경로 = `backend/eval/protocol/**`, `tests/wp4c05/**` (**`EXCLUSIVE`**) · 참조근거 = 조건은 값(`NOMINAL`/`PERTURBED` 문자열)으로만 노출된다 — 하류 소비자 `WP-4C-06`(체크포인트 스코어카드)은 `Condition` enum을 정적 import하지 않고 조건 값으로 데이터 조인하므로(§3.5·§3.3 데이터 조인) 정적 import 그래프에 보이지 않는 값-조인 의존이다(`06` §5.6) |
 
 > 🔴 **왜 이중 조건인가 — 그리고 이것이 무엇을 나쁘게 만드는가.**
 >
@@ -513,7 +513,7 @@
 | **실행 클래스** | `AI-offline` → `Human-judgment` (2 phase: 표 누적 → 체크포인트 선택) |
 | **입력** | WP-4C-03 `SuccessRateReport` · WP-4C-05 조건별 리포트 · WP-4A-05 계보 |
 | **산출** | 체크포인트↔성공률 누적 표 · 선택 규칙 · val-loss 자동선택 차단 |
-| **인터페이스 계약** | `CheckpointScorecard{checkpoint_hash, step, lineage_ref, per_task: [{task, condition, SuccessRateReport}], generalization_gap?, offline_metrics: {val_loss, action_mse}}` — 🔴 **`offline_metrics`는 필드에 있되 정렬 키가 될 수 없다.** 필드에서 빼면 "그 지표를 왜 안 보여주냐"가 되고, 정렬 키로 두면 `FR-INF-062` 위반이다. **표시하되 정렬 불가**가 정확한 형상이다 · **선택은 실기 성공률로 한다** — 그리고 성공률은 CI를 갖는다(§3.3). 즉 **선택은 점추정 비교가 아니라 구간 비교**이며, 구간이 겹치면 **"우열 미판정"이 정당한 출력**이다 |
+| **인터페이스 계약** | `CheckpointScorecard{checkpoint_hash, step, lineage_ref, per_task: [{task, condition, SuccessRateReport}], generalization_gap?, offline_metrics: {val_loss, action_mse}}` — 🔴 **`offline_metrics`는 필드에 있되 정렬 키가 될 수 없다.** 필드에서 빼면 "그 지표를 왜 안 보여주냐"가 되고, 정렬 키로 두면 `FR-INF-062` 위반이다. **표시하되 정렬 불가**가 정확한 형상이다 · **선택은 실기 성공률로 한다** — 그리고 성공률은 CI를 갖는다(§3.3). 즉 **선택은 점추정 비교가 아니라 구간 비교**이며, 구간이 겹치면 **"우열 미판정"이 정당한 출력**이다 · 소유 경로 = `backend/eval/selection/**`, `tests/wp4c06/**` (**`EXCLUSIVE`**) |
 | **수용 게이트** | ① `CG-4C-06a` val loss로 체크포인트를 정렬·자동선택하는 경로 **0개**(정적 검사) ② `CG-4C-06b` robomimic 경고("오프라인 지표는 온라인 성공률을 예측하지 못한다")가 **상시** 표시(`FR-GUI-125`) ③ `CG-4C-06c` 손실 기준 체크포인트 자동 삭제 경로 0개(`FR-TRN-042`) ④ `CG-4C-06d` 두 체크포인트의 Wilson CI가 **겹치면 "우열 미판정"** 출력(강제 순위 부여 금지) ⑤ `CG-4C-06e` `log_freq`/`save_freq`/`eval_steps`/`env_eval_freq` 4개가 UI에서 **별개 의미로** 노출(`FR-TRN-040`) && `env_eval_freq`에 **"OpenArm 실기와 무관"** 표기 ⑥ `CG-4C-06f` 선택 결정이 계보에 기록됨(누가·무엇을 근거로) |
 | **음성 분기** | ①실패 → `FAIL`. `FR-INF-062`의 직접 위반이고, 이 위반의 비용은 robomimic이 정량화했다: **50~100% 나쁜 정책** / ④실패(겹치는 CI에서 강제 순위) → `FAIL`. 겹치는 구간에서 1등을 뽑는 것은 노이즈를 뽑는 것이다 |
 | **워크플로우 형상** | `SHAPE-IM(1)` → `SHAPE-HG` (phase1 표 누적 = `AI-offline` / phase2 선택 = `Human-judgment`·`cancel=finish-step`) — 단일 빌더 + Human 게이트(선택). **자동화하지 않는 것이 이 WP의 산출물이다** — 표를 만들고, 정렬을 막고, 사람에게 넘긴다 |
@@ -527,7 +527,7 @@
 | **실행 클래스** | `AI-offline` → `Human-judgment` (2 phase: 자동 판정기 → 기준 라벨) |
 | **입력** | WP-4C-02 사람 라벨 세트 · WP-4C-04 택소노미 · 롤아웃 영상 |
 | **산출** | VLM 판정기 어댑터 · 불일치 집계기 · 자동 비활성 트리거 |
-| **인터페이스 계약** | `EpisodeRecord.label_source ∈ {HUMAN, MODEL}` (§3.2에서 이미 정의) — **집계기(§3.3)는 `label_source=HUMAN`만 정본으로 쓴다** · `AgreementReport{n_compared, agreement_rate, precision, recall, disagreement_by_tag}` — **precision/recall은 사람 라벨을 ground truth로 계산한다**(Q11 규율) |
+| **인터페이스 계약** | `EpisodeRecord.label_source ∈ {HUMAN, MODEL}` (§3.2에서 이미 정의) — **집계기(§3.3)는 `label_source=HUMAN`만 정본으로 쓴다** · `AgreementReport{n_compared, agreement_rate, precision, recall, disagreement_by_tag}` — **precision/recall은 사람 라벨을 ground truth로 계산한다**(Q11 규율) · 소유 경로 = `backend/eval/autojudge/**`, `tests/wp4c07/**` (**`EXCLUSIVE`**) |
 | **착수 조건 (순서가 이 WP의 전부다)** | 🔴 `11` §5-Q11이 정한 순서를 그대로 따른다: **(1) 사람 라벨 N개를 먼저 모은다 → (2) 태스크별 성공 기준을 문장으로 확정한다 → (3) 그 라벨에 대해 VLM의 precision/recall을 측정한다 → (4) 그때 도입 여부를 정한다.** 역순 금지 — VLM을 먼저 붙이고 사람이 검수하면, 사람이 VLM 판정에 앵커링되어 ground truth가 오염된다. **(2)가 없으면 (3)이 불가능하다**: 성공 기준이 문장으로 없으면 VLM 프롬프트를 쓸 수 없고, 사람 라벨의 일관성도 잴 수 없다 |
 | **수용 게이트** | ① `CG-4C-07a` 집계기가 `label_source=MODEL` 라벨을 성공률 정본에 **넣지 않음**(정적 검사 — `FR-INF-079` "정본은 사람 라벨") ② `CG-4C-07b` 불일치율이 임계 초과 → 자동 판정 **비활성화** + 사람 라벨 요구 ③ `CG-4C-07c` 사이드카에 **`model-judged`** 표기가 human-labeled와 **구분**됨(`FR-SIM-095`) ④ `CG-4C-07d` GPU 프리플라이트: Cosmos Reason 2 요구(Hopper·Blackwell)를 **보유 플릿과 대조** — RTX 5090(Blackwell) 적격, RTX A6000(Ampere) 부적격 → **타깃 표시** ⑤ `CG-4C-07e` (1)~(3) 순서를 건너뛰고 자동 판정을 켜는 경로 0개 |
 | **음성 분기** | 임계 초과(②) → **`FAIL`이 아니다.** 자동 판정 비활성 + 사람 라벨 100% 회귀는 `FR-INF-079`가 요구한 **정상 전이**이며, ②는 "임계 초과 시 그 전이가 실제로 일어나는가"를 이진으로 본다 — 전이가 안 일어나면 `FAIL` / ④에서 플릿 전체 부적격 → 이 WP가 불필요해진 것이므로 **웨이브 재배치(`01`) 소관의 WP 폐기**이지 `CG-*`의 상태가 아니다. 4C는 사람 라벨로 완결되며 아무것도 잃지 않는다(성공률 정본이 원래 사람 라벨이므로) |

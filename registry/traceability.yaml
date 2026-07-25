@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@d7cf14c
+spine_ref: docs/plan/00-실행계획-개요.md@7c82646
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -16171,7 +16171,11 @@ entries:
   - id: ART-EVIDENCE-4C07E
     kind: report
     path: registry/build/evidence/CG-4C-07e/
-  owns: []
+  owns:
+  - glob: backend/eval/autojudge/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4c07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -36823,7 +36827,11 @@ entries:
   - id: ART-EVIDENCE-4C05E
     kind: report
     path: registry/build/evidence/CG-4C-05e/
-  owns: []
+  owns:
+  - glob: backend/eval/protocol/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4c05/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -36879,6 +36887,8 @@ entries:
     owns: []
     cancel_policy: finish-step
     after: 1
+  justification: 조건은 값(NOMINAL/PERTURBED 문자열)으로만 노출된다 — 하류 소비자 WP-4C-06(체크포인트 스코어카드)은 Condition enum을
+    정적 import하지 않고 조건 값으로 데이터 조인하므로(§3.5·§3.3 데이터 조인) 정적 import 그래프에 보이지 않는 값-조인 의존이다(06 §5.6)
   planned: true
   provenance:
     wp_rule: coverage-fill
@@ -38431,7 +38441,11 @@ entries:
   - id: ART-EVIDENCE-4C07E
     kind: report
     path: registry/build/evidence/CG-4C-07e/
-  owns: []
+  owns:
+  - glob: backend/eval/autojudge/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4c07/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -48360,7 +48374,11 @@ entries:
   - id: ART-EVIDENCE-4C06F
     kind: report
     path: registry/build/evidence/CG-4C-06f/
-  owns: []
+  owns:
+  - glob: backend/eval/selection/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4c06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -48438,7 +48456,11 @@ entries:
   - id: ART-EVIDENCE-4C06F
     kind: report
     path: registry/build/evidence/CG-4C-06f/
-  owns: []
+  owns:
+  - glob: backend/eval/selection/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4c06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
@@ -48516,7 +48538,11 @@ entries:
   - id: ART-EVIDENCE-4C06F
     kind: report
     path: registry/build/evidence/CG-4C-06f/
-  owns: []
+  owns:
+  - glob: backend/eval/selection/**
+    mode: EXCLUSIVE
+  - glob: tests/wp4c06/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
     produces: []
