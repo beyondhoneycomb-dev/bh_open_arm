@@ -26,8 +26,13 @@ from backend.cartesian_jog import (
     build_cartesian_jog,
 )
 from backend.cartesian_jog.frames import pose_position, pose_quat, quat_geodesic_angle
+from backend.moveto.constants import arm_slot_base
 from backend.singularity import build_elbow_swivel
-from backend.singularity.constants import EE_FIXED_TOLERANCE_M, EE_FIXED_TOLERANCE_RAD
+from backend.singularity.constants import (
+    ARM_JOINTS_PER_SIDE,
+    EE_FIXED_TOLERANCE_M,
+    EE_FIXED_TOLERANCE_RAD,
+)
 
 
 def _jogged_off_home(side: str = "right", steps: int = 6):
@@ -70,14 +75,15 @@ def test_swivel_moves_the_arm_but_holds_the_ee_fixed(side: str, delta: float) ->
 
 def test_swivel_is_directional() -> None:
     # Opposite signs push the elbow opposite ways through the nullspace.
+    right = slice(arm_slot_base("right"), arm_slot_base("right") + ARM_JOINTS_PER_SIDE)
     positive = _jogged_off_home()
-    start = positive.committed_solution()[0:7].copy()
+    start = positive.committed_solution()[right].copy()
     build_elbow_swivel(positive).swivel("right", 0.3)
-    move_plus = positive.committed_solution()[0:7] - start
+    move_plus = positive.committed_solution()[right] - start
 
     negative = _jogged_off_home()
     build_elbow_swivel(negative).swivel("right", -0.3)
-    move_minus = negative.committed_solution()[0:7] - start
+    move_minus = negative.committed_solution()[right] - start
 
     assert float(np.dot(move_plus, move_minus)) < 0.0
 

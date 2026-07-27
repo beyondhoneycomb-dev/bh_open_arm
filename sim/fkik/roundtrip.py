@@ -301,13 +301,13 @@ def _forward_pose(adapter: IkAdapter, config: np.ndarray) -> tuple[np.ndarray, n
 
     Args:
         adapter: A built IK adapter.
-        config: Radian configuration, float[16] = right[8] + left[8].
+        config: Radian configuration, float[16] = left[8] + right[8].
 
     Returns:
         (tuple[np.ndarray, np.ndarray]) The (right, left) EE poses.
     """
-    right = np.asarray(config[:SIDE_WIDTH], dtype=float)
-    left = np.asarray(config[SIDE_WIDTH:], dtype=float)
+    left = np.asarray(config[:SIDE_WIDTH], dtype=float)
+    right = np.asarray(config[SIDE_WIDTH:], dtype=float)
     return adapter._kin.fk_bimanual(right, left)
 
 

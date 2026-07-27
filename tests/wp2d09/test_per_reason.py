@@ -18,6 +18,7 @@ pytest.importorskip("lerobot")
 from backend.cartesian_jog import JogStopReason, ReferenceFrame, TcpSelection
 from backend.jogclamp import JogClampReason
 from backend.moveto import JointMoveTo, NumericMoveTo, PoseMoveTo
+from backend.moveto.constants import arm_slot_base
 
 _MECHANICAL_OVERSHOOT_RAD = 10.0
 _UNREACHABLE_X_OFFSET_M = 3.0
@@ -37,7 +38,9 @@ def test_mechanical_violation_names_the_joint_and_reason(gate: NumericMoveTo) ->
     assert finding.reason is JogClampReason.MECHANICAL_LIMIT
     assert finding.side == "right"
     assert finding.joint_number == 1
-    assert finding.slot == 0
+    # Derived, not a literal: the slot a side starts at is the frozen action contract's
+    # arm order, and a literal here re-encodes whichever order happened to be current.
+    assert finding.slot == arm_slot_base("right")
     assert JogClampReason.MECHANICAL_LIMIT.value in report.by_reason()
 
 

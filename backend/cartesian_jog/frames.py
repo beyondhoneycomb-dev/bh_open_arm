@@ -162,18 +162,20 @@ class KinematicFrames:
         return self._lifter_range
 
     def home_solution(self) -> np.ndarray:
-        """Return the home-keyframe driver state as a float[16] right[8]+left[8] vector.
+        """Return the home-keyframe driver state as a float[16] left[8]+right[8] vector.
 
         Read from the model's ``home`` keyframe — the same rest pose ``sim.ik`` seeds
         from — so the jog's committed pose starts where the IK adapter's config does.
+        Arm order is the frozen action contract's (left first), which is what every
+        consumer of a 16-slot vector in this package indexes by.
         """
         model = self._setup.model
         key_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_KEY, HOME_KEYFRAME)
         qpos = np.asarray(model.key_qpos[key_id] if key_id >= 0 else self._setup.data.qpos)
-        right_joints, right_grip = self._setup.joint_resolver.get_driver(qpos, "right")
         left_joints, left_grip = self._setup.joint_resolver.get_driver(qpos, "left")
+        right_joints, right_grip = self._setup.joint_resolver.get_driver(qpos, "right")
         return np.concatenate(
-            [np.append(right_joints, float(right_grip)), np.append(left_joints, float(left_grip))]
+            [np.append(left_joints, float(left_grip)), np.append(right_joints, float(right_grip))]
         ).astype(float)
 
     def _seat(self, solution16: np.ndarray, q_lift: float) -> None:
@@ -182,8 +184,8 @@ class KinematicFrames:
         if solution.shape[0] != BIMANUAL_WIDTH:
             raise ValueError(f"solution must be {BIMANUAL_WIDTH}-dim, got {solution.shape[0]}")
         qpos = self._setup.data.qpos
-        self._setup.joint_resolver.set_qpos(qpos, solution[:SIDE_WIDTH], "right")
-        self._setup.joint_resolver.set_qpos(qpos, solution[SIDE_WIDTH:], "left")
+        self._setup.joint_resolver.set_qpos(qpos, solution[:SIDE_WIDTH], "left")
+        self._setup.joint_resolver.set_qpos(qpos, solution[SIDE_WIDTH:], "right")
         qpos[self._lifter_qadr] = float(q_lift)
         mujoco.mj_forward(self._setup.model, self._setup.data)
 

@@ -97,7 +97,7 @@ class ElbowSwivel:
         """
         side = _require_side(side)
         tcp = tcp if tcp is not None else self._jog.default_tcp
-        base = 0 if side == "right" else SIDE_WIDTH
+        base = 0 if side == "left" else SIDE_WIDTH
         joint_slice = slice(base, base + ARM_JOINTS_PER_SIDE)
 
         config_before = self._jog.committed_solution()

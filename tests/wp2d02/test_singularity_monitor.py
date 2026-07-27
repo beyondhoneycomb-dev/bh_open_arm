@@ -24,15 +24,30 @@ from backend.cartesian_jog import (
     build_cartesian_jog,
 )
 from backend.cartesian_jog.constants import FULL_VELOCITY_SCALE
+from backend.moveto.constants import arm_slot_base
 from backend.singularity import build_singularity_guard
-from backend.singularity.constants import DAMPED_FLOOR_SCALE
+from backend.singularity.constants import ARM_JOINTS_PER_SIDE, DAMPED_FLOOR_SCALE
+
+# Zero-based offset of joint 4 within an arm's seven joints.
+_JOINT_4_INDEX = 3
+
+
+def _right_arm_joints(state16: np.ndarray) -> np.ndarray:
+    """Slice the right arm's seven joints out of a 16-slot driver state."""
+    base = arm_slot_base("right")
+    return state16[base : base + ARM_JOINTS_PER_SIDE]
 
 
 def _near_singular_state(elbow: float) -> np.ndarray:
-    """A 16-value driver state: right elbow toward straight, left arm at home."""
+    """A 16-value driver state: right elbow toward straight, left arm at home.
+
+    The slot of each arm's joint 4 is derived, not written as a literal: the 16-slot
+    arm order is the frozen action contract's, and a literal here silently aims the
+    near-singular elbow at whichever arm the layout happens to put first.
+    """
     state = np.zeros(16)
-    state[3] = elbow
-    state[11] = np.pi / 2
+    state[arm_slot_base("right") + _JOINT_4_INDEX] = elbow
+    state[arm_slot_base("left") + _JOINT_4_INDEX] = np.pi / 2
     return state
 
 
@@ -53,11 +68,11 @@ def test_ramp_is_full_then_damped_then_critical() -> None:
     clear = guard.evaluate("right", jog.arm_joints("right"))  # home, well-conditioned
     assert not clear.damping and clear.velocity_scale == FULL_VELOCITY_SCALE
 
-    damped = guard.evaluate("right", _near_singular_state(_DAMPING_ELBOW)[:7])
+    damped = guard.evaluate("right", _right_arm_joints(_near_singular_state(_DAMPING_ELBOW)))
     assert damped.damping and not damped.critical
     assert DAMPED_FLOOR_SCALE < damped.velocity_scale < FULL_VELOCITY_SCALE
 
-    critical = guard.evaluate("right", _near_singular_state(_CRITICAL_ELBOW)[:7])
+    critical = guard.evaluate("right", _right_arm_joints(_near_singular_state(_CRITICAL_ELBOW)))
     assert critical.critical and critical.velocity_scale == DAMPED_FLOOR_SCALE
 
 

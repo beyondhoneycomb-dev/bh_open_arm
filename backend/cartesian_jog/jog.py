@@ -384,7 +384,7 @@ class CartesianJog:
 
     def arm_joints(self, side: str) -> np.ndarray:
         """Return the committed seven arm-joint angles (radians) for WP-2D-02's Jacobian."""
-        base = 0 if side == "right" else SIDE_WIDTH
+        base = 0 if side == "left" else SIDE_WIDTH
         return self._committed[base : base + ARM_JOINTS_PER_SIDE].copy()
 
     def current_pose(

@@ -46,9 +46,10 @@ GATE_CONTRACT_NOTE = (
 def arm_slot_base(side: str) -> int:
     """Return the 16-dim slot the seven arm joints of ``side`` begin at.
 
-    Right occupies slots 0..6 (arm) and 7 (gripper); left occupies 8..14 (arm) and 15
-    (gripper). The same base ``backend.cartesian_jog`` uses for ``arm_joints``, so a
-    finding's slot aligns with the jog's committed layout and the soft-limit order.
+    Left occupies slots 0..6 (arm) and 7 (gripper); right occupies 8..14 (arm) and 15
+    (gripper) — the frozen action contract's arm order. The same base
+    ``backend.cartesian_jog`` uses for ``arm_joints``, so a finding's slot aligns with the
+    jog's committed layout and the soft-limit order.
 
     Args:
         side: ``"right"`` or ``"left"``.
@@ -61,4 +62,4 @@ def arm_slot_base(side: str) -> int:
     """
     if side not in SIDES:
         raise ValueError(f"side must be 'right' or 'left', got {side!r}")
-    return 0 if side == "right" else SIDE_WIDTH
+    return 0 if side == "left" else SIDE_WIDTH

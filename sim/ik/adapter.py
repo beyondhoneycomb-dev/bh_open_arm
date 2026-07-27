@@ -46,13 +46,45 @@ from sim.ik.faults import FaultReporter, IkFault, IkFaultCode
 from sim.ik.limits import JointLimit, all_soft_limits
 from sim.ik.override import OrderedIkBuild
 
-# Solution layout: two arms of eight driver values (seven joints + one gripper).
+# Solution layout: two arms of eight driver values (seven joints + one gripper), left
+# arm first, matching the frozen action contract and `sim.ik.limits.SIDES`.
 SIDE_WIDTH = 8
 ARM_JOINTS_PER_SIDE = 7
 BIMANUAL_WIDTH = 16
 
+# `openarm_control` orders its driver vector right arm first — `Kinematics.sync` says so
+# in its own docstring, and `set_gripper` indexes `_gripper[0]` as right. That is the
+# third party's convention. It is converted here, at the only place we call into it, so
+# no module of ours has to know about it; a second order carried inward is what let the
+# dry-run gate check each arm against the other one's limits.
+_UPSTREAM_ARMS_ARE_RIGHT_FIRST = True
+
 # Clamp comparison tolerance in radians; a value within this of a bound is inside.
 CLAMP_TOLERANCE = 1e-9
+
+
+def _swap_arms(values16: np.ndarray) -> np.ndarray:
+    """Return the 16-slot vector with its two eight-value arm halves exchanged.
+
+    Args:
+        values16: float[16] in either arm order.
+
+    Returns:
+        (np.ndarray) The same values with the halves swapped.
+
+    Raises:
+        ValueError: When the input is not 16 wide, because a silent reshape here would
+            mislabel every slot downstream.
+    """
+    values = np.asarray(values16, dtype=float)
+    if values.shape[0] != BIMANUAL_WIDTH:
+        raise ValueError(f"arm-order swap needs {BIMANUAL_WIDTH} values, got {values.shape[0]}")
+    return np.concatenate([values[SIDE_WIDTH:], values[:SIDE_WIDTH]])
+
+
+def _to_upstream_order(values16: np.ndarray) -> np.ndarray:
+    """Convert a contract-order (left-first) vector to `openarm_control`'s order."""
+    return _swap_arms(values16) if _UPSTREAM_ARMS_ARE_RIGHT_FIRST else np.asarray(values16)
 
 
 @dataclass(frozen=True)
@@ -141,8 +173,13 @@ class IkAdapter:
         self._targets[side] = np.asarray(pose, dtype=float).copy()
 
     def sync(self, values16: np.ndarray) -> None:
-        """Seed the IK configuration from a 16-value driver state (right[8]+left[8])."""
-        self._kin.sync(values16)
+        """Seed the IK configuration from a 16-value driver state in contract order.
+
+        Args:
+            values16: float[16] driver state, left arm then right (the action-contract
+                layout every caller here already holds).
+        """
+        self._kin.sync(_to_upstream_order(values16))
 
     def set_gripper(self, side: str, value: float) -> None:
         """Pass a gripper value through; IK does not solve for it."""
@@ -239,12 +276,15 @@ class IkAdapter:
 
         ik._pending = set(ik._sides)
         qpos = ik._config.data.qpos
-        right_joints, _ = ik._joint_resolver.get_driver(qpos, "right")
+        # Built in contract order directly rather than in upstream order and swapped:
+        # both getters are keyed by side name, so there is nothing to reorder. The
+        # gripper indices are upstream's (`set_gripper`: 0 is right, 1 is left).
         left_joints, _ = ik._joint_resolver.get_driver(qpos, "left")
+        right_joints, _ = ik._joint_resolver.get_driver(qpos, "right")
         return np.concatenate(
             [
-                np.append(right_joints, ik._gripper[0]),
                 np.append(left_joints, ik._gripper[1]),
+                np.append(right_joints, ik._gripper[0]),
             ]
         ).astype(np.float32)
 
@@ -259,8 +299,8 @@ class IkAdapter:
         """
         if self._residual_max_m is None or not self._targets:
             return
-        right = np.asarray(solution[:SIDE_WIDTH], dtype=float)
-        left = np.asarray(solution[SIDE_WIDTH:], dtype=float)
+        left = np.asarray(solution[:SIDE_WIDTH], dtype=float)
+        right = np.asarray(solution[SIDE_WIDTH:], dtype=float)
         pose_right, pose_left = self._kin.fk_bimanual(right, left)
         achieved = {"right": pose_right, "left": pose_left}
         for side, target in self._targets.items():

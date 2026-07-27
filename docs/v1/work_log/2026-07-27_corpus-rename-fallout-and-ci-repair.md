@@ -452,7 +452,9 @@ ruff 명령을 돌린다. 무엇도 둘을 비교하지 않으므로 한쪽에 �
 — 이번엔 손으로 둘 다 고쳤다. 하나를 지우는 건 한 줄이지만 `WP-ENV-03` 의 선언된 산출물에서 잡을
 빼는 일이라 소유자 판단으로 남긴다.
 
-### D-0 — 🔴 **최우선**: IK 어댑터와 액션 계약의 좌우 순서가 반대다 (CRITICAL)
+### D-0 — ✅ **수정 완료**: IK 어댑터와 액션 계약의 좌우 순서가 반대였다 (CRITICAL)
+
+> **후속 세션에서 수정했다.** 아래는 발견 당시 기록이고, 수정 내용은 이 절 끝의 「수정」에 있다.
 
 세션 한도로 죽었던 감사 3영역(`sim`·`safety-physics`·전역 sentinel)을 재실행해서 나온 건이며,
 **내가 직접 재현해 확인했다.**
@@ -498,6 +500,45 @@ slot | dry-run 라벨            | 그 슬롯의 실제 어댑터 관절
 안전 게이트 경로의 좌우 교환을 긴 세션 끝에 반쯤 고치는 것은 **정확히 위치가 특정된 결함보다
 나쁘다.** 비대칭 리밋(`joint_2`)이 오프라인 판별 수단을 주므로 테스트로 증명 가능한 수정이며,
 별도 WP로 착수할 것.
+
+#### 수정 (같은 날 후속)
+
+**방향**: 계약(`contracts/unit_tags.yaml`, `arms: [left, right]`)은 동결이고 관측·액션·레코더·팔로워·
+데이터셋·프론트엔드가 전부 그 순서를 쓴다. 상류 `openarm_control` 만 오른팔 우선이다. 따라서
+**우리 코드를 전부 계약 순서로 통일하고, 상류와 만나는 한 지점에서만 변환**한다 — 세 번째 순서를
+만들지 않는다.
+
+바꾼 곳(하나의 믿음이 퍼져 있던 9곳 + 뒤늦게 찾은 1곳):
+
+| 파일 | 무엇 |
+|---|---|
+| `sim/ik/limits.py:46` | `SIDES = ("right","left")` → `("left","right")`. 이게 슬롯 배치의 정본이라 `backend/cartesian_jog`·`backend/moveto/limits`·`backend/inference/load_preflight/limits`·`sim/ik/bench`·`sim/fkik/roundtrip` 가 자동으로 따라온다 |
+| `sim/ik/adapter.py` | `_swap_arms`/`_to_upstream_order` 신설. `sync()` 가 계약 순서를 받아 상류 순서로 변환. `_driver_vector` 는 이름 기반 getter라 연결 순서만 뒤집음(그리퍼 인덱스는 상류 것: `_gripper[0]`=오른쪽) |
+| `sim/ik/adapter.py` `_check_residual` | `solution[:8]` 을 왼팔로 |
+| `backend/cartesian_jog/frames.py` | `_seat` 의 좌우, 그리고 **`home_solution()`** — 이건 처음 목록에 없다가 나중에 찾았다 |
+| `backend/cartesian_jog/jog.py:387` · `backend/moveto/constants.py` · `backend/singularity/nullspace.py` | `base = 0 if side == "right"` → `"left"` |
+| `sim/ik/bench.py` · `sim/fkik/roundtrip.py` | 좌우 슬라이스 |
+
+**판별 테스트**: `tests/wp0c09/test_arm_order_matches_the_action_contract.py`. 슬롯마다 계약 이름의
+팔과 IK 배치의 팔이 같은지 비교한다. **수정 전 16/16 불일치로 실패, 수정 후 통과.** 두 번째
+테스트는 `joint_2` 의 좌우 비대칭(왼 −90..9° / 오른 −9..90°)을 못박는다 — 그게 대칭이 되는 순간
+좌우 교환이 리밋 검사만으로는 탐지 불가능해지고, 첫 번째 테스트가 유일한 방어선이 되기 때문이다.
+
+**깨진 테스트 5건 — 전부 옛 순서를 숫자로 박아둔 것이었다.** 프로덕션 결함이 아니다:
+
+| 테스트 | 무엇을 가정했나 |
+|---|---|
+| `tests/wp2d02/test_singularity_monitor.py` | `state[3]` 을 "오른팔 4번 관절"로 — 이제 왼팔이라 특이 자세가 반대 팔에 실렸다 |
+| `tests/wp2d02/test_elbow_swivel.py` | 오른팔을 스위블하면서 `committed_solution()[0:7]`(이제 왼팔)을 읽어 움직임이 0으로 나왔다 |
+| `tests/wp2d09/test_per_reason.py` | 오른팔 1번 관절의 슬롯을 `0` 으로 단언 |
+| `tests/wp2d05/test_zero_change_hazard.py` | `concatenate([명령 8개, zeros(8)])` 로 앞 8칸에 넣고 오른팔을 조회 — 양쪽 다 0이라 재영점 위험이 0 mm 로 측정됐다 |
+
+전부 **리터럴 대신 `backend.moveto.constants.arm_slot_base(side)` 로 슬롯을 유도**하도록 고쳤다 —
+다음에 배치가 또 바뀌어도 테스트가 따라온다. 마지막 것은 고친 뒤 실제로 **43.2 mm** 차이를
+측정하는지 확인했다(임계 10 mm): 통과만 하고 아무것도 재지 않는 상태로 두지 않기 위해서다.
+
+**남은 확인**: 왕복(seed→step→읽기)이 상쇄되던 구조가 사라졌으므로, `jog._committed` 는 이제
+어느 경로가 쓰든 계약 순서 하나다.
 
 ### 그 밖의 재실행 감사 결과
 
@@ -660,9 +701,8 @@ prepend하기 때문이다. 아직 휠로 배포하지 않으므로 활성 결�
 
 ## 11. 다음
 
-0. 🔴 **D-0 (IK 어댑터 좌우 순서)가 최우선이다.** 안전 게이트가 각 팔을 반대편 리밋으로 검증하고
-   있고, 왕복 상쇄 때문에 테스트가 전부 초록이다. 별도 WP로 착수하고, `joint_2` 의 비대칭 리밋을
-   판별 수단으로 쓰는 테스트를 먼저 쓸 것.
+0. ✅ **D-0 (IK 어댑터 좌우 순서) 수정 완료** — §D-0 「수정」 참조. 판별 테스트가 수정 전 16/16
+   불일치로 실패하고 수정 후 통과함을 확인했다.
 1. **`CI-07` 의 13건이 게이트의 유일한 빨간불이다.** 각 건은 `ledger.yaml` 의 구조화된 판정 행 + 해시 재발행으로
    해소된다. 안전 3건(`NFR-SAF-001/002`, `FR-SAF-020/031`)이 먼저다 — 지금 이 코드들은 논쟁 중인
    요구사항의 한쪽 해석 위에 서 있고, 어느 쪽인지 아무 데도 적혀 있지 않다.

@@ -19,6 +19,8 @@ import inspect
 import numpy as np
 import pytest
 
+from backend.cartesian_jog.constants import BIMANUAL_WIDTH
+from backend.moveto.constants import arm_slot_base
 from backend.teaching import (
     ReplayDecision,
     TeachingPointStore,
@@ -64,16 +66,26 @@ def test_same_joint_command_reaches_a_different_pose_after_rezero() -> None:
     q_lift = 0.15
     q_command = [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.0]
 
-    taught = np.concatenate([np.array(q_command, dtype=float), np.zeros(8)])
-    pose_taught = frames.control_point_pose(RIGHT, taught, q_lift)
+    def _seated(command: list[float]) -> np.ndarray:
+        """Place one arm's eight driver values at that arm's slots in the 16-slot vector.
+
+        The slot base is derived rather than assumed: writing the command at slots 0..7
+        silently addresses whichever arm the layout puts first, and this test would then
+        compare the *other* arm against itself and measure zero divergence.
+        """
+        state = np.zeros(BIMANUAL_WIDTH)
+        base = arm_slot_base(RIGHT)
+        state[base : base + len(command)] = np.array(command, dtype=float)
+        return state
+
+    pose_taught = frames.control_point_pose(RIGHT, _seated(q_command), q_lift)
 
     # The same command, but the zero reference has moved: physically the arm now sits a
     # shift away on the re-zeroed joint. FK of that posture is the pose a naive replay
     # would actually reach.
     q_after = list(q_command)
     q_after[_SHIFTED_JOINT] += _REZERO_SHIFT_RAD
-    after = np.concatenate([np.array(q_after, dtype=float), np.zeros(8)])
-    pose_after = frames.control_point_pose(RIGHT, after, q_lift)
+    pose_after = frames.control_point_pose(RIGHT, _seated(q_after), q_lift)
 
     divergence = float(np.linalg.norm(pose_after[:3] - pose_taught[:3]))
     assert divergence > _MIN_POSE_DIVERGENCE_M

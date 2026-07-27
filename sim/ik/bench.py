@@ -157,8 +157,8 @@ def sample_reachable_targets(
     targets: list[tuple[np.ndarray, np.ndarray]] = []
     for _ in range(count):
         config = lower + rng.random(len(limits)) * (upper - lower)
-        right = config[:SIDE_WIDTH]
-        left = config[SIDE_WIDTH:]
+        left = config[:SIDE_WIDTH]
+        right = config[SIDE_WIDTH:]
         pose_right, pose_left = kin.fk_bimanual(right, left)
         targets.append((pose_right.copy(), pose_left.copy()))
     return targets

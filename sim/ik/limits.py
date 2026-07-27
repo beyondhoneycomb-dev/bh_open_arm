@@ -43,7 +43,15 @@ _MJCF_SUFFIX = {
     GRIPPER_KEY: "finger_joint1",
 }
 
-SIDES = ("right", "left")
+# Arm order of the 16-slot layout, and the reason it is this way round. The frozen
+# action contract (`contracts/unit_tags.yaml`, `arms: [left, right]`) puts left first,
+# and every consumer of an accepted action reads it that way — the dry-run gate, the
+# follower's prefix split, the recorded dataset column. `openarm_control` orders its own
+# driver vector right-first; that is the third party's convention and it is converted at
+# the one place we call into it (`sim.ik.adapter.IkAdapter`), never carried inward. Slot
+# i must mean the same arm here and in the contract or the dry-run gate checks each arm
+# against the other one's limits, which is invisible on every joint but `joint_2`.
+SIDES = ("left", "right")
 
 
 @dataclass(frozen=True)
