@@ -4,7 +4,7 @@
 **있는 검사를 빼면 위반**"*이다. 그래서 "무엇이 §5에 실재하는가"가 판정의 전부이며,
 이 표가 그 실재 목록이다.
 
-목록은 `docs/plan/06-추적성-레지스트리.md`를 **기계적으로 파싱**해 만들었다 — 규칙 칸과
+목록은 `docs/v1/plan/06-추적성-레지스트리.md`를 **기계적으로 파싱**해 만들었다 — 규칙 칸과
 이름 칸이 함께 있는 표 행만 규칙으로 인정하고, 산문 언급은 세지 않는다. 재생성:
 
 ```bash
@@ -13,7 +13,7 @@ from pathlib import Path
 from registry.ingest.markdown import all_tables, plain_text
 import re
 CI = re.compile(r'\bCI-\d{2}[a-z]?(?:-자기적용)?\b')
-for t in all_tables(Path('docs/plan/06-추적성-레지스트리.md')):
+for t in all_tables(Path('docs/v1/plan/06-추적성-레지스트리.md')):
     i, n = t.column_index('규칙','항목'), t.column_index('이름')
     if i is None or n is None: continue
     for row in t.rows:
@@ -112,7 +112,7 @@ WP만 보므로 착지 시점엔 공허참이다 — 판정에 넣어도 아무�
 
 ## `PG-*` 게이트 실재 목록 15개 (`CI-11b`·`CI-04` 판정 근거)
 
-`docs/plan/03-측정-게이트.md`의 게이트 표 ID 칸에서 파싱.
+`docs/v1/plan/03-측정-게이트.md`의 게이트 표 ID 칸에서 파싱.
 
 `PG-CAM-001` · `PG-CAN-001` · `PG-DEPTH-001` · `PG-FRIC-001` · `PG-IK-001` ·
 `PG-J7-001` · `PG-RID-001` · **`PG-RT-001a`** · **`PG-RT-001b`** · `PG-SAFE-001` ·

@@ -27,6 +27,7 @@ from ownership.prover import (
     exclusive_owners,
     read_handover_chains,
 )
+from registry import PLAN_DIR
 from registry.checks.corpus import Corpus
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -44,7 +45,7 @@ def test_contract_declares_the_frozen_id() -> None:
 
 def test_contract_does_not_drift_from_the_plan_document() -> None:
     """The frozen handover chains agree with 06 §3.2, in order."""
-    chains = read_handover_chains(REPO_ROOT / "docs" / "plan")
+    chains = read_handover_chains(PLAN_DIR)
     assert check_drift(_contract(), chains) == ()
 
 

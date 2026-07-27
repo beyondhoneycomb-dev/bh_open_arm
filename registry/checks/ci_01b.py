@@ -7,6 +7,7 @@ the `PLAN-*` axis by name: those ids are grounded in plan canon rather than in
 
 from __future__ import annotations
 
+from registry import SPEC_DIR_REL
 from registry.checks.corpus import Corpus
 from registry.checks.model import RuleResult, fail
 
@@ -44,7 +45,7 @@ def run(corpus: Corpus) -> RuleResult:
                     "registry declares a requirement id that no specification table "
                     "declares; the plan may register spec ids, never invent them"
                 ),
-                expected=f"{req} declared in a docs/spec requirement table",
+                expected=f"{req} declared in a {SPEC_DIR_REL} requirement table",
                 actual="absent from every specification requirement table",
             )
         )

@@ -2,7 +2,7 @@
 // the contents of the bundle and 13 §2.7 forbids cherry-picking: EVERY item must
 // be present, one missing BLOCKS generation. This module mirrors that required
 // set so the browser can enforce completeness; `diagnosticBundle.test.tsx` reads
-// the frozen FR-OPS-023 line from docs/spec/14 and asserts every `specPhrase`
+// the frozen FR-OPS-023 line from docs/v1/spec/14 and asserts every `specPhrase`
 // still appears there, so dropping an item or a spec revision fails the lane
 // rather than silently shrinking the bundle. `specPhrase` is the anchor the drift
 // guard matches; it is not shown to the user.
@@ -16,7 +16,7 @@ export interface DiagnosticItemSpec {
 }
 
 // The FR-OPS-023 contents, in document order. Each `specPhrase` is a verbatim
-// substring of the FR-OPS-023 requirement text (docs/spec/14 §2 ops).
+// substring of the FR-OPS-023 requirement text (docs/v1/spec/14 §2 ops).
 export const REQUIRED_DIAGNOSTIC_ITEMS: readonly DiagnosticItemSpec[] = [
   { id: "system_info", labelKo: "시스템 정보 (커널·PREEMPT_RT·chrt·어피니티·VmLck·Python)", specPhrase: "시스템 정보" },
   { id: "ip_link_stats", labelKo: "인터페이스별 링크 통계", specPhrase: "ip -details -statistics link show" },

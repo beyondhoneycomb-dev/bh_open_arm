@@ -23,17 +23,53 @@ jobs:
       - run: uv venv --python 3.12
       - run: uv pip install -e ".[dev]"
 
+      # Every Python tree in the repository, not just the plan machine. backend/
+      # alone is ~100k lines of the product runtime; checking only registry/ops/
+      # dashboard left it enforced by nothing but a pre-commit hook a contributor
+      # can skip, so a lint regression there reaches main with CI green.
       - name: Lint
-        run: uv run ruff check registry ops dashboard tests
+        run: uv run ruff check registry ops dashboard tests backend contracts sim packages ownership targets deps
 
       - name: Format check
-        run: uv run ruff format --check registry ops dashboard tests
+        run: uv run ruff format --check registry ops dashboard tests backend contracts sim packages ownership targets deps
 
+      # NOT the full tree: mypy --strict currently reports 266 errors across 79
+      # files under backend/contracts/sim, and backend/ needs --explicit-package-bases
+      # before it resolves at all (two directories both provide a `stats` module).
+      # Widening this step is its own work package, not a line edit here.
       - name: Types
         run: uv run mypy registry ops dashboard
 
       - name: Tests
         run: uv run pytest -q
+
+  # The GUI is 13 screens with its own vitest suite and strict tsconfig. Nothing
+  # ran either, so a broken screen or a contract drift on the TypeScript side of
+  # the WebSocket was invisible to every gate.
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+
+      - name: Types
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx eslint .
+
+      # Several suites read contracts/ and docs/v1/spec/ from the repository root,
+      # so this job needs the whole checkout rather than only frontend/.
+      - name: Tests
+        run: npx vitest run
 
   registry:
     runs-on: ubuntu-latest

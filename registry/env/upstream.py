@@ -312,7 +312,9 @@ def run_facts(facts_document: dict[str, object]) -> list[FactRow]:
     """Evaluate every fact in a parsed `upstream_facts.yaml` against the pin.
 
     A fact naming an unknown predicate is a hard failure, not a skip: an unchecked
-    citation is exactly the gap this checker exists to close.
+    citation is exactly the gap this checker exists to close. A predicate that
+    *raises* is the same failure with a different cause, and is isolated to its own
+    row so that one unevaluable fact cannot suppress the other facts' verdicts.
 
     Args:
         facts_document: Parsed `upstream_facts.yaml`.
@@ -345,7 +347,31 @@ def run_facts(facts_document: dict[str, object]) -> list[FactRow]:
                 )
             )
             continue
-        result = predicate()
+        try:
+            result = predicate()
+        except Exception as bad:  # noqa: BLE001 — see below: any raise is one unchecked fact
+            # A predicate introspects an installed upstream, so it raises for reasons
+            # outside this repository: a package absent from the lane's install group,
+            # a renamed attribute, an import that now fails. Letting that propagate
+            # loses the verdict of every OTHER fact in the document — one missing
+            # dependency reports nothing at all, which reads as "the checker is
+            # broken" rather than "this one fact could not be evaluated".
+            #
+            # An unevaluated fact is FAIL_BLOCKING regardless of its declared
+            # severity, on the same reasoning the unknown-predicate row above uses:
+            # an unchecked citation is the gap this checker exists to close, and it
+            # must never be reportable as a pass.
+            rows.append(
+                FactRow(
+                    fact_id=fact_id,
+                    ok=False,
+                    severity=SEVERITY_FAIL_BLOCKING,
+                    expected=f"predicate {predicate_name!r} evaluates against the upstream",
+                    actual=f"predicate raised {type(bad).__name__}: {bad}",
+                    affected_frs=affected,
+                )
+            )
+            continue
         rows.append(
             FactRow(
                 fact_id=fact_id,

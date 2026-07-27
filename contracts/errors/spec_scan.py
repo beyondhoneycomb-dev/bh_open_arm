@@ -49,7 +49,7 @@ def canon_codes(spec14: Path) -> set[str]:
     """Reconstruct every OA-* code the 14 §2.10 table declares.
 
     Args:
-        spec14: Path to `docs/spec/14-시스템-운영.md`.
+        spec14: Path to `docs/v1/spec/14-시스템-운영.md`.
 
     Returns:
         (set[str]) Full codes such as `OA-CAN-001`, `OA-MOT-00E`.

@@ -11,9 +11,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from registry import PLAN_DIR, SPINE_DOC_NAME, SPINE_DOC_REL
 from registry.checks.corpus import Corpus
 from registry.checks.fixtures import (
-    REPO_ROOT,
     FixtureCase,
     _gate_cell,
     _write,
@@ -481,7 +481,7 @@ def _ci11b_self_violation(_root: Path) -> Corpus:
             _gate_cell(
                 "PG-RT-001",
                 site="registry-gate-axis",
-                path="docs/plan/00-실행계획-개요.md",
+                path=SPINE_DOC_REL,
             ),
         )
     )
@@ -650,7 +650,7 @@ def _ci16_violation(root: Path) -> Corpus:
     return _ci16_corpus(root, None)
 
 
-_SPINE_DOC = REPO_ROOT / "docs" / "plan" / "00-실행계획-개요.md"
+_SPINE_DOC = PLAN_DIR / SPINE_DOC_NAME
 
 
 def _ci17_pass(_root: Path) -> Corpus:

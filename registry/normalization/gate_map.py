@@ -1,6 +1,6 @@
 """Load and validate the gate ID namespace mapping against the live corpus.
 
-The mapping (`docs/plan/normalization/gate_spec_map.yaml`) is the `WP-N1-03`
+The mapping (`docs/v1/plan/normalization/gate_spec_map.yaml`) is the `WP-N1-03`
 deliverable: it binds every plan-owned `PG-*` gate to the specification ids and
 document sections that justify it, without reusing a spec id as a gate id.
 
@@ -11,7 +11,7 @@ about the corpus:
   unmapped and no row names a gate the roster does not declare, so a renamed or
   dropped gate cannot hide;
 * every `spec_ref` resolves to a real definition — an `FR-*`/`NFR-*` declared in
-  a `docs/spec` requirement table, a `D-n`/`M-n` defined in `docs/spec/16`, or a
+  a `docs/v1/spec` requirement table, a `D-n`/`M-n` defined in `docs/v1/spec/16`, or a
   `NN §S` section that exists in document `NN`. This is the "no dangling
   reference" contract (02a §1.5 WP-N1-03 ②): the ghost id `M-25` and any other
   cited-but-undefined id fail here.
@@ -32,11 +32,11 @@ from typing import Any
 import yaml
 from jsonschema import Draft202012Validator
 
+from registry import NORMALIZATION_DIR
 from registry.normalization.validator import Corpus, section_body
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_PATH = Path(__file__).resolve().parent / "gate_map.schema.json"
-GATE_MAP_PATH = REPO_ROOT / "docs" / "plan" / "normalization" / "gate_spec_map.yaml"
+GATE_MAP_PATH = NORMALIZATION_DIR / "gate_spec_map.yaml"
 
 _FR_NFR = re.compile(r"^(?:FR|NFR)-[A-Z]{2,4}-\d{3}$")
 _DM = re.compile(r"^[DM]-\d+$")

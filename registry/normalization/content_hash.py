@@ -3,8 +3,8 @@
 The hash answers exactly one question: is this the normalization every downstream
 work package was spawned against (`SPINE` §5, `02a` §1.5 WP-N1-04). Its inputs are
 the two artifacts a Wave -1 ruling is recorded in — the contradiction ledger
-(`docs/plan/normalization/ledger.yaml`, WP-N1-02) and the gate ID namespace
-mapping (`docs/plan/normalization/gate_spec_map.yaml`, WP-N1-03).
+(`docs/v1/plan/normalization/ledger.yaml`, WP-N1-02) and the gate ID namespace
+mapping (`docs/v1/plan/normalization/gate_spec_map.yaml`, WP-N1-03).
 
 Determinism is the contract (`02a` §1.5 WP-N1-04 ①): the same settled content
 yields the same hash, and any changed settled value yields a different one. The
@@ -30,13 +30,13 @@ from typing import Any
 
 import yaml
 
+from registry import NORMALIZATION_DIR
 from registry.normalization.loader import load_ledger
 
 HASH_ALGORITHM = "sha256"
 HASH_PREFIX = "sha256:"
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-ISSUED_PATH = REPO_ROOT / "docs" / "plan" / "normalization" / "normalization_hash"
+ISSUED_PATH = NORMALIZATION_DIR / "normalization_hash"
 
 # Namespace the two inputs inside one object so that moving a value from the
 # ledger to the map (or vice versa) is a different corpus and hashes differently.

@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+from registry import PLAN_DIR
 from registry.checks import BUILD_RANGE, JUDGE_EXCLUDED, JUDGE_RANGE, RULE_IDS
 from registry.checks.corpus import Corpus
 from registry.checks.model import (
@@ -25,7 +26,7 @@ from registry.ingest.markdown import all_tables, plain_text
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-RULE_CANON = REPO_ROOT / "docs" / "plan" / "06-추적성-레지스트리.md"
+RULE_CANON = PLAN_DIR / "06-추적성-레지스트리.md"
 
 # `06` §5 states the report shape; a record below the floor means the checker failed.
 CANONICAL_FIELDS = ("rule_id", "severity", "req_or_wp", "path", "reason")
@@ -83,18 +84,25 @@ def test_build_range_covers_ci_01_through_ci_18() -> None:
     assert len(BUILD_RANGE) == len(set(RULE_IDS)) == len(RULE_IDS)
 
 
-def test_judge_range_excludes_the_two_uncheckable_at_landing() -> None:
-    """The judge range excludes CI-18 and CI-07, for different reasons.
+def test_judge_range_excludes_only_the_self_referencing_rule() -> None:
+    """CI-18 is excluded permanently; nothing else is.
 
-    `06` §5 and `02a` §−2.3 warn against making build and judge ranges match. CI-18's
-    predicate cites the band acceptance gate, so judging by it would make the gate
-    reference itself. CI-07 judges the Wave −1 normalisation hash, which cannot exist
-    at BOOT landing; the same circularity, resolved by exclusion rather than in the
-    predicate.
+    `06` §5 and `02a` §−2.3 warn against making the build and judge ranges match, and
+    CI-18 is why they differ: its predicate cites the band acceptance gate, so judging
+    by it would make the gate reference itself. That reason is structural and does not
+    expire.
+
+    CI-07 was excluded on a similar circularity — it judges the Wave −1 normalisation
+    hash, which could not exist while Wave −1 was blocked behind this gate — but on a
+    stated condition: lift it once Wave −1 lands. Wave −1 has landed, so it is judged.
+    An exclusion kept past its own condition is a rule present in the code and switched
+    off in the config, which is the shape that gets trusted without being true; this
+    test is what stops it drifting back.
     """
     judged = {module.RULE_ID for module in JUDGE_RANGE}
     assert "CI-18" not in judged
-    assert "CI-07" not in judged
+    assert "CI-07" in judged
+    assert set(JUDGE_EXCLUDED) == {"CI-18"}
     assert set(RULE_IDS) - judged == set(JUDGE_EXCLUDED)
     assert len(JUDGE_RANGE) == len(BUILD_RANGE) - len(JUDGE_EXCLUDED)
 

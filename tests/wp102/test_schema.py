@@ -77,6 +77,23 @@ def test_checksum_is_content_addressed() -> None:
         OpenArmCalibration.from_json_dict(good)
 
 
+def test_blank_checksum_is_refused_rather_than_recomputed() -> None:
+    """Blanking the digest must not turn the integrity check off.
+
+    Editing a joint sign or a zero offset by hand and clearing the now-wrong checksum is
+    the obvious thing to do, and it is the one case where verification matters most. If
+    an empty digest were treated as "nothing to compare", the loader would return a
+    calibration stamped with a fresh hash of the edited body — verified-looking, never
+    verified — and the next save would overwrite the only evidence.
+    """
+    payload = _valid().to_json_dict()
+    payload["gripper_open_rad"] = 3.0
+    payload["checksum"] = ""
+
+    with pytest.raises(CalibrationError, match="no checksum"):
+        OpenArmCalibration.from_json_dict(payload)
+
+
 def test_residual_flags_offenders_by_name() -> None:
     """The residual computation names exactly the joints past tolerance."""
     measured = [0.0] * MOTOR_COUNT

@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/plan/00-실행계획-개요.md@7c82646
+spine_ref: docs/v1/plan/00-실행계획-개요.md@8a4e493
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -34,7 +34,7 @@ entries:
   contract:
     consumes:
     - CTR-ACT@v1
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-UNIT@v1
     produces:
     - CTR-PRIM@v1
@@ -670,7 +670,7 @@ entries:
   contract:
     consumes:
     - CTR-ACT@v1
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-UNIT@v1
     produces:
     - CTR-PRIM@v1
@@ -3799,7 +3799,7 @@ entries:
   contract:
     consumes: []
     produces:
-    - CTR-CAL@v1
+    - CTR-CAL@v2
   gate:
   - CG-1-02a
   - CG-1-02b
@@ -4537,7 +4537,7 @@ entries:
   contract:
     consumes: []
     produces:
-    - CTR-CAL@v1
+    - CTR-CAL@v2
   gate:
   - CG-1-02a
   - CG-1-02b
@@ -4693,7 +4693,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
+  normalization: sha256:4340a0ce2e84b07a439d4b92d50cf03a213b8e6f75d2b5ae00cef79b9dd33056
 - req: FR-CON-062
   spec_ref: 02#3.4
   priority: M
@@ -4753,7 +4753,7 @@ entries:
   contract:
     consumes: []
     produces:
-    - CTR-CAL@v1
+    - CTR-CAL@v2
   gate:
   - CG-1-02a
   - CG-1-02b
@@ -4909,7 +4909,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
+  normalization: sha256:4340a0ce2e84b07a439d4b92d50cf03a213b8e6f75d2b5ae00cef79b9dd33056
 - req: FR-CON-063
   spec_ref: 02#3.4
   priority: M
@@ -4931,7 +4931,7 @@ entries:
     wp_candidates:
     - WP-1-02
     - WP-G-S02
-  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
+  normalization: sha256:4340a0ce2e84b07a439d4b92d50cf03a213b8e6f75d2b5ae00cef79b9dd33056
 - req: FR-CON-064
   spec_ref: 02#3.4
   priority: M
@@ -4991,7 +4991,7 @@ entries:
   contract:
     consumes: []
     produces:
-    - CTR-CAL@v1
+    - CTR-CAL@v2
   gate:
   - CG-1-02a
   - CG-1-02b
@@ -5206,7 +5206,7 @@ entries:
   contract:
     consumes: []
     produces:
-    - CTR-CAL@v1
+    - CTR-CAL@v2
   gate:
   - CG-1-02a
   - CG-1-02b
@@ -8990,7 +8990,7 @@ entries:
   contract:
     consumes:
     - CTR-ACT@v1
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-WS@v1
     produces: []
   gate:
@@ -9166,7 +9166,7 @@ entries:
   contract:
     consumes:
     - CTR-ACT@v1
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-WS@v1
     produces: []
   gate:
@@ -9261,7 +9261,7 @@ entries:
     mode: EXCLUSIVE
   contract:
     consumes:
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-WS@v1
     produces: []
   gate:
@@ -9325,7 +9325,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
+  normalization: sha256:4340a0ce2e84b07a439d4b92d50cf03a213b8e6f75d2b5ae00cef79b9dd33056
 - req: FR-GUI-061
   spec_ref: 13#3.5
   priority: M
@@ -9361,7 +9361,7 @@ entries:
     mode: EXCLUSIVE
   contract:
     consumes:
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-WS@v1
     produces: []
   gate:
@@ -9460,7 +9460,7 @@ entries:
     mode: EXCLUSIVE
   contract:
     consumes:
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-WS@v1
     produces: []
   gate:
@@ -9559,7 +9559,7 @@ entries:
     mode: EXCLUSIVE
   contract:
     consumes:
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-WS@v1
     produces: []
   gate:
@@ -9623,7 +9623,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
+  normalization: sha256:4340a0ce2e84b07a439d4b92d50cf03a213b8e6f75d2b5ae00cef79b9dd33056
 - req: FR-GUI-064
   spec_ref: 13#3.5
   priority: M
@@ -9659,7 +9659,7 @@ entries:
     mode: EXCLUSIVE
   contract:
     consumes:
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-WS@v1
     produces: []
   gate:
@@ -9758,7 +9758,7 @@ entries:
     mode: EXCLUSIVE
   contract:
     consumes:
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-WS@v1
     produces: []
   gate:
@@ -9822,7 +9822,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
+  normalization: sha256:4340a0ce2e84b07a439d4b92d50cf03a213b8e6f75d2b5ae00cef79b9dd33056
 - req: FR-GUI-066
   spec_ref: 13#3.5
   priority: M
@@ -9858,7 +9858,7 @@ entries:
     mode: EXCLUSIVE
   contract:
     consumes:
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-WS@v1
     produces: []
   gate:
@@ -9957,7 +9957,7 @@ entries:
     mode: EXCLUSIVE
   contract:
     consumes:
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-WS@v1
     produces: []
   gate:
@@ -10021,7 +10021,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
+  normalization: sha256:4340a0ce2e84b07a439d4b92d50cf03a213b8e6f75d2b5ae00cef79b9dd33056
 - req: FR-GUI-068
   spec_ref: 13#3.5
   priority: M
@@ -10057,7 +10057,7 @@ entries:
     mode: EXCLUSIVE
   contract:
     consumes:
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-WS@v1
     produces: []
   gate:
@@ -10156,7 +10156,7 @@ entries:
     mode: EXCLUSIVE
   contract:
     consumes:
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-WS@v1
     produces: []
   gate:
@@ -10255,7 +10255,7 @@ entries:
     mode: EXCLUSIVE
   contract:
     consumes:
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-WS@v1
     produces: []
   gate:
@@ -10354,7 +10354,7 @@ entries:
     mode: EXCLUSIVE
   contract:
     consumes:
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-WS@v1
     produces: []
   gate:
@@ -10453,7 +10453,7 @@ entries:
     mode: EXCLUSIVE
   contract:
     consumes:
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-WS@v1
     produces: []
   gate:
@@ -10552,7 +10552,7 @@ entries:
     mode: EXCLUSIVE
   contract:
     consumes:
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-WS@v1
     produces: []
   gate:
@@ -10651,7 +10651,7 @@ entries:
     mode: EXCLUSIVE
   contract:
     consumes:
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-WS@v1
     produces: []
   gate:
@@ -12533,7 +12533,7 @@ entries:
     wp_candidates:
     - WP-2C-07
     - WP-G-S12
-  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
+  normalization: sha256:4340a0ce2e84b07a439d4b92d50cf03a213b8e6f75d2b5ae00cef79b9dd33056
 - req: FR-GUI-112
   spec_ref: 13#3.8
   priority: M
@@ -12560,7 +12560,7 @@ entries:
     mode: EXCLUSIVE
   contract:
     consumes:
-    - CTR-CAL@v1
+    - CTR-CAL@v2
     produces: []
   gate:
   - CG-G-S02a
@@ -20740,7 +20740,7 @@ entries:
     kind: report
     path: registry/build/evidence/CG-N1-02f/
   owns:
-  - glob: docs/plan/normalization/ledger.yaml
+  - glob: docs/v1/plan/normalization/ledger.yaml
     mode: EXCLUSIVE
   contract:
     consumes: []
@@ -20799,7 +20799,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
+  normalization: sha256:4340a0ce2e84b07a439d4b92d50cf03a213b8e6f75d2b5ae00cef79b9dd33056
 - req: FR-MOT-032
   spec_ref: 03#3.5
   priority: M
@@ -24177,7 +24177,7 @@ entries:
   contract:
     consumes: []
     produces:
-    - CTR-ERR@v1
+    - CTR-ERR@v2
   gate:
   - CG-OPS-06a
   - CG-OPS-06b
@@ -24351,7 +24351,7 @@ entries:
   contract:
     consumes: []
     produces:
-    - CTR-ERR@v1
+    - CTR-ERR@v2
   gate:
   - CG-OPS-06a
   - CG-OPS-06b
@@ -24543,7 +24543,7 @@ entries:
   contract:
     consumes: []
     produces:
-    - CTR-ERR@v1
+    - CTR-ERR@v2
   gate:
   - CG-OPS-06a
   - CG-OPS-06b
@@ -27996,7 +27996,7 @@ entries:
   contract:
     consumes: []
     produces:
-    - CTR-CAL@v1
+    - CTR-CAL@v2
   gate:
   - CG-1-02a
   - CG-1-02b
@@ -29307,7 +29307,7 @@ entries:
   contract:
     consumes:
     - CTR-ACT@v1
-    - CTR-ERR@v1
+    - CTR-ERR@v2
     - CTR-UNIT@v1
     produces:
     - CTR-PRIM@v1
@@ -34291,19 +34291,19 @@ entries:
   negative_branch:
   - gate: CG-N1-01a
     'on': FAIL
-    action: ① ledger.yaml이 스키마 검증 통과 ② 모든 승리 요구사항 ID가 docs/spec/ grep에서 정확히 1회 정의로 히트 ③ 모든 폐기 텍스트.quote가
+    action: ① ledger.yaml이 스키마 검증 통과 ② 모든 승리 요구사항 ID가 docs/v1/spec/ grep에서 정확히 1회 정의로 히트 ③ 모든 폐기 텍스트.quote가
       지정 file:section에 문자 단위 일치로 실재 ④ 스키마 위반 픽스처 5종이 전부 거부됨
   - gate: CG-N1-01b
     'on': FAIL
-    action: ① ledger.yaml이 스키마 검증 통과 ② 모든 승리 요구사항 ID가 docs/spec/ grep에서 정확히 1회 정의로 히트 ③ 모든 폐기 텍스트.quote가
+    action: ① ledger.yaml이 스키마 검증 통과 ② 모든 승리 요구사항 ID가 docs/v1/spec/ grep에서 정확히 1회 정의로 히트 ③ 모든 폐기 텍스트.quote가
       지정 file:section에 문자 단위 일치로 실재 ④ 스키마 위반 픽스처 5종이 전부 거부됨
   - gate: CG-N1-01c
     'on': FAIL
-    action: ① ledger.yaml이 스키마 검증 통과 ② 모든 승리 요구사항 ID가 docs/spec/ grep에서 정확히 1회 정의로 히트 ③ 모든 폐기 텍스트.quote가
+    action: ① ledger.yaml이 스키마 검증 통과 ② 모든 승리 요구사항 ID가 docs/v1/spec/ grep에서 정확히 1회 정의로 히트 ③ 모든 폐기 텍스트.quote가
       지정 file:section에 문자 단위 일치로 실재 ④ 스키마 위반 픽스처 5종이 전부 거부됨
   - gate: CG-N1-01d
     'on': FAIL
-    action: ① ledger.yaml이 스키마 검증 통과 ② 모든 승리 요구사항 ID가 docs/spec/ grep에서 정확히 1회 정의로 히트 ③ 모든 폐기 텍스트.quote가
+    action: ① ledger.yaml이 스키마 검증 통과 ② 모든 승리 요구사항 ID가 docs/v1/spec/ grep에서 정확히 1회 정의로 히트 ③ 모든 폐기 텍스트.quote가
       지정 file:section에 문자 단위 일치로 실재 ④ 스키마 위반 픽스처 5종이 전부 거부됨
   downstream:
   - WP-N1-02
@@ -34314,7 +34314,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
+  normalization: sha256:4340a0ce2e84b07a439d4b92d50cf03a213b8e6f75d2b5ae00cef79b9dd33056
 - req: FR-SAF-046
   spec_ref: 12#3.6
   priority: M
@@ -35032,34 +35032,34 @@ entries:
   negative_branch:
   - gate: CG-0A-03a
     'on': FAIL
-    action: '① 레지스트리가 docs/plan/ 대역 전 WP의 산출 경로를 커버 — 미소유 경로 0건 ② 겹침 검출: 두 WP의 path_glob과 소유 구간이 동시에 겹침
-      → CI 거부 ③ OpenArmFollower 서브클래스 경로가 배타=true 이고 WP-1-02·WP-1-03 소유 구간이 인접하되 겹치지 않음 확인 — 두 WP가 동시
-      활성인 픽스처 → 거부, 순차 인계 픽스처 → 통과(순차 금지 아님) ④ fan-out 폭 계산기가 겹침 픽스처에서 n=1 반환 ⑤ 소유자 없는 파일 편집 시도 픽스처 →
-      CI 거부'
+    action: '① 레지스트리가 docs/v1/plan/ 대역 전 WP의 산출 경로를 커버 — 미소유 경로 0건 ② 겹침 검출: 두 WP의 path_glob과 소유 구간이 동시에
+      겹침 → CI 거부 ③ OpenArmFollower 서브클래스 경로가 배타=true 이고 WP-1-02·WP-1-03 소유 구간이 인접하되 겹치지 않음 확인 — 두 WP가
+      동시 활성인 픽스처 → 거부, 순차 인계 픽스처 → 통과(순차 금지 아님) ④ fan-out 폭 계산기가 겹침 픽스처에서 n=1 반환 ⑤ 소유자 없는 파일 편집 시도 픽스처
+      → CI 거부'
   - gate: CG-0A-03b
     'on': FAIL
-    action: '① 레지스트리가 docs/plan/ 대역 전 WP의 산출 경로를 커버 — 미소유 경로 0건 ② 겹침 검출: 두 WP의 path_glob과 소유 구간이 동시에 겹침
-      → CI 거부 ③ OpenArmFollower 서브클래스 경로가 배타=true 이고 WP-1-02·WP-1-03 소유 구간이 인접하되 겹치지 않음 확인 — 두 WP가 동시
-      활성인 픽스처 → 거부, 순차 인계 픽스처 → 통과(순차 금지 아님) ④ fan-out 폭 계산기가 겹침 픽스처에서 n=1 반환 ⑤ 소유자 없는 파일 편집 시도 픽스처 →
-      CI 거부'
+    action: '① 레지스트리가 docs/v1/plan/ 대역 전 WP의 산출 경로를 커버 — 미소유 경로 0건 ② 겹침 검출: 두 WP의 path_glob과 소유 구간이 동시에
+      겹침 → CI 거부 ③ OpenArmFollower 서브클래스 경로가 배타=true 이고 WP-1-02·WP-1-03 소유 구간이 인접하되 겹치지 않음 확인 — 두 WP가
+      동시 활성인 픽스처 → 거부, 순차 인계 픽스처 → 통과(순차 금지 아님) ④ fan-out 폭 계산기가 겹침 픽스처에서 n=1 반환 ⑤ 소유자 없는 파일 편집 시도 픽스처
+      → CI 거부'
   - gate: CG-0A-03c
     'on': FAIL
-    action: '① 레지스트리가 docs/plan/ 대역 전 WP의 산출 경로를 커버 — 미소유 경로 0건 ② 겹침 검출: 두 WP의 path_glob과 소유 구간이 동시에 겹침
-      → CI 거부 ③ OpenArmFollower 서브클래스 경로가 배타=true 이고 WP-1-02·WP-1-03 소유 구간이 인접하되 겹치지 않음 확인 — 두 WP가 동시
-      활성인 픽스처 → 거부, 순차 인계 픽스처 → 통과(순차 금지 아님) ④ fan-out 폭 계산기가 겹침 픽스처에서 n=1 반환 ⑤ 소유자 없는 파일 편집 시도 픽스처 →
-      CI 거부'
+    action: '① 레지스트리가 docs/v1/plan/ 대역 전 WP의 산출 경로를 커버 — 미소유 경로 0건 ② 겹침 검출: 두 WP의 path_glob과 소유 구간이 동시에
+      겹침 → CI 거부 ③ OpenArmFollower 서브클래스 경로가 배타=true 이고 WP-1-02·WP-1-03 소유 구간이 인접하되 겹치지 않음 확인 — 두 WP가
+      동시 활성인 픽스처 → 거부, 순차 인계 픽스처 → 통과(순차 금지 아님) ④ fan-out 폭 계산기가 겹침 픽스처에서 n=1 반환 ⑤ 소유자 없는 파일 편집 시도 픽스처
+      → CI 거부'
   - gate: CG-0A-03d
     'on': FAIL
-    action: '① 레지스트리가 docs/plan/ 대역 전 WP의 산출 경로를 커버 — 미소유 경로 0건 ② 겹침 검출: 두 WP의 path_glob과 소유 구간이 동시에 겹침
-      → CI 거부 ③ OpenArmFollower 서브클래스 경로가 배타=true 이고 WP-1-02·WP-1-03 소유 구간이 인접하되 겹치지 않음 확인 — 두 WP가 동시
-      활성인 픽스처 → 거부, 순차 인계 픽스처 → 통과(순차 금지 아님) ④ fan-out 폭 계산기가 겹침 픽스처에서 n=1 반환 ⑤ 소유자 없는 파일 편집 시도 픽스처 →
-      CI 거부'
+    action: '① 레지스트리가 docs/v1/plan/ 대역 전 WP의 산출 경로를 커버 — 미소유 경로 0건 ② 겹침 검출: 두 WP의 path_glob과 소유 구간이 동시에
+      겹침 → CI 거부 ③ OpenArmFollower 서브클래스 경로가 배타=true 이고 WP-1-02·WP-1-03 소유 구간이 인접하되 겹치지 않음 확인 — 두 WP가
+      동시 활성인 픽스처 → 거부, 순차 인계 픽스처 → 통과(순차 금지 아님) ④ fan-out 폭 계산기가 겹침 픽스처에서 n=1 반환 ⑤ 소유자 없는 파일 편집 시도 픽스처
+      → CI 거부'
   - gate: CG-0A-03e
     'on': FAIL
-    action: '① 레지스트리가 docs/plan/ 대역 전 WP의 산출 경로를 커버 — 미소유 경로 0건 ② 겹침 검출: 두 WP의 path_glob과 소유 구간이 동시에 겹침
-      → CI 거부 ③ OpenArmFollower 서브클래스 경로가 배타=true 이고 WP-1-02·WP-1-03 소유 구간이 인접하되 겹치지 않음 확인 — 두 WP가 동시
-      활성인 픽스처 → 거부, 순차 인계 픽스처 → 통과(순차 금지 아님) ④ fan-out 폭 계산기가 겹침 픽스처에서 n=1 반환 ⑤ 소유자 없는 파일 편집 시도 픽스처 →
-      CI 거부'
+    action: '① 레지스트리가 docs/v1/plan/ 대역 전 WP의 산출 경로를 커버 — 미소유 경로 0건 ② 겹침 검출: 두 WP의 path_glob과 소유 구간이 동시에
+      겹침 → CI 거부 ③ OpenArmFollower 서브클래스 경로가 배타=true 이고 WP-1-02·WP-1-03 소유 구간이 인접하되 겹치지 않음 확인 — 두 WP가
+      동시 활성인 픽스처 → 거부, 순차 인계 픽스처 → 통과(순차 금지 아님) ④ fan-out 폭 계산기가 겹침 픽스처에서 n=1 반환 ⑤ 소유자 없는 파일 편집 시도 픽스처
+      → CI 거부'
   downstream:
   - WP-0B-01
   - WP-1-01
@@ -35099,7 +35099,7 @@ entries:
     - WP-1-05
     - WP-G-S02
     - WP-N1-02
-  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
+  normalization: sha256:4340a0ce2e84b07a439d4b92d50cf03a213b8e6f75d2b5ae00cef79b9dd33056
 - req: FR-SIM-001
   spec_ref: 09#3.1
   priority: M
@@ -42167,7 +42167,7 @@ entries:
   contract:
     consumes: []
     produces:
-    - CTR-CAL@v1
+    - CTR-CAL@v2
   gate:
   - CG-1-02a
   - CG-1-02b
@@ -42556,7 +42556,7 @@ entries:
   contract:
     consumes: []
     produces:
-    - CTR-CAL@v1
+    - CTR-CAL@v2
   gate:
   - CG-1-02a
   - CG-1-02b
@@ -50966,7 +50966,7 @@ entries:
     - WP-2A-06
     - WP-5-05
     - WP-N1-02
-  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
+  normalization: sha256:4340a0ce2e84b07a439d4b92d50cf03a213b8e6f75d2b5ae00cef79b9dd33056
 - req: NFR-GUI-008
   spec_ref: 13#3.9
   priority: M
@@ -52634,7 +52634,7 @@ entries:
     kind: report
     path: registry/build/evidence/CG-N1-03f/
   owns:
-  - glob: docs/plan/normalization/gate_spec_map.yaml
+  - glob: docs/v1/plan/normalization/gate_spec_map.yaml
     mode: EXCLUSIVE
   contract:
     consumes: []
@@ -54903,7 +54903,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
+  normalization: sha256:4340a0ce2e84b07a439d4b92d50cf03a213b8e6f75d2b5ae00cef79b9dd33056
 - req: NFR-SAF-008
   spec_ref: 12#3.9
   priority: S
@@ -54970,7 +54970,7 @@ entries:
     - WP-N1-02
     - WP-OPS-05
     source: 'tag as written: (none)'
-  normalization: sha256:c1b53ff70b9b13712554869e4ea57fed2feb8e3bbfe1e12357a05ef23a4af803
+  normalization: sha256:4340a0ce2e84b07a439d4b92d50cf03a213b8e6f75d2b5ae00cef79b9dd33056
 - req: NFR-SIM-001
   spec_ref: 09#3.12
   priority: M
@@ -56840,7 +56840,7 @@ entries:
     wp_rule: plan-axis
     source: 02a-작업패키지-Wave-minus1-to-1.md:149
   owns:
-  - glob: docs/plan/normalization/normalization_hash
+  - glob: docs/v1/plan/normalization/normalization_hash
     mode: EXCLUSIVE
   gate:
   - CG-N1-04a

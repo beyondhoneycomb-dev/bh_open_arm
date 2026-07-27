@@ -673,7 +673,17 @@ class CartesianJog:
         target_world: np.ndarray,
         detail: str = "",
     ) -> JogResult:
-        """Latch the jog stopped without moving, and report the categorized reason."""
+        """Latch the jog stopped without moving, and report the categorized reason.
+
+        Every caller reaches here *after* the solver ran, and the solver integrates the
+        IK configuration in place on each iteration before it can decide the target is
+        inadmissible. So a hold leaves the adapter positioned at wherever the abandoned
+        solve got to, while `_committed` correctly stays put — and the next accepted jog
+        would solve a small delta from the drifted configuration and commit *that*,
+        turning a 5 mm request into the whole abandoned excursion. Restoring the
+        configuration is the same invariant the `commit=False` probe branch maintains.
+        """
+        self._adapter.sync(self._committed)
         self._stopped = True
         self._stop_reason = reason
         self._steps_held += 1

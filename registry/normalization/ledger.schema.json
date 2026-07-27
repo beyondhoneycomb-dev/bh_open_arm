@@ -25,7 +25,7 @@
     },
     "winner_id": {
       "type": "string",
-      "description": "A canonical surviving id. FR/NFR are defined in docs/spec tables, D-n/M-n in docs/spec/16, PG-* in docs/plan/03. Bare PG-RT-001 is rejected: it is not a gate id (06 CI-11b).",
+      "description": "A canonical surviving id. FR/NFR are defined in docs/v1/spec tables, D-n/M-n in docs/v1/spec/16, PG-* in docs/v1/plan/03. Bare PG-RT-001 is rejected: it is not a gate id (06 CI-11b).",
       "anyOf": [
         { "pattern": "^(?:FR|NFR)-[A-Z]{2,4}-\\d{3}$" },
         { "pattern": "^[DM]-\\d+$" },

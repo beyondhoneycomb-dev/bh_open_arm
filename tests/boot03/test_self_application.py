@@ -3,7 +3,7 @@
 `02a` §−2.3 acceptance ⑤. CI-10 and CI-11b ban two identifiers from gate
 declaration sites. Both bans are explained at length in the planning documents,
 and those explanations write the banned identifiers in prose. A checker scoped by
-lexical search over `docs/plan/**` therefore fails on its own justification the
+lexical search over the plan corpus therefore fails on its own justification the
 first time it runs — the recursion `06` §5 names explicitly.
 
 These tests assert both halves: the prose is numerous and passes, the field values
@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 
+from registry import PLAN_DIR, SPINE_DOC_REL
 from registry.checks import ci_10, ci_11b
 from registry.checks.corpus import Corpus
 from registry.checks.fixtures import corpus as fixture_corpus
@@ -42,7 +43,7 @@ def _prose_mentions(pattern: re.Pattern[str]) -> int:
     """
     return sum(
         len(pattern.findall(path.read_text(encoding="utf-8")))
-        for path in sorted((REPO_ROOT / "docs" / "plan").glob("*.md"))
+        for path in sorted(PLAN_DIR.glob("*.md"))
     )
 
 
@@ -91,7 +92,7 @@ def test_seals_ignore_prose_placed_in_a_non_field_position(module, tmp_path: Pat
 
     prose = GateCell(
         value="control-loop measurement must use PG-RT-001a, never the M-8 of 16 §8",
-        path="docs/plan/00-실행계획-개요.md",
+        path=SPINE_DOC_REL,
         line=1,
         site="prose-not-a-site",
         owner="(narration)",

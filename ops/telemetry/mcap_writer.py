@@ -14,6 +14,7 @@ asserts directly.
 from __future__ import annotations
 
 import json
+import queue
 from dataclasses import dataclass
 from multiprocessing import Process, Queue
 from pathlib import Path
@@ -21,6 +22,8 @@ from typing import Any
 
 from mcap.reader import make_reader
 from mcap.writer import Writer
+
+from ops.telemetry.constants import MCAP_CLOSE_TIMEOUT_S, MCAP_QUEUE_MAX_ITEMS
 
 # One queue item is `(topic, log_time_ns, payload_bytes)`; None is the shutdown sentinel.
 _QueueItem = tuple[str, int, bytes] | None
@@ -70,6 +73,10 @@ def _writer_worker(path: str, queue: Queue[_QueueItem]) -> None:
         writer.finish()
 
 
+class McapWriterError(RuntimeError):
+    """The timeseries for a session was not written, or not written completely."""
+
+
 class McapWriterProcess:
     """A handle to the separate process that writes the MCAP timeseries.
 
@@ -77,14 +84,23 @@ class McapWriterProcess:
     process and returns immediately; `close` sends the sentinel and joins. The child, not the
     caller, owns the file descriptor and the `Writer`.
 
+    Failure direction differs between the two calls, because the operations differ. `write`
+    runs on the real-time path, where blocking or raising is worse than losing a sample, so
+    it degrades: a full queue or a dead writer drops the sample and counts it. `close` is
+    the session boundary, where the loss is already irreversible and the record is what an
+    incident would be reconstructed from, so it refuses to return quietly — it raises with
+    the child's exit status and the drop count. Between them the drop counter has a
+    control-flow reader, which is what keeps it from being decoration.
+
     Args:
         path: Output `.mcap` path.
     """
 
     def __init__(self, path: Path) -> None:
         self.m_path = path
-        self.m_queue: Queue[_QueueItem] = Queue()
+        self.m_queue: Queue[_QueueItem] = Queue(maxsize=MCAP_QUEUE_MAX_ITEMS)
         self.m_proc: Process | None = None
+        self.m_dropped = 0
 
     def start(self) -> None:
         """Spawn the writer child process."""
@@ -106,24 +122,89 @@ class McapWriterProcess:
             raise RuntimeError("writer process not started")
         return self.m_proc.pid
 
+    @property
+    def dropped_samples(self) -> int:
+        """Return how many samples were discarded rather than handed to the writer."""
+        return self.m_dropped
+
     def write(self, topic: str, log_time_ns: int, payload: dict[str, Any]) -> None:
-        """Enqueue one timeseries sample for the writer process.
+        """Enqueue one timeseries sample for the writer process, or drop and count it.
+
+        Never blocks and never raises: this runs on the control loop, where stalling to
+        record telemetry would cost the thing the telemetry is describing.
 
         Args:
             topic: One of the FR-OPS-006 channels.
             log_time_ns: Sample time in nanoseconds.
             payload: JSON-serializable sample body.
         """
-        self.m_queue.put((topic, log_time_ns, json.dumps(payload).encode("utf-8")))
+        # `exitcode` is a non-blocking waitpid, and it is the only way the parent can learn
+        # the child is gone — a writer that died at `open()` sends no notice, so without
+        # this every subsequent sample would be enqueued to a consumer that will never read
+        # it. The syscall is far cheaper than the `json.dumps` on the next line.
+        if self.m_proc is not None and self.m_proc.exitcode is not None:
+            self.m_dropped += 1
+            return
+        try:
+            self.m_queue.put_nowait((topic, log_time_ns, json.dumps(payload).encode("utf-8")))
+        except queue.Full:
+            self.m_dropped += 1
 
     def close(self) -> None:
-        """Send the shutdown sentinel and join the writer process."""
-        if self.m_proc is None:
+        """Drain the writer, finish the file, and report anything that was lost.
+
+        Raises:
+            McapWriterError: If the writer died before finishing the file, did not finish
+                within the deadline, or if any sample was dropped. The file's summary
+                section is written only when the sentinel is drained, so a writer that did
+                not reach it leaves a container the standard reader cannot use — returning
+                normally there would report a session as recorded that is not.
+        """
+        proc = self.m_proc
+        if proc is None:
             return
-        self.m_queue.put(None)
-        self.m_proc.join()
+        self.m_proc = None
+
+        died_early = proc.exitcode is not None
+        if not died_early:
+            try:
+                self.m_queue.put_nowait(None)
+            except queue.Full:
+                # The backlog is already at the bound, so the sentinel cannot get in front
+                # of it; the join below will time out and the terminate path runs.
+                self.m_dropped += 1
+            proc.join(MCAP_CLOSE_TIMEOUT_S)
+
+        timed_out = proc.exitcode is None
+        if timed_out:
+            proc.terminate()
+            proc.join()
+
+        # The feeder thread blocks at exit trying to flush a queue nobody is draining, which
+        # is what turns a dead writer into a hung shutdown. Cancelling it is the documented
+        # way to abandon those buffered items; on the healthy path the queue is already
+        # empty and `join_thread` returns at once.
+        if died_early or timed_out:
+            self.m_queue.cancel_join_thread()
         self.m_queue.close()
         self.m_queue.join_thread()
+
+        if died_early:
+            raise McapWriterError(
+                f"MCAP writer for {self.m_path} exited with code {proc.exitcode} before the "
+                f"file was finished; {self.m_dropped} sample(s) were dropped"
+            )
+        if timed_out:
+            raise McapWriterError(
+                f"MCAP writer for {self.m_path} did not finish within "
+                f"{MCAP_CLOSE_TIMEOUT_S}s and was terminated; the file has no summary "
+                f"section and {self.m_dropped} sample(s) were dropped"
+            )
+        if self.m_dropped:
+            raise McapWriterError(
+                f"MCAP timeseries for {self.m_path} is incomplete: {self.m_dropped} "
+                f"sample(s) were dropped because the writer could not keep up"
+            )
 
 
 @dataclass

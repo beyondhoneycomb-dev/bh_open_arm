@@ -13,6 +13,7 @@ from typing import Any
 
 import pytest
 
+from registry import PLAN_DIR
 from registry.generate.manifests import (
     MANIFEST_SUBDIR,
     ManifestSchemaError,
@@ -28,7 +29,7 @@ from registry.generate.source import (
 )
 from registry.ingest.catalog import parse_all
 
-CATALOGS = Path(__file__).resolve().parents[2] / "docs" / "plan"
+CATALOGS = PLAN_DIR
 
 
 # ① every work package has a manifest.

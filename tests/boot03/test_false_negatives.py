@@ -18,13 +18,14 @@ from typing import Any
 
 import pytest
 
+from registry import PLAN_DIR, SPINE_DOC_NAME
 from registry.checks import JUDGE_RANGE
 from registry.checks.corpus import Corpus
-from registry.checks.fixtures import REPO_ROOT, corpus, record
+from registry.checks.fixtures import corpus, record
 
 # Prose scanning is scoped to the spine document so that the real corpus's own
 # dangling citations cannot masquerade as detections of an injected mutation.
-SPINE_DOC = REPO_ROOT / "docs" / "plan" / "00-실행계획-개요.md"
+SPINE_DOC = PLAN_DIR / SPINE_DOC_NAME
 
 DECLARED_REQUIREMENTS = frozenset({"FR-CAM-001", "FR-CAM-006"})
 

@@ -42,6 +42,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_VERSION = 1
 BOOT_BAND = "BOOT"
 
+# The generation a contract carries when the table naming it states none. `06` §4.1
+# lists bare names by design; `01` §6.2 is where generations are issued.
+FIRST_CONTRACT_GENERATION = 1
+
 # WP-ENV-04 issues the environment hash; every package that declares it as an
 # input is downstream of it and stamps the issued value into its manifest, where a
 # mismatch refuses start (02a WP-ENV-04, registry/env/barrier.py). The stamp is
@@ -171,13 +175,23 @@ def read_contract_producers(plan_dir: Path) -> dict[str, str]:
     entries, so either is authoritative; both are read and a disagreement is
     surfaced by returning the first and letting `CI-03` compare.
 
+    The generation is read from the ID cell rather than assumed. `06` §4.3 makes
+    `@v(n+1)` the only legal response to a change in a frozen contract, so a
+    produces axis that could only ever say `@v1` would leave the registry unable
+    to express the outcome the rule prescribes — `CI-09` would keep comparing a
+    superseded generation's lock against content that has legitimately moved on.
+    Only `01` §6.2 states generations (it is the issuing authority); `06` §4.1
+    lists the bare names, which is why an unstated generation resolves to the
+    first one rather than being an error.
+
     Args:
         plan_dir: Directory holding the planning documents.
 
     Returns:
-        (dict) Contract id (with `@v1`) to its declared producing package.
+        (dict) Contract id, generation included, to its declared producing package.
     """
-    producers: dict[str, str] = {}
+    owners_by_name: dict[str, str] = {}
+    generations: dict[str, str] = {}
     for name in ("01-의존성-DAG-및-병렬화.md", "06-추적성-레지스트리.md"):
         document = plan_dir / name
         if not document.exists():
@@ -188,11 +202,19 @@ def read_contract_producers(plan_dir: Path) -> dict[str, str]:
             if id_column is None or owner_column is None:
                 continue
             for row in table.rows:
-                found = re.search(r"\bCTR-[A-Z]+\b", plain_text(row[id_column]))
+                cell = plain_text(row[id_column])
+                found = re.search(r"\bCTR-[A-Z]+\b", cell)
                 owners = WP_ID.findall(plain_text(row[owner_column]))
-                if found and len(owners) == 1:
-                    producers.setdefault(f"{found.group(0)}@v1", owners[0])
-    return producers
+                if not found or len(owners) != 1:
+                    continue
+                owners_by_name.setdefault(found.group(0), owners[0])
+                stated = CONTRACT_ID.search(cell)
+                if stated:
+                    generations.setdefault(found.group(0), stated.group(0))
+    return {
+        generations.get(name, f"{name}@v{FIRST_CONTRACT_GENERATION}"): owner
+        for name, owner in owners_by_name.items()
+    }
 
 
 def _bound_packages(label: str, value: str) -> list[str]:

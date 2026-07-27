@@ -104,7 +104,5 @@ def scan_package(
     findings: list[HardcodedLiteral] = []
     for source_file in sorted(scan_root.rglob("*.py")):
         rel = source_file.relative_to(scan_root).as_posix()
-        findings.extend(
-            scan_source(source_file.read_text(encoding="utf-8"), values, path=rel)
-        )
+        findings.extend(scan_source(source_file.read_text(encoding="utf-8"), values, path=rel))
     return findings

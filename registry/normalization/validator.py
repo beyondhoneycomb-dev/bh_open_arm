@@ -4,7 +4,7 @@ Schema validity (`loader.schema_errors`) proves the ledger has the right shape.
 This module proves the ledger tells the truth about the corpus it rules over:
 
 * every winning id resolves to exactly one definition — an `FR-*`/`NFR-*` declared
-  in a `docs/spec` table, a `D-n`/`M-n` defined in `docs/spec/16`, a `PG-*`
+  in a spec requirement table, a `D-n`/`M-n` defined in spec `16`, a `PG-*`
   declared in the `docs/plan/03` gate table;
 * every discarded quote is present, character-exact, at its `file:section` — with
   Markdown emphasis markers and runs of whitespace normalized the same way every
@@ -25,6 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from registry import PLAN_SUBPATH, SPEC_SUBPATH
 from registry.ingest.build import read_contract_producers
 from registry.ingest.catalog import parse_all as parse_catalogs
 from registry.ingest.markdown import all_tables, plain_text, read_sections
@@ -100,8 +101,8 @@ class Corpus:
         Returns:
             (Corpus) The resolved corpus facts.
         """
-        spec_dir = root / "docs" / "spec"
-        plan_dir = root / "docs" / "plan"
+        spec_dir = root / SPEC_SUBPATH
+        plan_dir = root / PLAN_SUBPATH
         return cls(
             root=root,
             spec_dir=spec_dir,

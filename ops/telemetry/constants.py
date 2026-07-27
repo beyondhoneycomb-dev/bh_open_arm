@@ -61,3 +61,15 @@ MCAP_TOPICS = (
     TOPIC_CAN_TRACE,
     TOPIC_VIDEO_META,
 )
+
+# NFR-PRF-038 puts the MCAP writer off the control loop's process so disk I/O cannot steal
+# from the real-time path. An unbounded hand-off queue defeats that: a writer that has died
+# or stalled turns a disk problem into unbounded memory growth *in the process commanding
+# the arm*, and an out-of-memory kill there is a safety event. Bounded, the same failure
+# costs dropped samples the writer counts and reports at close.
+MCAP_QUEUE_MAX_ITEMS = 8192
+
+# How long `close()` waits for the writer to drain and finish the file before it stops
+# waiting. It exists so a dead or wedged writer cannot hang shutdown of the control
+# process; the deadline is generous because the normal path returns well inside it.
+MCAP_CLOSE_TIMEOUT_S = 10.0

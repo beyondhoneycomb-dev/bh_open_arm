@@ -85,7 +85,7 @@ codes:
     hardware_id: null
     subsystem: can
     recovery_hint: "배선·종단저항(120Ω×2)·비트레이트 확인 후 사용자 확인 하에 재활성화. 자동 복구 없음."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -96,7 +96,7 @@ codes:
     hardware_id: null
     subsystem: can
     recovery_hint: "커넥터·데이지체인 확인 후 해당 모터 재스캔. 결측 프레임을 0으로 기록 금지."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -107,7 +107,7 @@ codes:
     hardware_id: null
     subsystem: can
     recovery_hint: "lerobot-setup-can --mode=setup 실행. 코드가 링크를 대신 고칠 수 없다."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -118,7 +118,7 @@ codes:
     hardware_id: null
     subsystem: can
     recovery_hint: "즉시 홀드. 침입 프로세스 종료(ss -f link, fuser) 후 락 해제 확인, 재기동."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -129,7 +129,7 @@ codes:
     hardware_id: null
     subsystem: can
     recovery_hint: "링크 비트레이트를 1000000/5000000으로 재설정 후 재기동."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -140,7 +140,7 @@ codes:
     hardware_id: null
     subsystem: can
     recovery_hint: "config에 side를 명시. 기본값 ±5° 축소는 사용 불가."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -151,7 +151,7 @@ codes:
     hardware_id: null
     subsystem: can
     recovery_hint: "기대 모터 구성(CAN ID × 타입)과 실제 버스 응답을 대조. 스왑 해소 후 재기동."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -162,7 +162,7 @@ codes:
     hardware_id: null
     subsystem: motor
     recovery_hint: "정상 비활성 상태. enable 시퀀스 수행."
-    doc_url: "docs/spec/14-시스템-운영.md#2.4"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.4"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -173,7 +173,7 @@ codes:
     hardware_id: null
     subsystem: motor
     recovery_hint: "즉시 홀드 후 전원 점검(권고 ≤32V/≤52V). 감속 프로파일 완화."
-    doc_url: "docs/spec/14-시스템-운영.md#2.4"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.4"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -184,7 +184,7 @@ codes:
     hardware_id: null
     subsystem: motor
     recovery_hint: "전원 점검(≥15V). 저전압은 회생(regen) 신호일 수 있으므로 감속 완화."
-    doc_url: "docs/spec/14-시스템-운영.md#2.4"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.4"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -195,7 +195,7 @@ codes:
     hardware_id: null
     subsystem: motor
     recovery_hint: "토크 클램프 후 홀드. 충돌·끼임 물리 확인, 게인/페이로드 재검토."
-    doc_url: "docs/spec/14-시스템-운영.md#2.4"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.4"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -206,7 +206,7 @@ codes:
     hardware_id: null
     subsystem: motor
     recovery_hint: "궤적 중단 후 중력보상 홀드, 냉각 대기. 토크를 0으로 만들지 않는다(낙하)."
-    doc_url: "docs/spec/14-시스템-운영.md#2.4"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.4"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -217,7 +217,7 @@ codes:
     hardware_id: null
     subsystem: motor
     recovery_hint: "궤적 중단 후 중력보상 홀드, 히스테리시스만큼 냉각 대기. 부하·게인 재검토."
-    doc_url: "docs/spec/14-시스템-운영.md#2.4"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.4"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -228,7 +228,7 @@ codes:
     hardware_id: null
     subsystem: motor
     recovery_hint: "커넥터·데이지체인 확인 후 재스캔. 백엔드 CAN 해제 후 진단."
-    doc_url: "docs/spec/14-시스템-운영.md#2.4"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.4"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -239,7 +239,7 @@ codes:
     hardware_id: null
     subsystem: motor
     recovery_hint: "토크 클램프 후 홀드. 정격 4.1kg/피크 6.0kg 대비 페이로드 재검토."
-    doc_url: "docs/spec/14-시스템-운영.md#2.4"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.4"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -250,7 +250,7 @@ codes:
     hardware_id: null
     subsystem: control
     recovery_hint: "실측 Hz가 목표×0.95 미만. 연속 오버런 시 홀드."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -261,7 +261,7 @@ codes:
     hardware_id: null
     subsystem: control
     recovery_hint: "명령이 관절 리밋에서 클램프됨. 명령 소스·리밋 검토."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -272,7 +272,7 @@ codes:
     hardware_id: null
     subsystem: control
     recovery_hint: "즉시 홀드. 사이클 간 명령 점프율 위반. 정책/IK 신뢰 금지."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -283,7 +283,7 @@ codes:
     hardware_id: null
     subsystem: control
     recovery_hint: "홀드로 전이. 명령 age가 임계(3×주기) 초과. 링크 확인."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -294,7 +294,7 @@ codes:
     hardware_id: null
     subsystem: camera
     recovery_hint: "텔레옵 즉시 일시정지. USB 재연결 후 udev add 확인, 사용자 재-engage."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -305,7 +305,7 @@ codes:
     hardware_id: null
     subsystem: camera
     recovery_hint: "해상도/FPS 다운시프트. USB 대역폭 재배치."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -316,7 +316,7 @@ codes:
     hardware_id: null
     subsystem: camera
     recovery_hint: "age 임계 초과 지속 시 텔레옵 중단. 케이블/코덱 재설정."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -327,7 +327,7 @@ codes:
     hardware_id: null
     subsystem: teleop
     recovery_hint: "즉시 홀드. VR 링크 확인 후 재-engage."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -338,7 +338,7 @@ codes:
     hardware_id: null
     subsystem: teleop
     recovery_hint: "추적 상태 INVALID. 조작 중단, 트래킹 복구 대기."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -349,7 +349,7 @@ codes:
     hardware_id: null
     subsystem: teleop
     recovery_hint: "추적 데이터 stale. 홀드로 전이, 링크 age 확인."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -360,7 +360,7 @@ codes:
     hardware_id: null
     subsystem: teleop
     recovery_hint: "왕복 지연 임계 초과. 네트워크/부하 검토."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -371,7 +371,7 @@ codes:
     hardware_id: null
     subsystem: kinematics
     recovery_hint: "직전 유효 관절각 유지. 워크스페이스 이탈은 None을 만들지 않으므로 별도 검출."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -382,7 +382,7 @@ codes:
     hardware_id: null
     subsystem: kinematics
     recovery_hint: "홀드. ‖p_target − FK(q_solved)‖ 가 ik_residual_max_m 초과."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -393,7 +393,7 @@ codes:
     hardware_id: null
     subsystem: kinematics
     recovery_hint: "무제약 폴백은 기본 비활성화. 발동 시 홀드하고 폴백 해를 어댑터 클램프로 통과."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -404,7 +404,7 @@ codes:
     hardware_id: null
     subsystem: kinematics
     recovery_hint: "홀드. 개루프 IK 발산 감지."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -415,7 +415,7 @@ codes:
     hardware_id: null
     subsystem: kinematics
     recovery_hint: "홀드. 변환 경계 검증 실패. 단위 태그(CTR-UNIT) 경계 확인."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -426,7 +426,7 @@ codes:
     hardware_id: null
     subsystem: system
     recovery_hint: "1차 임계 미만: 신규 녹화 차단. 2차 임계 미만: 진행 에피소드 finalize 후 중단."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -437,7 +437,7 @@ codes:
     hardware_id: null
     subsystem: system
     recovery_hint: "마지막 체크포인트에서 재개, 배치 사이즈 축소 후 재시도 제안."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -448,7 +448,7 @@ codes:
     hardware_id: null
     subsystem: system
     recovery_hint: "@realtime 그룹 + /etc/security/limits.conf 안내. VmLck로 mlockall 검증."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -459,7 +459,7 @@ codes:
     hardware_id: null
     subsystem: system
     recovery_hint: "최고 심각도 경보. 외부 워치독(systemd)이 감시. 백엔드 사망 = 모터 워치독 이탈 = 낙하."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -470,7 +470,7 @@ codes:
     hardware_id: null
     subsystem: system
     recovery_hint: "백엔드 사망과 구분해 감지·보고. 즉시 최고 심각도 경보."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -481,7 +481,7 @@ codes:
     hardware_id: null
     subsystem: system
     recovery_hint: "기동 거부 + 충돌 포트/프로세스 표시. 포트 설정 변경."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -492,7 +492,7 @@ codes:
     hardware_id: null
     subsystem: system
     recovery_hint: "기록 시작 거부. 명시적 false 요구."
-    doc_url: "docs/spec/01-시스템-아키텍처.md#4.5"
+    doc_url: "docs/v1/spec/01-시스템-아키텍처.md#4.5"
     first_seen_t: null
     count: 0
     source: "01 §4.5"
@@ -503,7 +503,7 @@ codes:
     hardware_id: null
     subsystem: system
     recovery_hint: "SAFE_HOLD(중력보상). VR age>100ms 또는 제어 WS 소실. 자동 재개 금지."
-    doc_url: "docs/spec/01-시스템-아키텍처.md#4.5"
+    doc_url: "docs/v1/spec/01-시스템-아키텍처.md#4.5"
     first_seen_t: null
     count: 0
     source: "01 §4.5"
@@ -514,7 +514,7 @@ codes:
     hardware_id: null
     subsystem: system
     recovery_hint: "실측 Hz < 목표×0.95. 연속 오버런 시 SAFE_HOLD."
-    doc_url: "docs/spec/01-시스템-아키텍처.md#4.5"
+    doc_url: "docs/v1/spec/01-시스템-아키텍처.md#4.5"
     first_seen_t: null
     count: 0
     source: "01 §4.5"
@@ -525,7 +525,7 @@ codes:
     hardware_id: null
     subsystem: system
     recovery_hint: "드랍 카운터 임계 초과. 토크 채널 신뢰도 저하 경고. 지속 시 SAFE_HOLD."
-    doc_url: "docs/spec/01-시스템-아키텍처.md#4.5"
+    doc_url: "docs/v1/spec/01-시스템-아키텍처.md#4.5"
     first_seen_t: null
     count: 0
     source: "01 §4.5"
@@ -536,7 +536,7 @@ codes:
     hardware_id: null
     subsystem: system
     recovery_hint: "요청 거부 + 현재 모드·충돌 자원 반환. 모드 불변."
-    doc_url: "docs/spec/01-시스템-아키텍처.md#4.5"
+    doc_url: "docs/v1/spec/01-시스템-아키텍처.md#4.5"
     first_seen_t: null
     count: 0
     source: "01 §4.5"
@@ -547,7 +547,7 @@ codes:
     hardware_id: null
     subsystem: inference
     recovery_hint: "즉시 홀드 + 액션 큐 비움. stale 액션 실행 금지."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -558,7 +558,7 @@ codes:
     hardware_id: null
     subsystem: inference
     recovery_hint: "홀드. 큐가 비어 새 액션 없음."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -569,7 +569,7 @@ codes:
     hardware_id: null
     subsystem: inference
     recovery_hint: "즉시 홀드. 명령 안전 필터가 정책을 신뢰하지 않는다."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -580,7 +580,7 @@ codes:
     hardware_id: null
     subsystem: inference
     recovery_hint: "정책 백엔드 추상화 확인. 지원 정책으로 교체."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -591,7 +591,7 @@ codes:
     hardware_id: null
     subsystem: dataset
     recovery_hint: "에피소드 무효 표시. MCAP append-only이므로 마지막 1개 메시지만 손실."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -602,7 +602,7 @@ codes:
     hardware_id: null
     subsystem: dataset
     recovery_hint: "체크포인트와 데이터셋 계보 대조. 일치본으로 재개."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -613,7 +613,7 @@ codes:
     hardware_id: null
     subsystem: dataset
     recovery_hint: "exit 137/oom-kill 분류. 마지막 체크포인트 재개, 배치 축소 재시도."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -624,7 +624,7 @@ codes:
     hardware_id: null
     subsystem: dataset
     recovery_hint: "기동 거부. 단일 스위치로 팔로워·리더 동시 적용. 기본 True."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -635,7 +635,7 @@ codes:
     hardware_id: null
     subsystem: dataset
     recovery_hint: "기본 false 강제. 업로드는 명시 확인 + 감사 로그 필수."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -646,7 +646,7 @@ codes:
     hardware_id: null
     subsystem: zero
     recovery_hint: "enable 거부, 재영점 필요 상태 진입. 전 관절 위치·m_off 골든값 대조."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -657,7 +657,7 @@ codes:
     hardware_id: null
     subsystem: zero
     recovery_hint: "enable 거부. zero_golden.yaml 골든값과 m_off(RID 54) 대조."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -668,7 +668,7 @@ codes:
     hardware_id: null
     subsystem: zero
     recovery_hint: "재캘리브레이션 안내."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"
@@ -679,7 +679,7 @@ codes:
     hardware_id: null
     subsystem: zero
     recovery_hint: "모드 전환 경로에서 connect() 재호출 금지. 재영점 검증."
-    doc_url: "docs/spec/14-시스템-운영.md#2.10"
+    doc_url: "docs/v1/spec/14-시스템-운영.md#2.10"
     first_seen_t: null
     count: 0
     source: "14 §2.10"

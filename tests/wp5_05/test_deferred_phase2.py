@@ -33,9 +33,7 @@ def test_missing_file_is_reported_not_silently_passed(
     assert "not a file" in status.reason
 
 
-def test_present_fixture_is_ingested(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_present_fixture_is_ingested(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     capture = tmp_path / "occupancy.json"
     capture.write_text(json.dumps({"node_occupancy_pct": 42.0}), encoding="utf-8")
     monkeypatch.setenv(PHASE2_FIXTURE_ENV_VAR, str(capture))

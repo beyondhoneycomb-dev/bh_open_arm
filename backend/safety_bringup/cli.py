@@ -49,8 +49,8 @@ INJECTED_WALLS = REPO_ROOT / "sim" / "safety" / "scene" / "virtual_walls.xml"
 # The physical sources the velocity derivation rests on (`03` §5.6.0 ①). A basis URI must be
 # one of these, never the gate's own result record — the self-approval refusal reads this.
 DERIVATION_BASIS_URIS = (
-    "docs/spec/03-모터-설정.md#2.1",
-    "docs/spec/03-모터-설정.md#trap-2",
+    "docs/v1/spec/03-모터-설정.md#2.1",
+    "docs/v1/spec/03-모터-설정.md#trap-2",
     "backend/can/rid/motor_limits.py#MOTOR_LIMIT_PARAMS",
     "https://docs.openarm.dev/hardware/openarm-2.0/motor/",
 )

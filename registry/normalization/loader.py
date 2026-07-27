@@ -14,9 +14,10 @@ from typing import Any
 import yaml
 from jsonschema import Draft202012Validator
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+from registry import NORMALIZATION_DIR
+
 SCHEMA_PATH = Path(__file__).resolve().parent / "ledger.schema.json"
-LEDGER_PATH = REPO_ROOT / "docs" / "plan" / "normalization" / "ledger.yaml"
+LEDGER_PATH = NORMALIZATION_DIR / "ledger.yaml"
 
 
 def load_ledger(path: Path) -> dict[str, Any]:

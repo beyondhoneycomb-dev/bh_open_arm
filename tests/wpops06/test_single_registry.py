@@ -10,9 +10,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from contracts.errors.spec_scan import asserts_second_registry
+from registry import SPEC_DIR
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-SPEC_DIR = REPO_ROOT / "docs" / "spec"
 SPEC14 = SPEC_DIR / "14-시스템-운영.md"
 SPEC13 = SPEC_DIR / "13-GUI-화면-명세.md"
 

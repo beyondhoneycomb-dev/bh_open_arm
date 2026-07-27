@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+from registry import SPEC_DIR
 from registry.normalization.loader import load_ledger, schema_errors
 from registry.normalization.validator import (
     Corpus,
@@ -81,7 +82,7 @@ def test_dangling_enforcement_is_an_enforcement_violation(corpus: Corpus) -> Non
 
 def test_section_body_resolves_a_numbered_section() -> None:
     """A quote known to live in 13#3.5 is found in that section body."""
-    path = next((REPO_ROOT / "docs" / "spec").glob("13-*.md"))
+    path = next(SPEC_DIR.glob("13-*.md"))
     body = section_body(path, "3.5")
     assert body is not None
     assert "비상정지, 소프트 스톱" in body
@@ -89,7 +90,7 @@ def test_section_body_resolves_a_numbered_section() -> None:
 
 def test_section_body_is_absent_for_a_missing_section() -> None:
     """An unknown section number resolves to None rather than empty text."""
-    path = next((REPO_ROOT / "docs" / "spec").glob("13-*.md"))
+    path = next(SPEC_DIR.glob("13-*.md"))
     assert section_body(path, "99.99") is None
 
 

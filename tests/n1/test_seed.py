@@ -13,12 +13,10 @@ from typing import Any
 
 import pytest
 
+from registry import PLAN_DIR, SPEC_DIR, SPINE_DOC_REL
 from registry.ingest.build import build
 from registry.normalization.seed import HASH_PREFIX, ledger_seed
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-PLAN_DIR = REPO_ROOT / "docs" / "plan"
-SPEC_DIR = REPO_ROOT / "docs" / "spec"
 TAG_DECISION_REQUIRED = "결정필요"
 WP_DEFERRED = "DEFERRED"
 
@@ -59,7 +57,7 @@ def test_normalization_for_is_scoped_to_settled_ids() -> None:
 @pytest.fixture(scope="module")
 def seeded_registry() -> dict[str, Any]:
     """Build the registry document from the live corpus."""
-    document, _ = build(PLAN_DIR, SPEC_DIR, "docs/plan/00-실행계획-개요.md@0000000")
+    document, _ = build(PLAN_DIR, SPEC_DIR, f"{SPINE_DOC_REL}@0000000")
     return document
 
 

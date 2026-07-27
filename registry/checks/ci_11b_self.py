@@ -17,6 +17,7 @@ Three conditions, all required:
 
 from __future__ import annotations
 
+from registry import PLAN_DIR_REL
 from registry.checks import ci_11b
 from registry.checks.corpus import Corpus, GateCell
 from registry.checks.model import RuleResult, fail
@@ -113,7 +114,7 @@ def run(corpus: Corpus) -> RuleResult:
                 fail(
                     RULE_ID,
                     document,
-                    f"docs/plan/{document}",
+                    f"{PLAN_DIR_REL}/{document}",
                     "CI-11b is not green on the corpus as it stands, so either the document "
                     "carries a real violation or the checker over-blocks its own rationale",
                 )

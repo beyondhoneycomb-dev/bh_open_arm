@@ -20,6 +20,7 @@ from typing import Any
 
 import yaml
 
+from registry import PLAN_SUBPATH, SPEC_SUBPATH
 from registry.ingest.catalog import CatalogEntry
 from registry.ingest.catalog import parse_all as parse_catalogs
 from registry.ingest.markdown import all_tables, plain_text, read_sections
@@ -111,14 +112,14 @@ class Corpus:
         Args:
             root: Repository root.
             registry_path: Override for `registry/traceability.yaml`.
-            plan_dir: Override for `docs/plan`.
-            spec_dir: Override for `docs/spec`.
+            plan_dir: Override for the corpus plan directory.
+            spec_dir: Override for the corpus spec directory.
             manifest_dir: Override for `registry/build/manifests`.
         """
         self.root = root
         self.registry_path = registry_path or root / "registry" / "traceability.yaml"
-        self.plan_dir = plan_dir or root / "docs" / "plan"
-        self.spec_dir = spec_dir or root / "docs" / "spec"
+        self.plan_dir = plan_dir or root / PLAN_SUBPATH
+        self.spec_dir = spec_dir or root / SPEC_SUBPATH
         self.manifest_dir = manifest_dir or root / "registry" / "build" / "manifests"
 
     def rel(self, path: Path) -> str:

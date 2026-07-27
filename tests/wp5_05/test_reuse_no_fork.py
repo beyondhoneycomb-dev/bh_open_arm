@@ -45,9 +45,7 @@ def test_publish_rates_match_the_frontend_constants() -> None:
 
 def test_camera_load_is_sized_from_the_bandwidth_budget() -> None:
     cameras = d415_quad_full_res()
-    profile = LoadProfile(
-        cameras=cameras, client_count=1, link_capacity_bytes_per_sec=1.0
-    )
+    profile = LoadProfile(cameras=cameras, client_count=1, link_capacity_bytes_per_sec=1.0)
     # The offered preview rate is the 06 §2.9 budget (via backend.camera.bandwidth),
     # JPEG-compressed and summed — recomputed here from the same module, not a literal.
     expected = (

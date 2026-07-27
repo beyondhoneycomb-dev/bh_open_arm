@@ -364,8 +364,13 @@ def run_load(
     )
     camera_streams = tuple(
         (
-            int(round(_uncompressed_bytes_per_sec(cam) / JPEG_PREVIEW_COMPRESSION_RATIO
-                      / _camera_max_fps(cam))),
+            int(
+                round(
+                    _uncompressed_bytes_per_sec(cam)
+                    / JPEG_PREVIEW_COMPRESSION_RATIO
+                    / _camera_max_fps(cam)
+                )
+            ),
             _camera_max_fps(cam),
         )
         for cam in profile.cameras

@@ -14,8 +14,9 @@ from pathlib import Path
 import pytest
 import yaml
 
+from registry import PLAN_DIR, PLAN_SUBPATH
 from registry.contracts.cli import EXIT_OK, EXIT_VIOLATION, main
-from tests.boot05.conftest import MINI_REGISTRY, REPO_ROOT, schema_with
+from tests.boot05.conftest import MINI_REGISTRY, schema_with
 
 BASE = schema_with("robot_id", "joints")
 BUMPED = schema_with("robot_id", "joints", "gripper_rad")
@@ -35,10 +36,10 @@ def repo(tmp_path: Path) -> Path:
         Path: Root of the scratch repository.
     """
     root = tmp_path / "repo"
-    plan = root / "docs/plan"
+    plan = root / PLAN_SUBPATH
     plan.mkdir(parents=True)
     name = "01-의존성-DAG-및-병렬화.md"
-    shutil.copy(REPO_ROOT / "docs/plan" / name, plan / name)
+    shutil.copy(PLAN_DIR / name, plan / name)
 
     registry = root / "registry"
     registry.mkdir()

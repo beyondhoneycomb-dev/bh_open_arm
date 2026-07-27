@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import copy
 from collections.abc import Callable
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -20,9 +19,9 @@ import yaml
 from contracts.errors.constants import REGISTRY_PATH
 from contracts.errors.registry import Registry
 from contracts.errors.spec_scan import canon_codes
+from registry import SPEC_DIR
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-SPEC14 = REPO_ROOT / "docs" / "spec" / "14-시스템-운영.md"
+SPEC14 = SPEC_DIR / "14-시스템-운영.md"
 
 
 @pytest.fixture

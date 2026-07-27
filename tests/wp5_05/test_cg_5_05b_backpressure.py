@@ -27,12 +27,8 @@ def test_policy_is_sound() -> None:
 
 
 def test_camera_shed_only_over_threshold() -> None:
-    assert not should_drop_under_backpressure(
-        WsFrameType.CAMERA, BUFFERED_AMOUNT_THRESHOLD_BYTES
-    )
-    assert should_drop_under_backpressure(
-        WsFrameType.CAMERA, BUFFERED_AMOUNT_THRESHOLD_BYTES + 1
-    )
+    assert not should_drop_under_backpressure(WsFrameType.CAMERA, BUFFERED_AMOUNT_THRESHOLD_BYTES)
+    assert should_drop_under_backpressure(WsFrameType.CAMERA, BUFFERED_AMOUNT_THRESHOLD_BYTES + 1)
 
 
 def test_protected_frames_never_shed_even_far_over_threshold() -> None:

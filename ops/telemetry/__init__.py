@@ -26,7 +26,7 @@ from ops.telemetry.drop_disclaimer import (
     assert_disclaimer_present,
     doc_has_disclaimer,
 )
-from ops.telemetry.mcap_writer import McapWriterProcess, load_mcap
+from ops.telemetry.mcap_writer import McapWriterError, McapWriterProcess, load_mcap
 from ops.telemetry.ring_buffer import DiagnosticRingBuffer, RingSink
 from ops.telemetry.ros_staticcheck import find_forbidden_ros_imports
 from ops.telemetry.rss_monitor import RssSlopeMonitor, read_rss_bytes
@@ -43,6 +43,7 @@ __all__ = [
     "REQUIRED_DISCLAIMER_PHRASE",
     "CrashReport",
     "DiagnosticRingBuffer",
+    "McapWriterError",
     "McapWriterProcess",
     "RingSink",
     "RssSlopeMonitor",

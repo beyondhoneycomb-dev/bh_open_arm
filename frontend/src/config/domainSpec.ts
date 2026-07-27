@@ -25,7 +25,7 @@ export type DomainCode =
 
 export interface DomainSpecRef {
   code: DomainCode;
-  // Spec document number as in docs/spec/ (e.g. "02" is robot connection).
+  // Spec document number as in docs/v1/spec/ (e.g. "02" is robot connection).
   doc: string;
   title: string;
   // Same-origin address the backend serves the spec document from.
@@ -37,7 +37,7 @@ interface DomainEntry {
   title: string;
 }
 
-// One entry per domain code, each pointing at its docs/spec/ document.
+// One entry per domain code, each pointing at its docs/v1/spec/ document.
 const DOMAIN_CATALOG: Readonly<Record<DomainCode, DomainEntry>> = {
   SYS: { doc: "01", title: "시스템 아키텍처" },
   CON: { doc: "02", title: "로봇 연결 및 온보딩" },

@@ -1,6 +1,6 @@
 """WP-0A-03 acceptance ① — every produced path in the band is owned.
 
-① The registry covers the output paths of every work package in the `docs/plan`
+① The registry covers the output paths of every work package in the plan
    band: 0 unowned paths.
 
 The universe is the same artifact tree `CI-02b` guards, and `CI-02b` (WP-BOOT-03)
@@ -22,6 +22,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ownership.prover import owned_globs, unowned_paths
+from registry import PLAN_DIR
 from registry.checks.ci_02b import run as ci_02b_run
 from registry.checks.corpus import Corpus
 from registry.ingest.catalog import parse_all
@@ -55,7 +56,7 @@ def test_own_declaration_parses_and_covers_its_tree() -> None:
     sibling timing. The 02a declaration is this package's own and is what the
     seeder reads.
     """
-    entry = next(e for e in parse_all(REPO_ROOT / "docs" / "plan") if e.wp_id == "WP-0A-03")
+    entry = next(e for e in parse_all(PLAN_DIR) if e.wp_id == "WP-0A-03")
     declared = entry.declared_owns()
     for pair in _OWN_GLOBS:
         assert pair in declared

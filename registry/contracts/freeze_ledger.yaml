@@ -54,3 +54,27 @@ events:
   canonical_hash: sha256:aba79ae69ef09f811de9dc258cc47aa674a104ab926914f1d58b9f66a37d1c0f
   prev_digest: db9180291c5c4a6c7e7e2b0582ee7b62eb907f445d32a758a5e67e2ce418574f
   digest: 93993fae3220e02fb764141b5163ac6612af3e0e20a0cd60f2e3507bf80536e1
+- seq: 10
+  kind: SUPERSEDE
+  contract_id: CTR-CAL@v1
+  canonical_hash: null
+  prev_digest: 93993fae3220e02fb764141b5163ac6612af3e0e20a0cd60f2e3507bf80536e1
+  digest: e12e717616f33f3aa6611de2c3820baaeb4b05f5c30fb70b61ff9c89650d52ac
+- seq: 11
+  kind: FREEZE
+  contract_id: CTR-CAL@v2
+  canonical_hash: sha256:41e8bcabb1f80322efd0dd91acd9ebdb14dd2f2e9a9a960ffebf437643989928
+  prev_digest: e12e717616f33f3aa6611de2c3820baaeb4b05f5c30fb70b61ff9c89650d52ac
+  digest: a8a0fbdda84e9cb5e76aea4ca341a8e807731ca2dd9f63c584cf520cfd5e0058
+- seq: 12
+  kind: SUPERSEDE
+  contract_id: CTR-ERR@v1
+  canonical_hash: null
+  prev_digest: a8a0fbdda84e9cb5e76aea4ca341a8e807731ca2dd9f63c584cf520cfd5e0058
+  digest: 02d023ff31719d1131aeb38f36a311500b0ab3c411beb9e8081374c2187154d3
+- seq: 13
+  kind: FREEZE
+  contract_id: CTR-ERR@v2
+  canonical_hash: sha256:f96d529934a2884cda047f2789b7ca7c59abbe55f9626b425a3d9e38251067f5
+  prev_digest: 02d023ff31719d1131aeb38f36a311500b0ab3c411beb9e8081374c2187154d3
+  digest: 262227619c872ca3d41cb00e28b3778fdb0417dbe344bce64ce30b691315c82f

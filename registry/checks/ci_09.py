@@ -172,6 +172,27 @@ def run(corpus: Corpus) -> RuleResult:
     for contract_id, globs in sorted(frozen.items()):
         files = expand(tuple(sorted(globs)), corpus.tracked_files)
         if not files:
+            # An empty expansion is two different situations and only one of them is
+            # benign. With no recorded hash, the contract was never frozen and there is
+            # nothing to compare. With a recorded hash, the glob used to match and now
+            # does not — a rename, a move, a deletion — and skipping means the lock this
+            # rule enforces has been disarmed by an edit no rule looked at. From then on
+            # the frozen body is editable and CI-09 still reports green.
+            if registered.get(contract_id, ""):
+                hashed += 1
+                findings.append(
+                    fail(
+                        rule_id=RULE_ID,
+                        req_or_wp=contract_id,
+                        path=", ".join(sorted(globs)),
+                        reason=(
+                            "frozen contract has a recorded canonical_hash but its glob matches "
+                            "no tracked file, so the lock guards nothing"
+                        ),
+                        expected="the frozen glob to match the files it was frozen over",
+                        actual="no tracked file matches",
+                    )
+                )
             continue
         hashed += 1
         actual = content_hash(tuple(files), corpus.root)

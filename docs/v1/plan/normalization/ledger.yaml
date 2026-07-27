@@ -27,7 +27,7 @@ rows:
       - file: "01"
         section: "4.2"
         quote: "rest 자세 확인 모달"
-    contract: "CTR-CAL@v1"
+    contract: "CTR-CAL@v2"
     rationale: >-
       16 M-20 [확정] — connect()의 auto set_zero를 오버라이드한다. rest 모달은 02 FR-CON-063대로
       connect가 아니라 명시 set_zero 단계로 이동한다. 참조 rebot.py:247-259, openarm_follower.py:152-153.

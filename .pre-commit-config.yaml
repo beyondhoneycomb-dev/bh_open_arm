@@ -1,6 +1,9 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.9
+    # Must equal the pinned ruff in pyproject.toml [dev]; tests/env03 asserts it.
+    # The hook formats and CI checks the formatting, so two versions here means a
+    # commit the hook just formatted can be rejected by the gate.
+    rev: v0.15.22
     hooks:
       - id: ruff
         args: [--fix]

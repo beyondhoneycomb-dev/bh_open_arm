@@ -18,11 +18,14 @@
 
 [Unit]
 Description=OpenArm authorized CAN writer (sandboxed, AF_CAN only)
-# The link itself is brought up by WP-OPS-02's openarm-can-setup.service; this unit
-# only opens sockets on an already-configured interface (01 FR-SYS-006: code does not
-# configure the link). Ordering only — a soft Wants keeps the coupling loose.
-Wants=openarm-can-setup.service
-After=openarm-can-setup.service network-online.target
+# The link is brought up by WP-OPS-02's openarm-can-link.service; this unit only opens
+# sockets on an already-configured interface (01 FR-SYS-006: code does not configure the
+# link). Requires+After, not Wants: a Wants= is a wish, so a failed bring-up would leave
+# this service starting anyway against an unconfigured or default-bitrate link, which is
+# the silent progress FR-SYS-006 ③ forbids. ops/systemd/boot_order.py encodes that rule
+# and tests/wpops01 asserts it against this file.
+Requires=openarm-can-link.service
+After=openarm-can-link.service network-online.target
 
 [Service]
 Type=simple

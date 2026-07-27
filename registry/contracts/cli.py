@@ -183,7 +183,7 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="oa-contracts", description="Contract hash registry and CONTRACT_FROZEN lock."
     )
     parser.add_argument(
-        "--repo-root", default=".", help="Repository root holding docs/plan and registry."
+        "--repo-root", default=".", help="Repository root holding the plan corpus and registry."
     )
     subcommands = parser.add_subparsers(dest="command", required=True)
 

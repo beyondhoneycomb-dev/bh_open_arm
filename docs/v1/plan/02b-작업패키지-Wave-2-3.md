@@ -30,11 +30,11 @@ Wave 2(수동 동작·동역학·안전)와 Wave 3(계약동결·센싱/텔레�
 | **(A) WP 정의** | `WP` · 무엇 · 입력 · 산출 · 실행클래스 · 워크플로우 형상 |
 | **(B) 계약·게이트** | `WP` · 동결 인터페이스 계약 · 수용 기준(검증가능) · 음성 분기 · 명세 근거 |
 
-- WP ID: `WP-<대역>-nn` (불변). 게이트 ID: **`docs/plan/03-측정-게이트.md` §3의 `PG-*` 전수표가 유일 정본이며 본 문서는 `PG-*`를 신설하지 않는다.** `PG-*`에 대응하지 않는 검사는 **WP 수용 기준**이지 게이트가 아니다.
+- WP ID: `WP-<대역>-nn` (불변). 게이트 ID: **`docs/v1/plan/03-측정-게이트.md` §3의 `PG-*` 전수표가 유일 정본이며 본 문서는 `PG-*`를 신설하지 않는다.** `PG-*`에 대응하지 않는 검사는 **WP 수용 기준**이지 게이트가 아니다.
 - 실행클래스 4종: `AI-offline` / `AI-on-HW` / `Human-assisted-HW` / `Human-judgment`.
-- 구현자는 **Claude dynamic workflow 병렬 fan-out**이다. 🔴 **워크플로우 형상 5종의 _어휘_ 정본은 `docs/plan/05-워크플로우-오케스트레이션.md` §1.1이고, _배정_(어느 WP가 어느 형상인가) 정본은 **본 문서**다(`00` §9.2a). 본 문서는 어휘를 본 문서는 형상을 신설하지 않는다.** 모든 WP는 정확히 하나에 속한다: `SHAPE-CF`(계약동결·병렬 금지) / `SHAPE-IM(n)`(동결된 계약을 픽스처 대상별로 채움, 동시 n갈래) / `SHAPE-IG`(통합 배리어) / `SHAPE-MS`(실물 읽기·측정, 자원 배타) / `SHAPE-HG`(Human 게이트 — 블록·재개).
+- 구현자는 **Claude dynamic workflow 병렬 fan-out**이다. 🔴 **워크플로우 형상 5종의 _어휘_ 정본은 `docs/v1/plan/05-워크플로우-오케스트레이션.md` §1.1이고, _배정_(어느 WP가 어느 형상인가) 정본은 **본 문서**다(`00` §9.2a). 본 문서는 어휘를 본 문서는 형상을 신설하지 않는다.** 모든 WP는 정확히 하나에 속한다: `SHAPE-CF`(계약동결·병렬 금지) / `SHAPE-IM(n)`(동결된 계약을 픽스처 대상별로 채움, 동시 n갈래) / `SHAPE-IG`(통합 배리어) / `SHAPE-MS`(실물 읽기·측정, 자원 배타) / `SHAPE-HG`(Human 게이트 — 블록·재개).
 - 코드 단계의 `SHAPE-IM` fan-out과 달리 **물리 리그는 하나**이므로 같은 WP의 실기 확인 단계는 `SHAPE-MS`/`SHAPE-HG`로 **직렬**이다.
-- 계약 ID 형식: **`CTR-<NAME>@v<n>`**(`docs/plan/01-의존성-DAG-및-병렬화.md` §6.2의 13종이 정본). 본 문서는 계약을 신설하지 않고 **소비·동결 시점만** 명시한다.
+- 계약 ID 형식: **`CTR-<NAME>@v<n>`**(`docs/v1/plan/01-의존성-DAG-및-병렬화.md` §6.2의 13종이 정본). 본 문서는 계약을 신설하지 않고 **소비·동결 시점만** 명시한다.
 - 표기 규약은 명세를 계승한다: `FR-<영역>-nnn` · 우선 `M/S/C` · `[확정]`/`[미확인]`/`[결정필요]`/`[신규구현]`.
 
 ### 0.2 게이트 상태머신 (전 게이트 공통, 재정의 금지)
@@ -67,7 +67,7 @@ Wave 2(수동 동작·동역학·안전)와 Wave 3(계약동결·센싱/텔레�
 
 | 배리어 | 통과 조건 | 위반 시 |
 |---|---|---|
-| **B-2D.0 드라이런 하드게이트** | `WP-2A-00` PASS — **모드계층(순수시뮬/트윈/드라이런)과 6검사기 구현은 Wave 0-C 소관**(`docs/plan/02a-작업패키지-Wave-minus1-to-1.md`, AI-offline MuJoCo 자산)이고, 본 문서는 그 산출물을 **실기 전송 앞 하드 차단 인터록**으로 거는 것만 소유한다. 통과 조건 = 6검사 위반 궤적 주입 시 실기 전송이 차단됨이 결함주입으로 증명됨 (`FR-SIM-097`~`102`, `FR-SIM-030`, `FR-SIM-033`) | **Wave 2D 수동동작**(`WP-2D-01`~`09`)과 **3C 텔레옵 실기 전송**(`WP-3C-05`) 착수 불가. 드라이런은 편의 기능이 아니라 안전 기능이며, SPINE §5상 **수동/텔레옵의 선행**이다 |
+| **B-2D.0 드라이런 하드게이트** | `WP-2A-00` PASS — **모드계층(순수시뮬/트윈/드라이런)과 6검사기 구현은 Wave 0-C 소관**(`docs/v1/plan/02a-작업패키지-Wave-minus1-to-1.md`, AI-offline MuJoCo 자산)이고, 본 문서는 그 산출물을 **실기 전송 앞 하드 차단 인터록**으로 거는 것만 소유한다. 통과 조건 = 6검사 위반 궤적 주입 시 실기 전송이 차단됨이 결함주입으로 증명됨 (`FR-SIM-097`~`102`, `FR-SIM-030`, `FR-SIM-033`) | **Wave 2D 수동동작**(`WP-2D-01`~`09`)과 **3C 텔레옵 실기 전송**(`WP-3C-05`) 착수 불가. 드라이런은 편의 기능이 아니라 안전 기능이며, SPINE §5상 **수동/텔레옵의 선행**이다 |
 | **B-2B.0 식별 선행** | `PG-J7-001` PASS **그리고** J2 영점 `+π/2` 시프트가 변환기에 반영됨 (`FR-SAF-033`) | 2B 착수 불가 — tMax 2배 오차와 J2 sin↔cos 반전이 **식별값 전체를 오염**시킨다 |
 | **B-2C.0 감지 활성 금지** | `PG-FRIC-001` 미통과 상태에서 충돌 감지는 `DISABLED` 강제 + 배너 상시 (`FR-SAF-030`) | 2C는 **구현·시뮬 검증까지만** 진행. 실기 감지 활성화는 차단 |
 | **B-3A.0a 원시타입 선행 동결** | `WP-3A-00` PASS — **`CTR-PRIM@v1`**(공유 원시타입)의 정규화 해시가 레지스트리에 등재 | `WP-3A-01`~`05` 착수 불가. 5개 스키마는 원시타입을 **소비**할 뿐 각자 정의하지 않는다 |
@@ -95,7 +95,7 @@ Wave 1 ⑤에서 `PG-SAFE-001` 통과 후 가드된 토크-ON이 성립한 직�
 
 > 🔴 **Wave 2에는 GUI가 없다 — 이것은 편의 결정이 아니라 안전 근거다.** 브라우저 소프트 E-Stop은 단일 WS의 HOL 블로킹만큼 늦을 수 있으므로(`FR-GUI-040` 개정 H2), Wave 1·2의 개입 창구는 **① 워크플로우가 구동하는 하네스**(리스 갱신자·조그 지령 주입자·중단 트리거)와 **② 전원라인 물리 버튼**(`16` §4 M-2, `NFR-SAF-009`) **둘뿐**이다. 즉 2A의 리스 갱신자는 하네스이고, 2A의 정지 수단은 리스 만료와 물리 버튼이다.
 >
-> WS 클라이언트가 리스 갱신자·조그 창구가 되는 것은 **`CTR-WS@v1` 동결(3A) 이후 = 3B부터**이며, 그 화면 WP는 `WP-G-*` 네임스페이스로 `docs/plan/02d-작업패키지-GUI.md`가 소유한다. **미동결 "초안" 계약을 소비하는 WP를 Wave 2에 두지 않는다** — 계약 동결 후 소비는 불변식이다.
+> WS 클라이언트가 리스 갱신자·조그 창구가 되는 것은 **`CTR-WS@v1` 동결(3A) 이후 = 3B부터**이며, 그 화면 WP는 `WP-G-*` 네임스페이스로 `docs/v1/plan/02d-작업패키지-GUI.md`가 소유한다. **미동결 "초안" 계약을 소비하는 WP를 Wave 2에 두지 않는다** — 계약 동결 후 소비는 불변식이다.
 
 > **이 설계의 물리적 함의:** WS 지연 → 갱신 누락 → 리스 만료 → 자동 홀드. 즉 **지연이 정지를 앞당긴다.** 지연이 늘수록 정지가 늦어지는 통상 설계와 부호가 반대다.
 >
@@ -236,7 +236,7 @@ Wave 1 ⑤에서 `PG-SAFE-001` 통과 후 가드된 토크-ON이 성립한 직�
 >
 > 이전 판본은 2A→2B→2C→2D를 **분류학 순서**(쉬운 동작 → 동역학 → 안전 → 어려운 동작)로 늘어놓았고, 그 배치가 GMO를 마치 텔레옵·수집·추론의 선행인 것처럼 보이게 만들었다. **아니다.**
 >
-> **최단 가치검증 슬라이스**(정본은 `docs/plan/01-의존성-DAG-및-병렬화.md`)는 **읽기전용 브링업 → 보수 스케줄러/수동 → Quest 텔레옵 → 카메라 1대 → 에피소드 1개 → 데이터셋 로드 → 추론 1회**다. **이 슬라이스가 크리티컬 패스이고, GMO는 그 옆에 붙는다.**
+> **최단 가치검증 슬라이스**(정본은 `docs/v1/plan/01-의존성-DAG-및-병렬화.md`)는 **읽기전용 브링업 → 보수 스케줄러/수동 → Quest 텔레옵 → 카메라 1대 → 에피소드 1개 → 데이터셋 로드 → 추론 1회**다. **이 슬라이스가 크리티컬 패스이고, GMO는 그 옆에 붙는다.**
 >
 > - 슬라이스의 안전은 **`PG-SAFE-001`(물리 설비) + 보수 리미터(`WP-2A-04`) + 데드맨 리스 래치(`WP-2A-02`) + 드라이런 인터록(`WP-2A-00`) + 물리 버튼**이 성립시킨다. **GMO는 이 목록에 없다.**
 > - 이 배치는 `PG-FRIC-001`의 `DEGRADED`/`FAIL_BLOCKING` 경로와 **이미 정합**이다: 그 경로가 발동해도 감지가 `DISABLED`로 남을 뿐 **슬라이스는 계속 간다.** 2C를 크리티컬 패스에 두면 `PG-FRIC-001` 하나가 텔레옵·수집·추론 전부를 볼모로 잡는데, **설계상 그럴 이유가 없다.**
@@ -369,7 +369,7 @@ Wave 1 ⑤에서 `PG-SAFE-001` 통과 후 가드된 토크-ON이 성립한 직�
 | **프레임 타입 태그**(RGB / depth / 채널 태그) | `CAM` capability · `WS` 바이너리 채널 · `REC` feature 키 | 뎁스가 채널인지 스트림인지가 계약마다 다르다 → `PG-DEPTH-001` 음성 분기의 stale 전파 범위를 계산할 수 없다 |
 | **액션 페이로드 형상**(position-only 8/16 · 단위 태그 deg·deg/s·Nm) | `TEL` `action_features` · `WS` 명령 프레임 · `REC` `action` 차원 | 텔레옵이 보내는 것과 기록되는 것이 형상 불일치 → `CTR-ACT@v1`(0-A 동결)과 삼중 불일치 |
 | **큐 의미론**(bounded · 우선순위 클래스 · drop 정책 · latest-wins) | `WS` 클래스별 큐 · `CAM` 프리뷰 `read_latest()` · `CAP` 매칭 실패 drop | drop이 "정상"인지 "결함"인지가 계약마다 달라진다 → 품질 리포트가 셋 다른 값을 낸다 |
-| **에러 봉투**(`OA-*` 코드 · 사유 필드 · 심각도) | 5종 전부 | `CTR-ERR@v1`(0-Ops 생산)이 계약마다 다르게 감싸인다 |
+| **에러 봉투**(`OA-*` 코드 · 사유 필드 · 심각도) | 5종 전부 | `CTR-ERR@v2`(0-Ops 생산)이 계약마다 다르게 감싸인다 |
 
 따라서 **`WP-3A-00`이 `CTR-PRIM@v1`을 먼저 동결하고, `WP-3A-01`~`05`는 그것을 소비한다.** 5개 스키마 사이의 병렬성은 유지되지만, 그것은 "상호참조가 없어서"가 아니라 **"공유분을 위로 빼내서"** 성립한다. 이 순서를 지키지 않으면 원시타입이 5벌로 갈라지고, 3B fan-out이 그 갈라짐 위에서 13갈래로 증폭된다.
 
@@ -377,7 +377,7 @@ Wave 1 ⑤에서 `PG-SAFE-001` 통과 후 가드된 토크-ON이 성립한 직�
 
 | WP | 무엇 | 입력 | 산출 | 실행클래스 | 워크플로우 형상 |
 |---|---|---|---|---|---|
-| `WP-3A-00` | 🔴 **공유 원시타입 동결** → `CTR-PRIM@v1` — **3A의 단일 진입점** | `CTR-ACT@v1`·`CTR-UNIT@v1`·`CTR-ERR@v1`(Wave 0-A/0-Ops 동결본), `WP-2A-02` 리스 시계 소유권 규약, `13` §2.1 | **카메라 식별자 타입**(슬롯 키 문법·`left_`/`right_` 규칙·시뮬 namespace), **타임스탬프 도메인**(`CLOCK_MONOTONIC` ns · **서버 시계 = 만료 판정 유일 소유자** · 클라이언트 시계 = age 입력 · 합성 격자 `timestamp` ⟂ `capture_ts`), **프레임 타입 태그**(RGB/depth/채널), **액션 페이로드 형상**(position-only 8/16 + 단위 태그, `CTR-ACT@v1` 재수출), **큐 의미론**(bounded·우선순위 클래스·drop 정책·latest-wins), **에러 봉투**(`CTR-ERR@v1` 래핑 규약) | `AI-offline` | `SHAPE-CF` — **병렬 금지, 3A 전 계약의 선행**(B-3A.0a) |
+| `WP-3A-00` | 🔴 **공유 원시타입 동결** → `CTR-PRIM@v1` — **3A의 단일 진입점** | `CTR-ACT@v1`·`CTR-UNIT@v1`·`CTR-ERR@v2`(Wave 0-A/0-Ops 동결본), `WP-2A-02` 리스 시계 소유권 규약, `13` §2.1 | **카메라 식별자 타입**(슬롯 키 문법·`left_`/`right_` 규칙·시뮬 namespace), **타임스탬프 도메인**(`CLOCK_MONOTONIC` ns · **서버 시계 = 만료 판정 유일 소유자** · 클라이언트 시계 = age 입력 · 합성 격자 `timestamp` ⟂ `capture_ts`), **프레임 타입 태그**(RGB/depth/채널), **액션 페이로드 형상**(position-only 8/16 + 단위 태그, `CTR-ACT@v1` 재수출), **큐 의미론**(bounded·우선순위 클래스·drop 정책·latest-wins), **에러 봉투**(`CTR-ERR@v2` 래핑 규약) | `AI-offline` | `SHAPE-CF` — **병렬 금지, 3A 전 계약의 선행**(B-3A.0a) |
 | `WP-3A-01` | **카메라 registry 계약 동결** → `CTR-CAM@v1` | **`CTR-PRIM@v1`**(카메라 식별자·프레임 타입·에러 봉투), LeRobot `cameras` dict 규약, `PG-CAM-001` 예비 열거 결과 | 이름 기반 레지스트리 + **필수/선택 capability**(RGB=필수, depth=선택), 팔별(`left_*`/`right_*`) vs 최상위 등록 규칙, 데이터셋 키 유도 규칙(**어느 계층도 해상도/fps 재선언 금지**) | `AI-offline` | `SHAPE-CF` — `CTR-PRIM@v1` 소비. 계약 내 병렬 금지 |
 | `WP-3A-02` | **`capture_ts` 사이드카 계약 동결** → `CTR-CAP@v1` | **`CTR-PRIM@v1`**(타임스탬프 도메인·카메라 식별자·큐 drop 의미론), `Camera` 서브클래스 grab 지점, LeRobot `timestamp` = `frame_index/fps` 사실 | `capture_ts`(ns, `CLOCK_MONOTONIC`, **grab 직후 부착**), sensor 타임스탬프·frame-number 병행 보존 규약, 에피소드별 사이드카 스키마 `{episode_index, frame_index, <slot>_capture_ts…}` | `AI-offline` | `SHAPE-CF` — `CTR-PRIM@v1` 소비. 계약 내 병렬 금지 |
 | `WP-3A-03` | **텔레오퍼레이터 계약 동결** → `CTR-TEL@v1` | **`CTR-PRIM@v1`**(액션 페이로드 형상·타임스탬프 도메인·에러 봉투), LeRobot `Teleoperator` ABC, `05` §2.3/§2.5 | `lerobot_teleoperator_openarm_vr` 패키지 계약, `action_features` = **flat `{key: type}`**, `get_action()` **비블로킹**, 비추상 `sync_state(obs)` 추가, 3단 유효성(OK/STALE/INVALID), KER 삽입 슬롯 예약 | `AI-offline` | `SHAPE-CF` — `CTR-PRIM@v1` 소비. 계약 내 병렬 금지 |
@@ -389,7 +389,7 @@ Wave 1 ⑤에서 `PG-SAFE-001` 통과 후 가드된 토크-ON이 성립한 직�
 
 | WP | 동결 인터페이스 계약 | 수용 기준 (검증가능) | 음성 분기 | 명세 근거 |
 |---|---|---|---|---|
-| `WP-3A-00` | `CTR-PRIM@v1` — **공유 원시타입의 유일 정의처.** `WP-3A-01`~`05`는 이를 **소비만** 하고 재정의하지 않는다. 원시타입 변경은 `CTR-PRIM@v(n+1)` + 5개 소비 계약 전부 `SUPERSEDED`(`CR-2`). 🔴 소유 경로 = `contracts/prim/schema.py`, `contracts/prim/schema.json` (`CONTRACT_FROZEN` — `CTR-PRIM@v1`), `contracts/prim/**` (`EXCLUSIVE`), `tests/wp3a00/**` (`EXCLUSIVE`) | ① 6종 원시타입(카메라 식별자·타임스탬프 도메인·프레임 타입·액션 페이로드 형상·큐 의미론·에러 봉투)이 각각 **단일 정의 지점**을 가짐 ② `WP-3A-01`~`05` 산출 스키마에 **원시타입 재정의 0건**이 정적검사로 확인됨(예: `CAP`이 자기 타임스탬프 도메인을 선언하면 실패) ③ **만료 판정 시계 소유자 = 서버**가 원시타입 레벨에 못 박히고, `CTR-WS@v1`이 이를 뒤집을 수 없음이 확인됨 ④ 카메라 식별자가 `CAM`/`CAP`/`WS`/`REC` 4계약에서 **동일 문법으로 조인 가능**함이 픽스처 라운드트립으로 증명됨 ⑤ 정규화 해시가 레지스트리에 등재됨 | 원시타입 재정의 발견 → `FAIL_BLOCKING`(계약이 5벌로 갈라진 채 3B가 13갈래로 증폭된다). 3B 중 원시타입 결함 발견 → `CTR-PRIM@v2` + **5개 소비 계약 전부 `SUPERSEDED`**(이것이 원시타입을 위로 뺀 대가이자, 아래에 흩어뒀을 때보다 싼 이유) | `CTR-ACT@v1`·`CTR-UNIT@v1`·`CTR-ERR@v1`(0-A/0-Ops), U-4(`WP-2A-02` 시계 소유권), `FR-GUI-040`(H2)/`092`, `FR-REC-008`, `FR-CAM-001`/`006` |
+| `WP-3A-00` | `CTR-PRIM@v1` — **공유 원시타입의 유일 정의처.** `WP-3A-01`~`05`는 이를 **소비만** 하고 재정의하지 않는다. 원시타입 변경은 `CTR-PRIM@v(n+1)` + 5개 소비 계약 전부 `SUPERSEDED`(`CR-2`). 🔴 소유 경로 = `contracts/prim/schema.py`, `contracts/prim/schema.json` (`CONTRACT_FROZEN` — `CTR-PRIM@v1`), `contracts/prim/**` (`EXCLUSIVE`), `tests/wp3a00/**` (`EXCLUSIVE`) | ① 6종 원시타입(카메라 식별자·타임스탬프 도메인·프레임 타입·액션 페이로드 형상·큐 의미론·에러 봉투)이 각각 **단일 정의 지점**을 가짐 ② `WP-3A-01`~`05` 산출 스키마에 **원시타입 재정의 0건**이 정적검사로 확인됨(예: `CAP`이 자기 타임스탬프 도메인을 선언하면 실패) ③ **만료 판정 시계 소유자 = 서버**가 원시타입 레벨에 못 박히고, `CTR-WS@v1`이 이를 뒤집을 수 없음이 확인됨 ④ 카메라 식별자가 `CAM`/`CAP`/`WS`/`REC` 4계약에서 **동일 문법으로 조인 가능**함이 픽스처 라운드트립으로 증명됨 ⑤ 정규화 해시가 레지스트리에 등재됨 | 원시타입 재정의 발견 → `FAIL_BLOCKING`(계약이 5벌로 갈라진 채 3B가 13갈래로 증폭된다). 3B 중 원시타입 결함 발견 → `CTR-PRIM@v2` + **5개 소비 계약 전부 `SUPERSEDED`**(이것이 원시타입을 위로 뺀 대가이자, 아래에 흩어뒀을 때보다 싼 이유) | `CTR-ACT@v1`·`CTR-UNIT@v1`·`CTR-ERR@v2`(0-A/0-Ops), U-4(`WP-2A-02` 시계 소유권), `FR-GUI-040`(H2)/`092`, `FR-REC-008`, `FR-CAM-001`/`006` |
 | `WP-3A-01` | `CTR-CAM@v1` — 카메라 dict = **유일 스키마**. 고정 슬롯 계약 금지. 시뮬은 **필수 capability subset 충족 시 정합**('정확히 N스트림 동일 스키마' 요구 금지). 🔴 소유 경로 = `contracts/camera_registry/schema.json` (`CONTRACT_FROZEN` — `CTR-CAM@v1`), `contracts/camera_registry/**` (`EXCLUSIVE`), `tests/wp3a01/**` (`EXCLUSIVE`) | ① 해상도/fps를 dict 밖에서 재선언한 코드 0건(정적검사) ② `width`/`height`/`fps` 미지정 시 수집 시작 **차단** ③ 팔별 등록 키에 `left_`/`right_` 자동 부착이 UI에 명시 ④ 슬롯 이름 충돌이 저장 전 거부됨 ⑤ 시뮬 전용 scene 카메라가 별도 namespace | 고정 슬롯 가정이 하류에 남음 → `FAIL_BLOCKING`(3B 재작업) | `FR-CAM-001`/`006`/`070`/`081`/`088`, `FR-REC-013`, `FR-SIM-019` |
 | `WP-3A-02` | `CTR-CAP@v1` — `capture_ts`는 **grab 직후 부착**. 소비자(GUI/레코더)가 수신 시각으로 붙이는 것 **금지**. 🔴 소유 경로 = `contracts/capture/schema.py`, `contracts/capture/schema.json` (`CONTRACT_FROZEN` — `CTR-CAP@v1`), `contracts/capture/**`, `tests/wp3a02/**` (`EXCLUSIVE`). 동결 대상 = `contracts/capture/schema.py`·`contracts/capture/schema.json` — WP-3A-06가 `CTR-CAP@v1`로 콘텐츠 해시 동결(DRAFT 유지·ledger 미추가) | ① 소비자 측 타임스탬프 부착 0건(정적검사) ② 사이드카가 에피소드별로 생성되고 `frame_index`로 조인됨 ③ sensor ts/frame-number 제공 장치에서 host↔sensor 오프셋·드리프트와 frame-number 연속성이 검증됨 ④ LeRobot `timestamp`가 **합성 격자**임이 메타·UI에 명시 | 소비자 타임스탬프 발견 → `FAIL_BLOCKING`(노출 위상차를 영원히 못 잡는다) | `FR-CAM-014`/`016`/`022`, `FR-REC-044`/`045`, `FR-DAT-010` |
 | `WP-3A-03` | `CTR-TEL@v1` — 텔레오퍼레이터 = **LeRobot 무수정 플러그인**. 포크 금지. `get_action()` 블로킹 금지 · **타깃 = `jetson_nano`·`jetson_orin`·`rtx_5090`·`rtx_a6000`** (전 타깃 필수 — `03` §5.11) · 🔴 소유 경로 = `contracts/teleop/schema.json` (`CONTRACT_FROZEN` — `CTR-TEL@v1`), `contracts/teleop/**` (`EXCLUSIVE`), `tests/wp3a03/**` (`EXCLUSIVE`) | ① `--teleop.type=openarm_vr`가 LeRobot 본체 수정 0줄로 로드됨 ② `action_features`가 flat 규약(b규약 사용 시 데이터셋 피처 생성 실패가 재현됨) ③ `get_action()`에 블로킹 IO 0건(정적검사) ④ `sync_state()` 호출 없는 경로(CLI)는 **검증 전용**으로만 표기되고 운용 경로가 아님이 문서화됨 ⑤ KER 삽입 슬롯이 **CAN 채널 0개**를 소비함이 계약으로 고정 | flat 규약 위반 → `FAIL_BLOCKING`. `sync_state` 미호출 운용 경로 존재 → `FAIL_BLOCKING`(IK 개루프) | `FR-TEL-001`~`007`, `FR-TEL-062`/`063`/`064`/`066` |

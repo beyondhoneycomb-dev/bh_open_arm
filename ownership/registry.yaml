@@ -6,7 +6,7 @@
 # data it operates on is never restated here:
 #
 #   - who owns which glob  -> registry/traceability.yaml, the owns[] axis
-#   - the handover order   -> docs/plan/06-추적성-레지스트리.md §3.2, 소유 WP column
+#   - the handover order   -> docs/v1/plan/06-추적성-레지스트리.md §3.2, 소유 WP column
 #
 # ownership.prover derives the live claim view from those two sources; the
 # handover_chains block below is the one thing this contract adds — the arrows of
@@ -27,7 +27,7 @@ record_schema:
 # The authoritative inputs. This contract is a view over them, never a fork.
 sources:
   ownership_truth: registry/traceability.yaml    # owns[] axis: glob -> owner_wp, mode
-  handover_order: docs/plan/06-추적성-레지스트리.md §3.2   # 소유 WP column, arrows
+  handover_order: docs/v1/plan/06-추적성-레지스트리.md §3.2   # 소유 WP column, arrows
 
 span_model:
   kind: half-open-ordinal-interval

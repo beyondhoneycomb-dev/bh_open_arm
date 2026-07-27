@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://bh-open-arm/registry/generate/manifest.schema.json",
   "title": "OpenArm work-package manifest",
-  "description": "One manifest per work package, machine-read by the workflow that executes it. Field definitions are owned by docs/plan/06-추적성-레지스트리.md §2.2 and the WP-BOOT-02 contract cell of docs/plan/02a §−2.3; where this file disagrees with them, they are canonical and this file is the defect. contract_refs[] is deliberately absent: it is a derived view of consumes[] ∪ produces[] computed by the index generator, not a stored field, and unevaluatedProperties rejects it here.",
+  "description": "One manifest per work package, machine-read by the workflow that executes it. Field definitions are owned by docs/v1/plan/06-추적성-레지스트리.md §2.2 and the WP-BOOT-02 contract cell of docs/v1/plan/02a §−2.3; where this file disagrees with them, they are canonical and this file is the defect. contract_refs[] is deliberately absent: it is a derived view of consumes[] ∪ produces[] computed by the index generator, not a stored field, and unevaluatedProperties rejects it here.",
   "type": "object",
   "required": [
     "wp_id",

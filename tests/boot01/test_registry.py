@@ -1,6 +1,6 @@
 """WP-BOOT-01 acceptance criteria, as executable checks.
 
-Criterion numbering follows `docs/plan/02a-작업패키지-Wave-minus1-to-1.md` §-2.3,
+Criterion numbering follows `02a-작업패키지-Wave-minus1-to-1.md` §-2.3,
 row `WP-BOOT-01`.
 """
 
@@ -9,25 +9,36 @@ from __future__ import annotations
 import copy
 import json
 import re
-from pathlib import Path
 from typing import Any
 
 import pytest
 import yaml
 from jsonschema import Draft202012Validator
 
+from registry import PLAN_DIR, PLAN_DIR_REL, REPO_ROOT, SPEC_DIR, SPINE_DOC_REL
 from registry.ingest.build import build
 from registry.ingest.catalog import parse_all as parse_catalogs
 from registry.ingest.spec import parse_all as parse_spec
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-PLAN_DIR = REPO_ROOT / "docs" / "plan"
-SPEC_DIR = REPO_ROOT / "docs" / "spec"
 SCHEMA_PATH = REPO_ROOT / "registry" / "schema" / "traceability.schema.json"
 REGISTRY_PATH = REPO_ROOT / "registry" / "traceability.yaml"
 
 ISSUED_PACKAGE_COUNT = 177
-SPINE_REF = "docs/plan/00-실행계획-개요.md@9b521ad"
+SPINE_REF = f"{SPINE_DOC_REL}@9b521ad"
+
+
+def test_schema_spine_pattern_agrees_with_the_corpus_constant(schema: dict[str, Any]) -> None:
+    """The schema's `spine_ref` prefix must be the prefix the seeder writes.
+
+    JSON Schema cannot import `registry.PLAN_DIR_REL`, so the corpus location is
+    stated twice. Both copies still parse and both still validate their own inputs
+    after one of them diverges — the mismatch only surfaces as every record failing
+    validation at seed time, with nothing naming the prefix as the cause.
+    """
+    pattern = schema["properties"]["spine_ref"]["pattern"]
+    assert pattern.startswith(f"^{PLAN_DIR_REL}/"), (
+        f"schema spine_ref pattern {pattern!r} does not anchor on {PLAN_DIR_REL!r}"
+    )
 
 
 @pytest.fixture(scope="module")

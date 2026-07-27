@@ -8,6 +8,7 @@ partial file and no stray temp file.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -72,6 +73,28 @@ def test_tampered_body_is_refused(tmp_path: Path, valid_record: GripperMirrorRec
     path.write_text(tampered, encoding="utf-8")
 
     with pytest.raises(GripperConfigError, match="checksum"):
+        load_gripper_record(path)
+
+
+def test_blank_checksum_is_refused_rather_than_recomputed(
+    tmp_path: Path, valid_record: GripperMirrorRecord
+) -> None:
+    """Clearing the digest must not disable the integrity check it belongs to.
+
+    A hand-edit that also blanks the stale checksum is the ordinary way this file gets
+    tampered with. Treating an empty digest as "nothing to compare" would load the body
+    unverified and stamp a fresh hash of it, so the record would report itself intact and
+    the next save would persist that claim.
+    """
+    path = gripper_record_path_for(tmp_path, "armpair")
+    save_gripper_record(path, valid_record)
+
+    text = path.read_text(encoding="utf-8")
+    blanked = re.sub(r'"checksum":\s*"[0-9a-f]*"', '"checksum": ""', text)
+    assert blanked != text
+    path.write_text(blanked, encoding="utf-8")
+
+    with pytest.raises(GripperConfigError, match="no checksum"):
         load_gripper_record(path)
 
 

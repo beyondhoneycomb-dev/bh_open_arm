@@ -1,7 +1,7 @@
 // Test-only loaders that pull S-13's canon from the frozen sources on disk so the
 // lane consumes the real contracts, not values re-authored in the screen:
 // contracts/errors/error_registry.yaml (CTR-ERR@v1, canon 14 §2.10) and the port
-// tables of docs/spec/01 §2.17 + docs/spec/14 §2.1. Regex parsing keeps a YAML
+// tables of docs/v1/spec/01 §2.17 + docs/v1/spec/14 §2.1. Regex parsing keeps a YAML
 // dependency out of the frontend, matching errors.contract.test.ts. Imported only
 // by *.test.tsx; never part of the shipped bundle.
 
@@ -100,9 +100,9 @@ function parsePortTable(text: string, heading: string): CanonPortEntry[] {
 // The port-map canon = union of 01 §2.17 + 14 §2.1 (13 §2.7). Deduped by
 // component so a component named in both tables yields one canon row.
 export function loadPortCanon(): CanonPortEntry[] {
-  const fromArch = parsePortTable(repoFile("docs/spec/01-시스템-아키텍처.md"), "### 2.17 포트 맵");
+  const fromArch = parsePortTable(repoFile("docs/v1/spec/01-시스템-아키텍처.md"), "### 2.17 포트 맵");
   const fromOps = parsePortTable(
-    repoFile("docs/spec/14-시스템-운영.md"),
+    repoFile("docs/v1/spec/14-시스템-운영.md"),
     "프로세스·포트 맵 (운영이 감독해야 할 전부)",
   );
   const byComponent = new Map<string, CanonPortEntry>();
@@ -116,7 +116,7 @@ export function loadPortCanon(): CanonPortEntry[] {
 
 // The verbatim FR-OPS-023 requirement text, for the diagnostic-bundle drift guard.
 export function loadFrOps023Text(): string {
-  const text = repoFile("docs/spec/14-시스템-운영.md");
+  const text = repoFile("docs/v1/spec/14-시스템-운영.md");
   const line = text.split("\n").find((candidate) => candidate.includes("FR-OPS-023"));
   return line ?? "";
 }

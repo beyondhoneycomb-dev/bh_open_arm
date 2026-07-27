@@ -10,10 +10,8 @@ from pathlib import Path
 
 import pytest
 
+from registry import PLAN_DIR, SPEC_DIR
 from registry.ingest.markdown import find_pipe_defects, plain_text, read_sections, split_row
-
-PLAN_DIR = Path(__file__).resolve().parents[2] / "docs" / "plan"
-SPEC_DIR = Path(__file__).resolve().parents[2] / "docs" / "spec"
 
 
 @pytest.mark.parametrize(

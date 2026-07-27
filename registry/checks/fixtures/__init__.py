@@ -19,9 +19,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from registry import PLAN_DIR, REPO_ROOT, SPEC_DIR, SPINE_DOC_REL
 from registry.checks.corpus import Corpus, GateCell
-
-REPO_ROOT = Path(__file__).resolve().parents[3]
 
 CLEAN_ENV_HASH = f"sha256:{'0' * 64}"
 
@@ -82,13 +81,13 @@ def corpus(
     """
     built = Corpus(
         root or REPO_ROOT,
-        plan_dir=REPO_ROOT / "docs" / "plan",
-        spec_dir=REPO_ROOT / "docs" / "spec",
+        plan_dir=PLAN_DIR,
+        spec_dir=SPEC_DIR,
     )
     records = tuple(entries) if entries else (record(),)
     built.__dict__["registry"] = {
         "version": 1,
-        "spine_ref": f"docs/plan/00-실행계획-개요.md@{'a' * 7}",
+        "spine_ref": f"{SPINE_DOC_REL}@{'a' * 7}",
         "entries": list(records),
     }
     built.__dict__["entries"] = records

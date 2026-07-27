@@ -16,12 +16,13 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from registry import DAG_DOC_REL
 from registry.contracts.violations import SEVERITY_BLOCKING, ContractViolationError, Violation
 from registry.ingest.catalog import CONTRACT_ID, WP_ID
 from registry.ingest.markdown import plain_text, read_sections
 
 CONTRACT_COUNT = 13
-CANONICAL_DOC = Path("docs/plan/01-의존성-DAG-및-병렬화.md")
+CANONICAL_DOC = Path(DAG_DOC_REL)
 CANONICAL_SECTION_PREFIX = "6.2"
 
 # `@v<n>` is the freeze generation and has no digits beneath it (`01` §6.2), so

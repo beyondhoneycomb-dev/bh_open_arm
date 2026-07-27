@@ -4,7 +4,7 @@
 `02-작업패키지.md` does not exist, and the canon is `02a`/`02b`/`02c`/`02d`. A
 citation of a document that was never written reads as authority and carries none.
 
-1. `docs/plan/*.md` paths cited by this registry and by `06` itself.
+1. Plan-document paths cited by this registry and by `06` itself.
 2. `spec_ref` of the form `<doc>#<section>` — the section must exist, including the
    plan-canon sections that `PLAN-*` records point at.
 3. `spine_ref` must be a real file path plus commit, never a bare `"SPINE vN"`.
@@ -18,6 +18,7 @@ import re
 
 import yaml
 
+from registry import PLAN_DIR_REL, SPEC_DIR_REL, SPINE_DOC_NAME
 from registry.checks.corpus import Corpus
 from registry.checks.model import RuleResult, fail
 from registry.ingest.markdown import all_tables, plain_text, read_sections
@@ -25,12 +26,12 @@ from registry.ingest.markdown import all_tables, plain_text, read_sections
 RULE_ID = "CI-17"
 TITLE = "document references exist"
 
-REBINDING_DOC = "00-실행계획-개요.md"
+REBINDING_DOC = SPINE_DOC_NAME
 
 SPEC_REF = re.compile(r"^(?P<doc>[0-9]{2})#(?P<section>.+)$")
 SPINE_CITATION = re.compile(r"SPINE\s*§\s*(?P<token>[A-Z0-9](?:[0-9]|-[0-9A-Z]|\.[0-9])*)")
 SPINE_REF_WITH_COMMIT = re.compile(r"^(?P<path>[^@]+)@(?P<commit>[0-9a-f]{7,40})$")
-PLAN_DOC_PATH = re.compile(r"docs/plan/[0-9A-Za-z가-힣._-]+\.md")
+PLAN_DOC_PATH = re.compile(rf"{re.escape(PLAN_DIR_REL)}/[0-9A-Za-z가-힣._-]+\.md")
 
 REBINDING_SECTION_MARKER = "9.0"
 
@@ -155,7 +156,7 @@ def run(corpus: Corpus) -> RuleResult:
                     req_or_wp="(document reference)",
                     path=origin,
                     reason="cites a planning document path that does not exist",
-                    expected="an existing docs/plan/*.md file",
+                    expected=f"an existing {PLAN_DIR_REL}/*.md file",
                     actual=cited,
                 )
             )
@@ -185,7 +186,7 @@ def run(corpus: Corpus) -> RuleResult:
                     req_or_wp=str(record.get("req", "?")),
                     path=corpus.rel(corpus.registry_path),
                     reason="spec_ref cites a document number with no matching document",
-                    expected="a document number present in docs/spec or docs/plan",
+                    expected=f"a document number present in {SPEC_DIR_REL} or {PLAN_DIR_REL}",
                     actual=raw,
                 )
             )

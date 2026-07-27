@@ -235,13 +235,14 @@ class OpenArmCalibration:
 
         Raises:
             CalibrationError: If the payload is missing a required field, has an
-                extra field, or carries a checksum that does not match its body.
+                extra field, carries no checksum, or carries a checksum that does not
+                match its body.
         """
         known = set(cls.__dataclass_fields__)
         unknown = set(data) - known
         if unknown:
             raise CalibrationError(f"unknown calibration field(s): {sorted(unknown)}")
-        stored_checksum = data.get("checksum", "")
+        stored_checksum = str(data.get("checksum", ""))
         kwargs = {k: v for k, v in data.items() if k != "checksum"}
         try:
             calibration = cls(**kwargs)
@@ -249,8 +250,19 @@ class OpenArmCalibration:
             raise CalibrationError(
                 f"calibration payload does not match {CONTRACT_ID}: {exc}"
             ) from exc
-        if stored_checksum and stored_checksum != calibration.compute_checksum():
+        # An absent checksum is a failed integrity check, not a skipped one. Anyone
+        # editing a joint sign or a zero offset by hand blanks the now-wrong digest as
+        # the obvious next step, and treating that as "nothing to verify" would return a
+        # calibration stamped with a fresh hash of the edited body — the set-zero
+        # residual and the taught-posture match would then both certify against the
+        # tampered reference, and the next save would overwrite the only evidence.
+        if not stored_checksum:
+            raise CalibrationError(
+                "calibration carries no checksum: an unverifiable body is refused, "
+                "not accepted and re-stamped"
+            )
+        if stored_checksum != calibration.compute_checksum():
             raise CalibrationError(
                 "calibration checksum mismatch: the body does not hash to its recorded checksum"
             )
-        return replace(calibration, checksum=stored_checksum or calibration.compute_checksum())
+        return replace(calibration, checksum=stored_checksum)

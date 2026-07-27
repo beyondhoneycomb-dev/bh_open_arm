@@ -96,7 +96,7 @@ def test_empty_derivation_basis_is_refused() -> None:
 
 def test_physical_source_basis_is_accepted() -> None:
     assert_derivation_basis_not_self(
-        ("docs/spec/03-모터-설정.md#trap-2", "backend/can/rid/motor_limits.py"),
+        ("docs/v1/spec/03-모터-설정.md#trap-2", "backend/can/rid/motor_limits.py"),
         "registry/build/evidence/CG-1-06i/",
     )
 

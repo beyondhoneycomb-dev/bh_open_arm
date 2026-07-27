@@ -171,7 +171,7 @@ def render_m24_row(verdict: M24Verdict) -> str:
     """Render the M-24 ledger row from a verdict — the acceptance ② artifact.
 
     The row mirrors the `16` M-24 table shape (`| id | question | finding |
-    action |`). Ownership keeps this WP out of `docs/spec/16`, so the updated row
+    action |`). Ownership keeps this WP out of `docs/v1/spec/16`, so the updated row
     is produced as an artifact here rather than written into the spec prose.
 
     Args:

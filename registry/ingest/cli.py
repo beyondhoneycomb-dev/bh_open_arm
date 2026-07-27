@@ -1,7 +1,7 @@
 """Emit the registry document and the prose-to-registry reconciliation report.
 
 The Korean text in `_render_report` is report *content*, not commentary: it is
-the body of a document written for the same readers as `docs/plan/`, which is
+the body of a document written for the same readers as the plan corpus, which is
 Korean throughout. The English-comments rule governs what the code says about
 itself, and every comment and docstring here is English. Translating the report
 body would leave the reconciliation output in a different language from the
@@ -20,14 +20,14 @@ from typing import Any
 import yaml
 from jsonschema import Draft202012Validator
 
+from registry import PLAN_DIR, REPO_ROOT, SPEC_DIR, SPINE_DOC_REL
 from registry.ingest.build import build
 from registry.ingest.resolve import RULE_AMBIGUOUS, RULE_COVERAGE, RULE_DOC06, RULE_SOLE
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
 REGISTRY_PATH = REPO_ROOT / "registry" / "traceability.yaml"
 SCHEMA_PATH = REPO_ROOT / "registry" / "schema" / "traceability.schema.json"
 REPORT_PATH = REPO_ROOT / "registry" / "build" / "reconciliation.md"
-SPINE_DOC = "docs/plan/00-실행계획-개요.md"
+SPINE_DOC = SPINE_DOC_REL
 
 
 class _NoAliasDumper(yaml.SafeDumper):
@@ -194,8 +194,8 @@ def main(argv: list[str] | None = None) -> int:
         (int) 0 when the registry validates, 1 otherwise.
     """
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--plan-dir", type=Path, default=REPO_ROOT / "docs" / "plan")
-    parser.add_argument("--spec-dir", type=Path, default=REPO_ROOT / "docs" / "spec")
+    parser.add_argument("--plan-dir", type=Path, default=PLAN_DIR)
+    parser.add_argument("--spec-dir", type=Path, default=SPEC_DIR)
     parser.add_argument("--check", action="store_true", help="validate without writing")
     args = parser.parse_args(argv)
 

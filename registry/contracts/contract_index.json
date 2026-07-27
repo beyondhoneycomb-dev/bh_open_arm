@@ -1,8 +1,8 @@
 {
   "version": 1,
   "namespace": "CTR-<NAME>@v<n>",
-  "canonical_source": "docs/plan/01-의존성-DAG-및-병렬화.md",
-  "ledger_head": "93993fae3220e02fb764141b5163ac6612af3e0e20a0cd60f2e3507bf80536e1",
+  "canonical_source": "docs/v1/plan/01-의존성-DAG-및-병렬화.md",
+  "ledger_head": "262227619c872ca3d41cb00e28b3778fdb0417dbe344bce64ce30b691315c82f",
   "contracts": [
     {
       "contract_id": "CTR-ACT@v1",
@@ -22,6 +22,14 @@
       "contract_id": "CTR-CAL@v1",
       "version": 1,
       "canonical_hash": "sha256:8339de3cd5c1979395ce918411ce291ba5b06f6addf1727f5ca7daeb5bf5a480",
+      "status": "SUPERSEDED",
+      "owner_wp": "WP-1-02",
+      "consumer_wps": []
+    },
+    {
+      "contract_id": "CTR-CAL@v2",
+      "version": 2,
+      "canonical_hash": "sha256:41e8bcabb1f80322efd0dd91acd9ebdb14dd2f2e9a9a960ffebf437643989928",
       "status": "FROZEN",
       "owner_wp": "WP-1-02",
       "consumer_wps": [
@@ -54,6 +62,14 @@
       "contract_id": "CTR-ERR@v1",
       "version": 1,
       "canonical_hash": "sha256:7e448ad96a0da70170f518786d72823e7f85734c6ced9a0eb1f795bf7bc9cc89",
+      "status": "SUPERSEDED",
+      "owner_wp": "WP-OPS-06",
+      "consumer_wps": []
+    },
+    {
+      "contract_id": "CTR-ERR@v2",
+      "version": 2,
+      "canonical_hash": "sha256:f96d529934a2884cda047f2789b7ca7c59abbe55f9626b425a3d9e38251067f5",
       "status": "FROZEN",
       "owner_wp": "WP-OPS-06",
       "consumer_wps": [

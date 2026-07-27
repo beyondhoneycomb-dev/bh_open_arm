@@ -11,17 +11,21 @@ warns against "correcting" the two numbers to match:
 * `JUDGE_RANGE` — `BUILD_RANGE` minus `JUDGE_EXCLUDED`. What the BOOT band's own
   acceptance is decided by.
 
-Two rules are excluded, for reasons that do not generalise to each other:
+One rule is excluded:
 
 * `CI-18` — **permanent.** Its predicate cites this very acceptance gate, so
   judging it would make the gate reference itself.
-* `CI-07` — **temporal, lift after Wave −1.** It judges the normalisation hash,
-  which `WP-N1-04` mints in Wave −1. At BOOT landing every contested record has a
-  null hash because Wave −1 has not run, and Wave −1 cannot run until this gate
-  passes — the same circularity `CI-18` has, but resolved by exclusion rather than
-  built into the predicate. Once Wave −1 lands the hashes and the registry
-  re-seeds, `CI-07` goes green on its own; remove it from `JUDGE_EXCLUDED` then, so
-  a later missing hash fails the build.
+
+`CI-07` was excluded on the same circularity while Wave −1 could not run until this
+gate passed, on the stated condition that the exclusion be lifted once Wave −1 landed.
+Wave −1 has landed, so it is judged. It did not go green on its own: `02a`'s `NORM-*`
+table names requirements as contested that `docs/v1/plan/normalization/ledger.yaml`
+carries no structured ruling for, and the seeder stamps the hash only from the
+structured winners — deliberately, because stamping from the same free-text columns
+`CI-07` reads would make the rule green while catching nothing. The gap between the two
+is unruled contested requirements, which is what `CI-07` exists to report. Keeping the
+exclusion past its condition would have left a rule that is present in the code and
+switched off in the config, which is the shape that gets trusted without being true.
 """
 
 from __future__ import annotations
@@ -104,12 +108,10 @@ BUILD_RANGE: tuple[ModuleType, ...] = (
     ci_18,
 )
 
-JUDGE_EXCLUDED = ("CI-07", "CI-18")
+JUDGE_EXCLUDED = ("CI-18",)
 
 # Rules whose predicate references the band gate's own pass/fail state, and which
-# therefore receive the running judged-finding tally as a second argument. This is
-# a narrower set than `JUDGE_EXCLUDED`: `CI-07` is excluded from judging but does
-# not read the gate state, so it takes the corpus alone.
+# therefore receive the running judged-finding tally as a second argument.
 GATE_STATE_RULES = ("CI-18",)
 
 JUDGE_RANGE: tuple[ModuleType, ...] = tuple(

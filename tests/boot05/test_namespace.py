@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from registry import DAG_DOC_NAME, PLAN_DIR, PLAN_SUBPATH
 from registry.contracts.catalog import CONTRACT_COUNT, load_catalog, parse_contract_id
 from registry.contracts.index import freeze_contract
 from registry.contracts.violations import ContractViolationError
@@ -94,12 +95,12 @@ def test_every_canonical_contract_can_be_registered(store) -> None:
 
 def test_truncated_canonical_table_is_rejected(tmp_path: Path, store) -> None:
     """A catalog that lost a row fails loudly instead of shrinking silently."""
-    source = (REPO_ROOT / "docs/plan/01-의존성-DAG-및-병렬화.md").read_text(encoding="utf-8")
+    source = (PLAN_DIR / DAG_DOC_NAME).read_text(encoding="utf-8")
     truncated = source.replace(
         "| `CTR-REC@v1` | **recorder 스키마** | `WP-3A-05` | Wave 3B 진입 |", "| x | x | x | x |", 1
     )
     doctored_root = tmp_path / "doctored"
-    doctored = doctored_root / "docs/plan/01-의존성-DAG-및-병렬화.md"
+    doctored = doctored_root / PLAN_SUBPATH / DAG_DOC_NAME
     doctored.parent.mkdir(parents=True)
     doctored.write_text(truncated, encoding="utf-8")
 

@@ -7,8 +7,8 @@ Usage:
     python -m registry.normalization.cli --barrier M.yaml # start-block one WP manifest
 
 `--check` validates two artifacts against the live corpus — the contradiction
-ledger (`docs/plan/normalization/ledger.yaml`) and the gate ID namespace mapping
-(`docs/plan/normalization/gate_spec_map.yaml`) — and, for the real corpus, that the
+ledger (`docs/v1/plan/normalization/ledger.yaml`) and the gate ID namespace mapping
+(`docs/v1/plan/normalization/gate_spec_map.yaml`) — and, for the real corpus, that the
 published normalization hash still matches their content. `--issue` recomputes and
 republishes that hash. `--barrier` refuses a manifest that declares no hash or an
 out-of-date one. Exit status is the contract: non-zero on any failure.

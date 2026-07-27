@@ -15,16 +15,12 @@ from backend.compat.policy_matrix import (
 
 # A source snippet that copies the 32-dim ceiling into a literal — the positive
 # control proving the scanner fires rather than passing vacuously.
-_HARDCODED_SOURCE = (
-    "def capability():\n"
-    "    return {'max_state_dim': 32, 'max_action_dim': 32}\n"
-)
+_HARDCODED_SOURCE = "def capability():\n    return {'max_state_dim': 32, 'max_action_dim': 32}\n"
 
 # A source snippet that reads the ceiling from a config object instead of restating
 # it — the negative control the scanner must leave clean.
 _INTROSPECTED_SOURCE = (
-    "def capability(config):\n"
-    "    return {'max_state_dim': config.max_state_dim}\n"
+    "def capability(config):\n    return {'max_state_dim': config.max_state_dim}\n"
 )
 
 

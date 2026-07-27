@@ -325,9 +325,9 @@ class GripperMirrorRecord:
             (GripperMirrorRecord) The validated record.
 
         Raises:
-            GripperConfigError: On unknown or missing fields, a checksum mismatch, or
-                any invariant violation (including the sign mirror), which is the load
-                refusal of acceptance (2).
+            GripperConfigError: On unknown or missing fields, an absent or mismatched
+                checksum, or any invariant violation (including the sign mirror), which
+                is the load refusal of acceptance (2).
         """
         known = set(cls.__dataclass_fields__)
         unknown = set(data) - known
@@ -350,11 +350,20 @@ class GripperMirrorRecord:
             )
         except KeyError as exc:
             raise GripperConfigError(f"gripper record missing required field: {exc}") from exc
-        if stored_checksum and stored_checksum != record.compute_checksum():
+        # An absent checksum is a failed integrity check, not a skipped one. Accepting it
+        # and stamping a freshly computed digest would return a record that reports itself
+        # verified while nothing verified it, and the next save would persist that digest
+        # over the only evidence the body had been edited.
+        if not stored_checksum:
+            raise GripperConfigError(
+                "gripper record carries no checksum: an unverifiable body is refused, "
+                "not accepted and re-stamped"
+            )
+        if stored_checksum != record.compute_checksum():
             raise GripperConfigError(
                 "gripper record checksum mismatch: the body does not hash to its recorded checksum"
             )
-        record.checksum = stored_checksum or record.compute_checksum()
+        record.checksum = stored_checksum
         return record
 
 

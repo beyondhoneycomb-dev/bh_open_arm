@@ -729,11 +729,26 @@ class BiOaOpenArmFollower(OpenArmRobot):
         self._connected = False
 
     def get_observation(self) -> RobotObservation:
-        """Merge both arms' frames under the frozen `left_`/`right_` channel names."""
+        """Merge both arms' frames under the frozen `left_`/`right_` channel names.
+
+        The CAN drop counter is observation *meta* rather than a per-arm channel: the ABC
+        declares it unprefixed for the bimanual robot too, so prefixing it emits two keys
+        the declared feature set does not contain and omits the one it does. LeRobot builds
+        a dataset's features from that declaration, so a prefixed counter is dropped from
+        every recorded episode — and the tally is the only signal that motor feedback
+        frames were lost, which is what makes a lossy-bus episode indistinguishable from a
+        clean one. The two arms share one bus lock and one counter semantic, so the robot's
+        count is their sum.
+        """
         observation: dict[str, float | int] = {}
+        dropped = 0
         for prefix, arm in (("left", self.left_arm), ("right", self.right_arm)):
             for channel, value in arm.get_observation().items():
+                if channel == DROP_COUNTER_META:
+                    dropped += int(value)
+                    continue
                 observation[f"{prefix}_{channel}"] = value
+        observation[DROP_COUNTER_META] = dropped
         return observation
 
     def send_action(self, action: RobotAction) -> RobotAction:
