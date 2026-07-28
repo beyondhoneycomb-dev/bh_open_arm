@@ -1,7 +1,7 @@
 # WP-ENV-04 environment hash — sha256({pin_sha, lock_hash, checker_version}).
-# pin_sha        = 30da8e687a6dfc617fcd94afc367ac7071c376ca
-# lock_hash      = sha256:d48805f5b70237261724aba787f2987dc7ba807a44c1078e83752adabb0a3582
+# pin_sha        = 30da8e687a6dfc617fcd94afc367ac7071c376ce
+# lock_hash      = sha256:851f17ecc1b7d336f54e999076ca709a0810e2dca33a7bc79a5a3d8fbe2404a0
 # checker_version = env04-upstream-facts@1
 # Every downstream WP manifest declares this as env_hash — mismatch = start refused.
 # Reissue: python -m registry.env.cli --issue
-sha256:a01951d6d9a030b8869e8ad2ee90ab90c4e90c1b65ed560975d133a4ecdb944f
+sha256:d28ff705fbef7c1e6eb42ad42955994331c6a8d325b829148886a3404a547cbe
