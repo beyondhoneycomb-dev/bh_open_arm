@@ -1,20 +1,21 @@
 """WP-3B-12 ③ — the quality report computes every listed metric, and exposes CAN drop.
 
-`02b` §5.2 WP-3B-12 ③: loop rate, jitter, CAN drop, camera drop, missing, jerk and the
-std floor. The CAN-drop measure must surface a `_batch_refresh` stale reuse rather than
-let it pass as a fresh sample. ⑥: the gate bakes in no threshold — an ungated metric reads
-UNSET, never a fabricated pass.
+`02b` §5.2 WP-3B-12 ③: cycle time, CAN drop, camera drop, missing, jerk and the std floor.
+The CAN-drop measure must surface a `_batch_refresh` stale reuse rather than let it pass as
+a fresh sample. ⑥: the gate bakes in no threshold — an ungated metric reads UNSET, never a
+fabricated pass. The cycle-time distribution itself is exercised in
+`test_cycle_time_report.py`, against the NORM-013 ruling that fixes what it must report.
 """
 
 from __future__ import annotations
 
 import pytest
 
+from backend.recorder.quality.constants import NANOS_PER_SECOND
 from backend.recorder.quality.metrics import (
     camera_drop_stats,
     can_drop_stats,
     jerk_stats,
-    loop_timing,
     missing_samples,
     std_floor_stats,
 )
@@ -33,27 +34,42 @@ from contracts.capture import (
     SensorSample,
     SlotCapture,
 )
-from contracts.fixtures.synthetic_dataset import build_synthetic_dataset
-from tests.wp3b12.support import frames_from_dataset
+from contracts.fixtures.synthetic_dataset import FIXTURE_FPS, build_synthetic_dataset
+from tests.wp3b12.support import frames_from_dataset, frames_with_cycle_instants
 
-_FIXTURE_FPS = 30.0
+# A cycle that holds the fixture target, so the supplied rate floor grades a real measure.
+_ON_TARGET_NS = NANOS_PER_SECOND // FIXTURE_FPS
 
 
 def test_report_on_synthetic_dataset_computes_every_metric() -> None:
-    """③ Building a report over the synthetic dataset yields all seven measures populated."""
-    dataset = build_synthetic_dataset(frame_count=8)
-    report = build_report(frames_from_dataset(dataset), dataset.sidecar, dataset.config)
+    """③ Building a report over the synthetic dataset yields all six measures populated.
 
-    assert report.frame_count == 8
-    assert report.loop.rate_hz == pytest.approx(_FIXTURE_FPS)
-    assert report.loop.jitter_std_s == pytest.approx(0.0, abs=1e-9)
+    The cycle instants are stamped here: the fixture carries none of its own, and a report
+    built without them measures no cycle time at all, which is the one measure this test
+    would then leave unexercised.
+    """
+    frame_count = 8
+    dataset = build_synthetic_dataset(frame_count=frame_count)
+    report = build_report(
+        frames_with_cycle_instants(dataset, [_ON_TARGET_NS] * (frame_count - 1)),
+        dataset.sidecar,
+        dataset.config,
+        FIXTURE_FPS,
+    )
+
+    assert report.frame_count == frame_count
     assert report.missing == 0
+    assert report.cycle_time.interval_count == frame_count - 1
+    assert report.cycle_time.p50_s == pytest.approx(_ON_TARGET_NS / NANOS_PER_SECOND)
+    assert report.cycle_time.missed_target_intervals == 0
     # The synthetic action is a constant-velocity ramp, so its third derivative is zero.
     assert report.jerk.max_abs == pytest.approx(0.0, abs=1e-6)
     assert report.jerk.unit == "deg/s^3"
     # No drops are injected: every slot delivers every frame with a continuous counter.
     assert report.total_camera_drop() == 0
     assert len(report.camera_drop) == len(dataset.sidecar.slots())
+    assert report.can_drop.total_frames == frame_count
+    assert len(report.std_floor.per_channel_std) == len(dataset.frames[0].observation_state)
 
 
 def test_missing_samples_counts_frame_index_gaps() -> None:
@@ -141,7 +157,9 @@ def test_std_floor_flags_stuck_channels_only_against_a_supplied_floor() -> None:
 def test_evaluate_reports_unset_without_thresholds() -> None:
     """⑥ With no thresholds every metric is UNSET — never a fabricated pass."""
     dataset = build_synthetic_dataset(frame_count=8)
-    report = build_report(frames_from_dataset(dataset), dataset.sidecar, dataset.config)
+    report = build_report(
+        frames_from_dataset(dataset), dataset.sidecar, dataset.config, FIXTURE_FPS
+    )
 
     outcomes = evaluate(report, QualityThresholds())
 
@@ -149,9 +167,19 @@ def test_evaluate_reports_unset_without_thresholds() -> None:
 
 
 def test_evaluate_grades_against_supplied_thresholds() -> None:
-    """⑥ Supplied thresholds produce PASS/FAIL; the seam a measured bar is injected through."""
-    dataset = build_synthetic_dataset(frame_count=8)
-    report = build_report(frames_from_dataset(dataset), dataset.sidecar, dataset.config)
+    """⑥ Supplied thresholds produce PASS/FAIL; the seam a measured bar is injected through.
+
+    The cycle instants are supplied rather than left to the fixture: with none stamped the
+    rate is unmeasured, and grading an unmeasured rate is what NORM-013's report replaced.
+    """
+    frame_count = 8
+    dataset = build_synthetic_dataset(frame_count=frame_count)
+    report = build_report(
+        frames_with_cycle_instants(dataset, [_ON_TARGET_NS] * (frame_count - 1)),
+        dataset.sidecar,
+        dataset.config,
+        FIXTURE_FPS,
+    )
 
     outcomes = evaluate(
         report,
@@ -162,12 +190,6 @@ def test_evaluate_grades_against_supplied_thresholds() -> None:
     assert outcomes["missing"] is GateOutcome.PASS
     assert outcomes["jerk"] is GateOutcome.PASS
     assert outcomes["jitter"] is GateOutcome.UNSET
-
-
-def test_loop_timing_needs_two_frames() -> None:
-    """③ A single frame yields a defined, zeroed timing rather than a division error."""
-    timing = loop_timing([0.0])
-    assert timing.rate_hz == 0.0
 
 
 def test_frame_sample_defaults_can_stale_false() -> None:

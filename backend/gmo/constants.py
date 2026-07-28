@@ -33,6 +33,12 @@ GMO_JOINT_COUNT = ARM_JOINT_COUNT
 # NFR-SAF-002 reference; the per-joint tuned vector is deferred (WP-2C-06, torque-ON).
 DEFAULT_OBSERVER_GAIN = 90.0
 
+# NFR-SAF-002's ceiling on the detection delay, s (`12` §3.6). The delay a residual observer adds
+# is its own time constant `1/K`, so this ceiling is a lower bound on the gain — `K >= 1/0.015`,
+# i.e. 66.7 — and any per-joint tuning in WP-2C-06 stays above it. Declared here beside the gain
+# because a gain lowered without consulting the ceiling is how the requirement gets missed.
+NFR_SAF_002_MAX_DETECTION_DELAY_S = 0.015
+
 # A residual-loop gain must be strictly positive: `r_dot = K*(tau_ext - r)` is only a stable
 # low-pass toward `tau_ext` for `K > 0`. A non-positive gain is a configuration error, refused
 # rather than run into an unstable or frozen observer.

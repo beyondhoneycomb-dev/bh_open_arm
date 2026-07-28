@@ -6,9 +6,13 @@ excluded from residual detection (WP-2C-11), so it never appears in a length-7 a
 
 The threshold band is bounded on both ends and neither bound is arbitrary:
 
-* Floor = 10 x the torque 12-bit LSB (DM8009 0.0264 / DM4340 0.0137 / DM4310 0.0049 Nm). A
-  threshold below ten quantisation steps is below the sensor's own resolution — it would fire on
-  quantisation noise, so WP-2C-03 blocks it and WP-2C-04 refuses to consume it (FR-SAF-019).
+* Floor = 10 x the torque 12-bit LSB. A threshold below ten quantisation steps is below the
+  sensor's own resolution — it would fire on quantisation noise, so WP-2C-03 blocks it and
+  WP-2C-04 refuses to consume it (FR-SAF-019). The LSB comes from WP-1-06's packet-derived
+  `torque_lsb_nm`, not from spec 12 §2.2's printed table: that table is the same quantity rounded
+  to four decimals (0.0263736 -> 0.0264, 0.0136752 -> 0.0137, 0.0048840 -> 0.0049), and a
+  transcription of it makes this floor 0.1 % higher than the floor WP-2C-03's proposer clamps to,
+  so a floor-clamped proposal was refused by this package's own consumer.
 * Ceiling = the URDF effort limit. A threshold above the joint's own torque ceiling can never be
   exceeded, so detection on that joint would be dead (WP-2C-03 acceptance ③).
 
@@ -20,6 +24,8 @@ measured figure, and this package consumes whichever value it is handed.
 
 from __future__ import annotations
 
+from backend.safety_bringup.constants import ARM_JOINT_MOTORS, torque_lsb_nm
+
 # The seven torque-controlled arm joints. joint8 (gripper) has no torque feedback and is excluded
 # from residual-based detection (spec 12 §2.2, WP-2C-11), so every per-joint array here is width 7.
 N_ARM_JOINTS = 7
@@ -28,9 +34,11 @@ N_ARM_JOINTS = 7
 # threshold set above this can never be reached, leaving that joint's detection dead.
 JOINT_EFFORT_LIMITS_NM = (40.0, 40.0, 27.0, 27.0, 7.0, 7.0, 7.0)
 
-# Torque 12-bit LSB [Nm] per joint (spec 12 §2.2 Table): DM8009 0.0264, DM4340 0.0137,
-# DM4310 0.0049. The detection threshold floor is ten of these steps.
-TORQUE_LSB_NM = (0.0264, 0.0264, 0.0137, 0.0137, 0.0049, 0.0049, 0.0049)
+# Torque 12-bit LSB [Nm] per joint, from the packet encoding (`03` §2.3, `04` §2.7) rather than
+# from spec 12 §2.2's rounded print of the same numbers. Derived, not transcribed: WP-1-06's
+# proposer clamps to this exact value and WP-2C-04 refuses below it, so a second rounding of the
+# quantity puts a hard refusal and a hard clamp at two different places on the same axis.
+TORQUE_LSB_NM = tuple(torque_lsb_nm(motor) for motor in ARM_JOINT_MOTORS)
 
 # A threshold below this many LSB sits under the sensor's resolution and would fire on the
 # quantiser alone (FR-SAF-019, WP-2C-03 acceptance ②).

@@ -93,6 +93,28 @@ PROVENANCE_REAL_ATTESTED = (
     "real collision-free residual run, operator-attested no-collision (12 FR-SAF-060)"
 )
 
+# The operator-set overlay NORM-009 and NORM-011 require: the shipped per-joint threshold and
+# the shipped observer gain are defaults, so an operator-set value must be persisted and win on
+# the next start. The envelope version is compared exactly on load — a file written under a
+# different field shape is refused rather than read with today's meanings. Bumping it makes every
+# already-written file unreadable and, because both setters read before they write, unwritable
+# too; a bump ships with a migration or a deletion of the old file.
+SETTINGS_VERSION = 1
+
+# The settings file name. Its suffix is distinct from `.oa_cal.json` / `.oa_teach.json` /
+# `.oa_gripper.json` so the persistence mechanisms never read each other's bytes. No robot id or
+# arm side in the name: both defaults this overlays are single system-wide values, so a per-side
+# override would overlay a non-per-side default.
+SETTINGS_FILENAME = "operator_settings.oa_thr.json"
+
+# The settings file's JSON keys. Named rather than inlined because each appears twice, in the
+# writer and in the reader, and a typo that diverged the two would drop an operator's saved
+# safety parameter in silence.
+FIELD_VERSION = "version"
+FIELD_THRESHOLDS_NM = "thresholds_nm"
+FIELD_OBSERVER_GAIN = "observer_gain"
+FIELD_OBSERVER_GAIN_DT_S = "observer_gain_dt_s"
+
 # Environment variable naming a directory of real collision-free residual captures for the
 # deferred calibration run (`02a` §4.1 re-verification hook). Until it is set, the real-run
 # acceptance skips with a reason and is never asserted green: the run needs a powered arm,

@@ -35,6 +35,7 @@ from __future__ import annotations
 from backend.gmo.constants import (
     DEFAULT_OBSERVER_GAIN,
     GMO_JOINT_COUNT,
+    NFR_SAF_002_MAX_DETECTION_DELAY_S,
     NOMINAL_DETECTION_DT_S,
 )
 from backend.gmo.errors import (
@@ -74,6 +75,7 @@ __all__ = [
     "DEFAULT_DETECTION_METHOD",
     "DEFAULT_OBSERVER_GAIN",
     "GMO_JOINT_COUNT",
+    "NFR_SAF_002_MAX_DETECTION_DELAY_S",
     "NOMINAL_DETECTION_DT_S",
     "RESIDUAL_BASED_METHODS",
     "DetectionMethod",

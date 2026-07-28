@@ -8,6 +8,8 @@ crash path needs — a valid one and a footerless (crash-truncated) one.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
 
 import pyarrow as pa
@@ -15,6 +17,11 @@ import pyarrow.parquet as pq
 
 from backend.recorder.quality.report import FrameSample
 from contracts.fixtures.synthetic_dataset import SyntheticDataset
+
+# `CLOCK_MONOTONIC`'s origin is arbitrary, so a fixture instant series only has to be
+# positive and increasing. Starting away from zero makes a reader that takes an absolute
+# instant instead of differencing two of them produce a visibly wrong answer.
+CYCLE_BASE_MONO_NS = 1_000_000_000
 
 
 def frames_from_dataset(dataset: SyntheticDataset) -> list[FrameSample]:
@@ -35,6 +42,40 @@ def frames_from_dataset(dataset: SyntheticDataset) -> list[FrameSample]:
         )
         for frame in dataset.frames
     ]
+
+
+def frames_with_cycle_instants(
+    dataset: SyntheticDataset, intervals_ns: Sequence[int]
+) -> list[FrameSample]:
+    """Adapt a synthetic dataset's frames and stamp a caller-chosen cycle-instant series.
+
+    The dataset's own `timestamp` is the `frame_index / fps` grid and carries no cycle
+    timing at all, so a test that needs a measured loop supplies the gaps here rather than
+    reading them back off the fixture.
+
+    Args:
+        dataset: A validated synthetic dataset.
+        intervals_ns: The nanosecond gap between consecutive cycles; one fewer than the
+            dataset's frame count.
+
+    Returns:
+        (list[FrameSample]) The dataset's frames, each carrying a `cycle_mono_ns`.
+
+    Raises:
+        ValueError: When the interval count does not match the frame count.
+    """
+    frames = frames_from_dataset(dataset)
+    if len(intervals_ns) != len(frames) - 1:
+        raise ValueError(
+            f"{len(frames)} frames need {len(frames) - 1} intervals, got {len(intervals_ns)}"
+        )
+    instant = CYCLE_BASE_MONO_NS
+    stamped: list[FrameSample] = []
+    for position, frame in enumerate(frames):
+        if position > 0:
+            instant += intervals_ns[position - 1]
+        stamped.append(replace(frame, cycle_mono_ns=instant))
+    return stamped
 
 
 def write_valid_parquet(path: Path, rows: int = 8) -> Path:

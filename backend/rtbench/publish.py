@@ -8,6 +8,10 @@ sweep (⑤), the `PG-CAN-001` frame verdict (⑧), the `f_max` figure (⑨), the
 synthetic-vs-real comparison table (⑥), the provisional `f_max_python` with its
 re-derivation trigger (⑤-b), and the target-host record (⑩).
 
+It also carries the `cycle_time` section NORM-008 requires: the operating point's
+distribution, its overrun share and its achieved rate, at the top level and flagged as
+rendering no verdict. That ruling is why nothing here refuses a run for its frequency.
+
 Four refusals bite here, as hard errors, because `THE ONE RULE` is that a run never
 fakes an acceptance:
 
@@ -32,6 +36,7 @@ from backend.rtbench.constants import (
     REQUIRED_STALE_TRIGGER,
     SYNTHETIC_BASIS,
 )
+from backend.rtbench.cycle_time import CycleTimeMeasurement, measure_cycle_time
 from backend.rtbench.fmax import FMax, compute_fmax
 from backend.rtbench.frame_count import (
     FrameCountSource,
@@ -52,6 +57,7 @@ from backend.rtbench.session import (
 )
 from sim.harness.artifact import build_artifact
 from sim.harness.harness import HarnessResult
+from sim.harness.histogram import CycleTimeHistogram
 
 WP_ID = "WP-1-04"
 
@@ -88,6 +94,27 @@ def _assert_session_publishable(session: ReadOnlyMeasurementSession[Any]) -> Non
         ) from cause
 
 
+def _condition4_timing(result: HarnessResult) -> tuple[CycleTimeHistogram, float]:
+    """Retrieve condition 4's distribution and the period it was collected at.
+
+    Args:
+        result: The completed harness run.
+
+    Returns:
+        (tuple[CycleTimeHistogram, float]) The histogram and its target period.
+
+    Raises:
+        MeasurementArtifactRefusedError: If condition 4 carries no timing distribution.
+    """
+    condition4 = result.condition(4)
+    period = condition4.period_sec
+    if condition4.histogram is None or period is None:
+        raise MeasurementArtifactRefusedError(
+            "condition 4 carries no timing distribution; cannot judge PG-RT-001a"
+        )
+    return condition4.histogram, period
+
+
 def _condition4_band_point(result: HarnessResult) -> BandPoint:
     """Build the band point for condition 4's own operating frequency.
 
@@ -100,18 +127,41 @@ def _condition4_band_point(result: HarnessResult) -> BandPoint:
     Returns:
         (BandPoint) Condition 4's frequency and its overrun rate.
     """
-    condition4 = result.condition(4)
-    period = condition4.period_sec
-    if condition4.histogram is None or period is None:
-        raise MeasurementArtifactRefusedError(
-            "condition 4 carries no timing distribution; cannot judge PG-RT-001a"
-        )
-    overrun = condition4.histogram.overrun_rate(period, result.config.overrun_tolerance)
+    histogram, period = _condition4_timing(result)
+    overrun = histogram.overrun_rate(period, result.config.overrun_tolerance)
     return BandPoint(target_hz=result.config.target_hz, overrun_rate=overrun)
+
+
+def _cycle_time_measurement(result: HarnessResult) -> CycleTimeMeasurement:
+    """Build the top-level cycle-time section NORM-008 requires.
+
+    Condition 4 is the operating point, and it is the only condition whose distribution
+    survives the run — `sim/harness/harness.py:_fmax_sweep` discards the per-frequency
+    histograms and keeps only their overrun rates, so a per-band-point distribution is
+    not reachable from here.
+
+    Args:
+        result: The completed harness run.
+
+    Returns:
+        (CycleTimeMeasurement) The operating point's distribution, overrun share and
+        achieved rate.
+    """
+    histogram, _ = _condition4_timing(result)
+    return measure_cycle_time(
+        histogram=histogram,
+        target_hz=result.config.target_hz,
+        overrun_tolerance=result.config.overrun_tolerance,
+    )
 
 
 def _judged_band(result: HarnessResult) -> tuple[BandPoint, ...]:
     """Assemble the full judged band: the sweep points plus condition 4's point.
+
+    Band scope is settled here and nowhere later: `judge_pg_rt_001a` judges every point it
+    is handed, so the 30-250 Hz main path acceptance ⑤ names is a property of the harness
+    sweep configuration rather than a filter the verdict applies to its own inputs
+    (NORM-008 — a frequency that removes a measured failure decides a pass).
 
     Args:
         result: The completed harness run.
@@ -253,8 +303,8 @@ def build_measurement_artifact(
 
     Returns:
         (dict[str, Any]) The full artifact: the synthetic run's histograms and derived
-        metrics, this WP's verdicts, the `f_max` figure, the comparison table, and the
-        provisional figure with its re-derivation trigger.
+        metrics, this WP's verdicts, the cycle-time measurement, the `f_max` figure, the
+        comparison table, and the provisional figure with its re-derivation trigger.
 
     Raises:
         MeasurementArtifactRefusedError: If the session is not publishable (②③④) or the
@@ -296,6 +346,7 @@ def build_measurement_artifact(
         },
         "pg_rt_001a": verdict.as_record(),
         "pg_can_001": frame_verdicts,
+        "cycle_time": _cycle_time_measurement(harness_result).as_record(),
         "f_max": fmax.as_record(),
         "f_max_python_provisional": _provisional_fmax_python(fmax),
         "comparison_table": _comparison_table(harness_result, real_condition4),

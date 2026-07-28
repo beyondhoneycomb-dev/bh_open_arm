@@ -15,6 +15,8 @@ from __future__ import annotations
 import numpy as np
 
 from backend.friction import V1_SEED_FRICTION
+from backend.friction.active import ActiveFrictionProfile
+from backend.friction.seed import V1_SEED_PROVENANCE
 from backend.gmo import (
     FrictionFeedforward,
     GmoModelTerms,
@@ -34,7 +36,8 @@ def _mismatched_model() -> GmoModelTerms:
         type(param)(f_o=param.f_o, f_v=param.f_v, f_c=param.f_c + 1.0, k_eff=param.k_eff)
         for param in V1_SEED_FRICTION
     )
-    return GmoModelTerms(friction=FrictionFeedforward(inflated))
+    profile = ActiveFrictionProfile(params=inflated, provenance=V1_SEED_PROVENANCE)
+    return GmoModelTerms(friction=FrictionFeedforward(profile))
 
 
 def test_friction_mismatch_biases_the_residual_without_contact(model_terms: GmoModelTerms) -> None:

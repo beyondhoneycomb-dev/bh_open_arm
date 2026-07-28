@@ -17,30 +17,42 @@ from collections.abc import Sequence
 import numpy as np
 from numpy.typing import NDArray
 
-from backend.friction import V1_SEED_FRICTION, FrictionParams
+from backend.friction.active import ActiveFrictionProfile, v1_seed_profile
 from backend.gmo.constants import GMO_JOINT_COUNT
 from backend.gmo.errors import GmoJointCountError
 
 
 class FrictionFeedforward:
-    """Per-joint friction torque `F_hat(q_dot)` from identified (or seed) friction parameters."""
+    """Per-joint friction torque `F_hat(q_dot)` from identified (or seed) friction parameters.
 
-    def __init__(self, params: Sequence[FrictionParams] = V1_SEED_FRICTION) -> None:
-        """Store the per-joint friction parameters, refusing a set of the wrong width.
+    Takes a profile rather than bare parameters so that the friction the observer is subtracting
+    can always name which robot it describes (NORM-012). An anonymous parameter set would make
+    `profile.is_reidentified` unanswerable at exactly the moment it matters — a residual that
+    looks wrong and no way to tell whether the friction model is the reason.
+    """
+
+    def __init__(self, profile: ActiveFrictionProfile | None = None) -> None:
+        """Store the friction profile, refusing a parameter set of the wrong width.
 
         Args:
-            params: One `FrictionParams` per arm joint, joint1..joint7 order. Defaults to the v1
-                seed, the offline stand-in until WP-2B-07's identified parameters are available.
+            profile: The friction in use, or None for the v1 seed — the offline stand-in until
+                WP-2B-07's identified parameters are available.
 
         Raises:
-            GmoJointCountError: If `params` is not `GMO_JOINT_COUNT` long.
+            GmoJointCountError: If the profile does not hold `GMO_JOINT_COUNT` parameter sets.
         """
-        parameters = tuple(params)
-        if len(parameters) != GMO_JOINT_COUNT:
+        active = profile if profile is not None else v1_seed_profile()
+        if len(active.params) != GMO_JOINT_COUNT:
             raise GmoJointCountError(
-                f"friction params must have {GMO_JOINT_COUNT} entries, got {len(parameters)}"
+                f"friction params must have {GMO_JOINT_COUNT} entries, got {len(active.params)}"
             )
-        self._params = parameters
+        self._profile = active
+        self._params = active.params
+
+    @property
+    def profile(self) -> ActiveFrictionProfile:
+        """The friction profile being subtracted, with the stamp saying which robot it describes."""
+        return self._profile
 
     def friction(self, qdot: Sequence[float]) -> NDArray[np.float64]:
         """Return the per-joint friction torque at the joint velocities `qdot`.

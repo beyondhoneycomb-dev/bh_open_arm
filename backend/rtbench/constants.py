@@ -1,12 +1,16 @@
 """Named constants for the WP-1-04 read-only measurement bench.
 
-Every value here is a spec-given threshold or band, not a measured target: the
-main-path band and its overrun budget come from `15` §2.10 / NFR-PRF-040, the
-frequency-headroom and actual-vs-target ratios from `15` NFR-PRF-004, and the
-frames-per-cycle counts from `15` §2.1. They are the pass lines the measurement is
-judged against, not numbers the measurement produces — which is why they carry no
-`registry/build/evidence/` anchor (CI-11 anchors *produced* targets, not spec
-constants).
+Two kinds of value live here, and they carry no `registry/build/evidence/` anchor for
+the same reason: neither is a number the measurement produces (CI-11 anchors *produced*
+targets, not spec constants).
+
+The first kind is a spec-given band or budget the measurement is judged against — the
+main-path band and its overrun budget from `15` §2.10 / NFR-PRF-040, the frequency
+headroom from `15` NFR-PRF-004, the frames-per-cycle counts from `15` §2.1.
+
+The second is the vocabulary of what gets published: which distribution figures the
+artifact must carry and which quantity a verdict was rendered on. NORM-008 makes that a
+requirement rather than a formatting choice, so it is named rather than spelled inline.
 """
 
 from __future__ import annotations
@@ -20,10 +24,27 @@ MAIN_PATH_BAND_HIGH_HZ = 250.0
 # `15` NFR-PRF-040: a main-path pass is an overrun rate at or below 0.1%.
 MAIN_PATH_OVERRUN_BUDGET = 1e-3
 
-# `15` NFR-PRF-004: a later target frequency must not exceed f_max x 0.8, and a cycle
-# is on-time when its actual frequency is at least 0.95 x target.
+# `15` NFR-PRF-004's x 0.8. NORM-008 keeps the number and drops the enforcement: the
+# artifact publishes `f_max x 0.8` as a figure a reader judges once the real measurement
+# exists, and nothing refuses a target for exceeding it.
 TARGET_FREQ_HEADROOM = 0.8
-ACTUAL_HZ_PASS_RATIO = 0.95
+
+# NORM-008 names the four figures the cycle-time distribution must surface: median,
+# 95th, 99th, maximum. Spelled as the keys `CycleTimeHistogram.summary()` produces, in
+# ascending order, so a missing one is caught rather than silently dropped.
+REPORTED_DISTRIBUTION_KEYS = ("p50", "p95", "p99", "max")
+MEDIAN_DISTRIBUTION_KEY = "p50"
+
+# The quantity `PG-RT-001a` is decided on. Named in the verdict record so the artifact
+# states in itself that the gate reads overrun, never a frequency (NORM-008).
+OVERRUN_RATE_CRITERION = "overrun_rate"
+
+# Carried beside every cycle-time figure, so a reader cannot mistake a produced number
+# for a confirmed pass line (NORM-008; same stance as the WP-5-05 latency measurement).
+CYCLE_TIME_NOTE = (
+    "measurement only: NORM-008 rules that no frequency is a pass/fail criterion, so the "
+    "distribution and the achieved rate are surfaced and judged by a reader, not by code"
+)
 
 # `15` §2.1: LeRobot's default loop is pattern B at 32 frames/cycle; pattern A skips
 # the full observation read and runs 16. These are the two counts `PG-CAN-001` reads.

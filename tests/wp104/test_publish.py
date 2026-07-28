@@ -13,7 +13,11 @@ from pathlib import Path
 import pytest
 
 from backend.can.lock.manager import LockManager
-from backend.rtbench.constants import REQUIRED_STALE_TRIGGER
+from backend.rtbench.constants import (
+    OVERRUN_RATE_CRITERION,
+    REPORTED_DISTRIBUTION_KEYS,
+    REQUIRED_STALE_TRIGGER,
+)
 from backend.rtbench.publish import (
     MeasurementArtifactRefusedError,
     _assert_provisional_marked,
@@ -93,6 +97,32 @@ def test_happy_path_artifact_carries_conditions_verdicts_and_trigger(
     assert artifact["target_host"]["is_fleet_target"] is False
     # the real-CAN inputs are declared awaited, not invented.
     assert len(artifact["deferred"]["awaited_inputs"]) == 3
+
+
+def test_artifact_surfaces_the_cycle_time_measurement(
+    tmp_path: Path, harness_result: HarnessResult
+) -> None:
+    manager = LockManager(lock_dir=str(tmp_path))
+    assert manager.acquire_all(_IFACES).ok
+    try:
+        artifact = build_measurement_artifact(
+            session=_connected_session(manager),
+            harness_result=harness_result,
+            host_id="dev-x86",
+            is_fleet_target=False,
+        )
+    finally:
+        manager.release_all()
+
+    # NORM-008: the distribution and the achieved rate are a top-level named section, not
+    # something a reader has to dig out of the synthetic run, and they judge nothing.
+    cycle_time = artifact["cycle_time"]
+    assert cycle_time["is_verdict"] is False
+    assert set(REPORTED_DISTRIBUTION_KEYS) <= set(cycle_time["distribution_sec"])
+    assert cycle_time["achieved_hz"] > 0.0
+    assert 0.0 <= cycle_time["overrun_share"] <= 1.0
+    # and the verdict that does exist names the quantity that decided it.
+    assert artifact["pg_rt_001a"]["criterion"] == OVERRUN_RATE_CRITERION
 
 
 def test_real_candump_count_is_judged_alongside_the_model(

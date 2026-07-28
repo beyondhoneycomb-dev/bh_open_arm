@@ -1,13 +1,15 @@
-"""`f_max = min(f_max_can, f_max_python)` and the target-frequency headroom enforcer.
+"""`f_max = min(f_max_can, f_max_python)` and the `x 0.8` figure derived from it.
 
-`15` NFR-PRF-004: the usable ceiling is the minimum of the CAN-bound and Python-bound
-maxima, a later operating target must stay at or below `f_max x 0.8`, and a cycle is
-on-time when its actual frequency is at least `0.95 x target`.
+`15` NFR-PRF-004 gives the usable ceiling as the minimum of the CAN-bound and
+Python-bound maxima, with `f_max x 0.8` as the highest operating target it contemplates.
+NORM-008 keeps the arithmetic and drops the enforcement: no frequency is a pass/fail
+criterion here, so `f_max x 0.8` is published as a figure a reader judges — against the
+real measurement, once M-8 produces one — and nothing in this package refuses a target
+for exceeding it.
 
-`f_max_can` is a `WP-0B-06` real-bus measurement and does not exist on this host, so
-it is optional: when absent, `f_max` falls back to the Python-bound figure alone and
-records that it is awaiting the CAN measurement. The arithmetic — the `min`, the
-`x 0.8` ceiling, the `0.95` on-time test — runs here; only the CAN input is deferred.
+`f_max_can` is a `WP-0B-06` real-bus measurement and does not exist on this host, so it
+is optional: when absent, `f_max` falls back to the Python-bound figure alone and records
+that it is awaiting the CAN measurement.
 """
 
 from __future__ import annotations
@@ -15,15 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from backend.rtbench.constants import (
-    ACTUAL_HZ_PASS_RATIO,
-    FINAL_GATE,
-    TARGET_FREQ_HEADROOM,
-)
-
-
-class TargetExceedsFmaxError(ValueError):
-    """A requested target frequency exceeded the `f_max x 0.8` ceiling (`15` NFR-PRF-004)."""
+from backend.rtbench.constants import FINAL_GATE, TARGET_FREQ_HEADROOM
 
 
 @dataclass(frozen=True)
@@ -70,7 +64,7 @@ class FMax:
         return tuple(missing)
 
     def max_target_hz(self) -> float | None:
-        """The highest operating target the `x 0.8` headroom rule permits.
+        """`f_max x 0.8` — published for a reader, gating nothing (NORM-008).
 
         Returns:
             (float | None) `f_max x 0.8`, or None when `f_max` is not yet known.
@@ -82,8 +76,9 @@ class FMax:
         """Serialize the figure for the artifact.
 
         Returns:
-            (dict[str, Any]) The two bounds, the derived `f_max`, the `x 0.8` ceiling,
-            and — when the CAN bound is deferred — its re-derivation trigger.
+            (dict[str, Any]) The two bounds, the derived `f_max`, the `x 0.8` figure
+            flagged as no verdict, and — when the CAN bound is deferred — its
+            re-derivation trigger.
         """
         record: dict[str, Any] = {
             "f_max_can_hz": self.f_max_can_hz,
@@ -91,7 +86,7 @@ class FMax:
             "f_max_hz": self.f_max_hz,
             "max_target_hz": self.max_target_hz(),
             "headroom": TARGET_FREQ_HEADROOM,
-            "actual_hz_pass_ratio": ACTUAL_HZ_PASS_RATIO,
+            "is_verdict": False,
             "provisional": self.provisional,
             "awaiting": list(self.awaiting),
         }
@@ -117,39 +112,3 @@ def compute_fmax(f_max_can_hz: float | None, f_max_python_hz: float | None) -> F
         f_max_python_hz=f_max_python_hz,
         provisional=provisional,
     )
-
-
-def enforce_target_hz(target_hz: float, fmax: FMax) -> None:
-    """Refuse a target frequency above the `f_max x 0.8` ceiling.
-
-    When `f_max` is not yet known (both bounds deferred) there is no ceiling to
-    enforce, and the call returns without raising — the caller is expected to check
-    `fmax.awaiting` and hold the target until the figure is complete rather than treat
-    an unknown ceiling as permission.
-
-    Args:
-        target_hz: The requested operating frequency.
-        fmax: The usable-maximum figure.
-
-    Raises:
-        TargetExceedsFmaxError: When `f_max` is known and the target exceeds `x 0.8`.
-    """
-    ceiling = fmax.max_target_hz()
-    if ceiling is not None and target_hz > ceiling:
-        raise TargetExceedsFmaxError(
-            f"target {target_hz} Hz exceeds the f_max x {TARGET_FREQ_HEADROOM} ceiling of "
-            f"{ceiling} Hz (15 NFR-PRF-004)"
-        )
-
-
-def meets_actual_hz(actual_hz: float, target_hz: float) -> bool:
-    """Report whether a measured actual frequency clears the on-time threshold.
-
-    Args:
-        actual_hz: The measured loop frequency.
-        target_hz: The target loop frequency.
-
-    Returns:
-        (bool) True when `actual_hz >= 0.95 x target_hz` (`15` NFR-PRF-004).
-    """
-    return actual_hz >= ACTUAL_HZ_PASS_RATIO * target_hz

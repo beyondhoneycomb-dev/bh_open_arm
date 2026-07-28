@@ -1,7 +1,7 @@
 """The `PG-RT-001a` verdict: main-path overrun over the 30-250 Hz band, then escalate.
 
 `02a` WP-1-04 acceptance ⑤ fixes both halves of this rule and forbids inventing a
-third: a run passes when every main-path frequency clears the 0.1% overrun budget
+third: a run passes when every measured point clears the 0.1% overrun budget
 (`15` NFR-PRF-040), and on failure the retry escalates through an *ordered, frozen*
 set of variants — process separation, then pattern A, then RT promotion, then worker
 separation — never a variant the plan did not enumerate, and never a CAN-ownership
@@ -26,6 +26,7 @@ from backend.rtbench.constants import (
     MAIN_PATH_BAND_HIGH_HZ,
     MAIN_PATH_BAND_LOW_HZ,
     MAIN_PATH_OVERRUN_BUDGET,
+    OVERRUN_RATE_CRITERION,
     PROVISIONAL_GATE,
     SYNTHETIC_BASIS,
 )
@@ -46,8 +47,12 @@ class BandPoint:
     def in_main_path(self) -> bool:
         """Whether this frequency lies in the 30-250 Hz main-path band.
 
+        Published beside the point and read by a person. Nothing in the verdict consumes
+        it: NORM-008 rules that no frequency decides a pass or a fail, so a point that
+        missed the budget fails whatever frequency it was measured at.
+
         Returns:
-            (bool) True when the frequency is within the judged band.
+            (bool) True when the frequency is within the band acceptance ⑤ names.
         """
         return MAIN_PATH_BAND_LOW_HZ <= self.target_hz <= MAIN_PATH_BAND_HIGH_HZ
 
@@ -63,12 +68,14 @@ class BandPoint:
         """Serialize the point for the artifact.
 
         Returns:
-            (dict[str, Any]) The frequency, overrun rate, and budget status.
+            (dict[str, Any]) The frequency, overrun rate, budget status, and whether the
+            frequency sat in the main-path band — the last stated, not acted on.
         """
         return {
             "target_hz": self.target_hz,
             "overrun_rate": self.overrun_rate,
             "within_budget": self.within_budget(),
+            "in_main_path": self.in_main_path(),
         }
 
 
@@ -135,8 +142,8 @@ class PgRt001aVerdict:
 
     Attributes:
         status: `PASS` or `RETRY_WITH_VARIANT`.
-        band_points: Every main-path point that was judged.
-        failing_points: The main-path points that missed the budget.
+        band_points: Every point that was judged, in the order supplied.
+        failing_points: The points that missed the budget.
         escalation: The forced retry order, empty on `PASS`.
         basis: The measurement basis; always the synthetic GIL load for `a`.
         superseded_by: The gate whose PASS supersedes this verdict.
@@ -164,7 +171,9 @@ class PgRt001aVerdict:
         Returns:
             (dict[str, Any]) The full verdict, flagged provisional and naming its
             superseding gate; `is_wave1_exit_permit` restates that a `PASS` means
-            "proceed until the rig overturns it", not "final".
+            "proceed until the rig overturns it", not "final"; `criterion` states which
+            quantity decided it, so the artifact answers on its own the question NORM-008
+            asks — the gate reads overrun rate, never a frequency.
         """
         return {
             "gate": PROVISIONAL_GATE,
@@ -172,6 +181,7 @@ class PgRt001aVerdict:
             "provisional": True,
             "is_wave1_exit_permit": self.passed,
             "basis": self.basis,
+            "criterion": OVERRUN_RATE_CRITERION,
             "overrun_budget": MAIN_PATH_OVERRUN_BUDGET,
             "band_points": [point.as_record() for point in self.band_points],
             "failing_points": [point.as_record() for point in self.failing_points],
@@ -187,11 +197,15 @@ class PgRt001aVerdict:
 def judge_pg_rt_001a(band_points: tuple[BandPoint, ...]) -> PgRt001aVerdict:
     """Render the provisional `PG-RT-001a` verdict over a measured band.
 
-    Only main-path points (30-250 Hz) are judged; a point outside the band is carried
-    for the record but cannot fail the verdict. A pass requires every main-path point
-    to clear the budget. On any failure the verdict is `RETRY_WITH_VARIANT` and carries
-    the whole forced escalation — the caller works down it in order, never reordering
-    or extending it.
+    Every supplied point is judged and the overrun rate is the only quantity that decides
+    the outcome: a pass requires all of them to clear the budget. On any failure the
+    verdict is `RETRY_WITH_VARIANT` and carries the whole forced escalation — the caller
+    works down it in order, never reordering or extending it.
+
+    Scoping the sweep to the 30-250 Hz main path acceptance ⑤ names belongs to whoever
+    assembles `band_points`, upstream of here. Dropping a measured failure at this end on
+    the strength of its frequency would be a frequency deciding a pass, and NORM-008
+    forbids that; band membership is published per point instead.
 
     Args:
         band_points: The (frequency, overrun-rate) sweep over the control band.
@@ -200,13 +214,12 @@ def judge_pg_rt_001a(band_points: tuple[BandPoint, ...]) -> PgRt001aVerdict:
         (PgRt001aVerdict) The verdict, always provisional, naming `PG-RT-001b` as its
         superseding gate.
     """
-    main_path = tuple(point for point in band_points if point.in_main_path())
-    failing = tuple(point for point in main_path if not point.within_budget())
+    failing = tuple(point for point in band_points if not point.within_budget())
     status = GATE_STATE_PASS if not failing else GATE_STATE_RETRY_WITH_VARIANT
     escalation = () if not failing else FORCED_VARIANT_ESCALATION
     return PgRt001aVerdict(
         status=status,
-        band_points=main_path,
+        band_points=band_points,
         failing_points=failing,
         escalation=escalation,
         basis=SYNTHETIC_BASIS,

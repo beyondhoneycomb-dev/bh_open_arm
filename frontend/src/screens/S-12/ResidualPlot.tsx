@@ -5,6 +5,11 @@
 // The threshold value is the backend's (FR-SAF-060); this component draws it and
 // marks the samples that exceed it, and computes no threshold of its own.
 
+import {
+  EFFORT_LIMIT_READOUT_LABEL,
+  RESIDUAL_COMPARISON_NOTICE,
+  THRESHOLD_READOUT_LABEL,
+} from "./constants";
 import { buildResidualPlotGeometry, type JointResidual } from "./residualGeometry";
 
 interface ResidualPlotProps {
@@ -24,8 +29,9 @@ function JointPlot({ joint }: { joint: JointResidual }) {
     <div className="oa-residual" data-plot="residual" data-joint={joint.jointName}>
       <div className="oa-residual__head">
         <span className="oa-residual__joint">{joint.jointName}</span>
-        <span className="oa-residual__note-value">
-          임계 ±{joint.thresholdNm} Nm · effort {joint.effortLimitNm} Nm
+        <span className="oa-residual__readout" data-readout="threshold">
+          {THRESHOLD_READOUT_LABEL} ±{joint.thresholdNm} Nm · {EFFORT_LIMIT_READOUT_LABEL}{" "}
+          {joint.effortLimitNm} Nm
         </span>
       </div>
 
@@ -87,6 +93,9 @@ export function ResidualPlot({ residuals }: ResidualPlotProps) {
       <h2 id="oa-safety-residual-title" className="oa-safety__panel-title">
         GMO 잔차 · 임계선
       </h2>
+      {/* Standing, not breach-conditional: at rest is exactly when an operator reads
+          the threshold number and can misread it as total motor torque (NORM-009). */}
+      <p className="oa-residual__comparison">{RESIDUAL_COMPARISON_NOTICE}</p>
       {residuals.length === 0 ? (
         <p className="oa-safety__status-line">잔차 데이터 없음 — 백엔드 미제공</p>
       ) : (

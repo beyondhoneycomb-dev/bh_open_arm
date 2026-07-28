@@ -178,6 +178,22 @@
   font-weight: 600;
 }
 
+.oa-residual__readout {
+  color: var(--oa-saf-muted);
+  text-align: right;
+}
+
+/* Explanation, not alarm: the calm rule keeps it visually distinct from the
+   warn-coloured standing banners, which carry a blocked action. */
+.oa-residual__comparison {
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--oa-saf-muted);
+  border-left: 2px solid var(--oa-saf-calm);
+  padding-left: 0.6rem;
+  margin: 0;
+}
+
 .oa-residual__svg {
   width: 100%;
   height: 96px;

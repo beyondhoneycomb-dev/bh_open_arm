@@ -37,6 +37,22 @@ RECOVERED_SUFFIX = ".recovered"
 MIN_SAMPLES_FOR_RATE = 2
 MIN_SAMPLES_FOR_JERK = 4
 
+# The shape NORM-013 fixes for the recording loop's cycle time. No lower bound on the
+# achieved rate is named here or anywhere: the only citable precedent is ALOHA's 84%,
+# measured on other hardware, and a borrowed number becomes this project's pass line the
+# moment it is written down. The distribution and the missed-target share are reported
+# instead, and the operator lowers the target when the machine cannot hold it.
+CYCLE_TIME_PERCENTILE_P50 = 50.0
+CYCLE_TIME_PERCENTILE_P95 = 95.0
+CYCLE_TIME_PERCENTILE_P99 = 99.0
+
+# Cycle instants arrive as `CLOCK_MONOTONIC` nanoseconds and the report is in seconds.
+NANOS_PER_SECOND = 1_000_000_000
+
+# The smallest integer rate that has a cycle period at all. Arithmetic, not a quality
+# floor — NORM-013 rules out any floor above it, and names no ceiling either.
+MIN_SELECTABLE_FPS = 1
+
 # The unit a jerk magnitude carries, recorded in the report so a reader never has to
 # infer it from the position unit (`CTR-REC@v1` `.pos` = degrees).
 JERK_UNIT = "deg/s^3"

@@ -17,6 +17,9 @@ genuinely passes:
     imported from WP-1-06 (`wizard`).
   * the synthetic collision-free residual stream that proves the math against a known
     envelope (`synthetic`).
+  * the operator's persisted overlay on the two numbers NORM-009 and NORM-011 ruled to be
+    defaults rather than fixed constants — the per-joint threshold and the observer gain —
+    refused out of band, never clamped, and read back on the next start (`settings`).
 
 What does not run here is the calibration *run* itself — a real collision-free trajectory
 under WP-2C-01's live residual with an operator attesting no contact. It is deferred to a
@@ -44,6 +47,8 @@ from backend.threshold_calib.constants import (
     PROVENANCE_REAL_ATTESTED,
     PROVENANCE_SYNTHETIC,
     SENSITIVITY_PRESETS,
+    SETTINGS_FILENAME,
+    SETTINGS_VERSION,
     SIGMA_MULTIPLE,
     SensitivityPreset,
 )
@@ -64,6 +69,14 @@ from backend.threshold_calib.reverify import (
     RealCalibrationVerification,
     fixture_dir_from_env,
     reverify_from_fixture,
+)
+from backend.threshold_calib.settings import (
+    OperatorSettings,
+    OperatorSettingsStore,
+    SettingRefusedError,
+    load_settings,
+    save_settings_atomic,
+    settings_path_for,
 )
 from backend.threshold_calib.synthetic import (
     SyntheticTruth,
@@ -91,6 +104,8 @@ __all__ = [
     "PROVENANCE_REAL_ATTESTED",
     "PROVENANCE_SYNTHETIC",
     "SENSITIVITY_PRESETS",
+    "SETTINGS_FILENAME",
+    "SETTINGS_VERSION",
     "SIGMA_MULTIPLE",
     "Calibration",
     "CalibrationNotCanonicalError",
@@ -98,6 +113,8 @@ __all__ = [
     "EffectiveThreshold",
     "JointDisplayRow",
     "NoCollisionJudgment",
+    "OperatorSettings",
+    "OperatorSettingsStore",
     "PerJointThreshold",
     "PresetApplication",
     "PresetError",
@@ -106,6 +123,7 @@ __all__ = [
     "ResidualCollector",
     "ResidualStats",
     "SensitivityPreset",
+    "SettingRefusedError",
     "SyntheticTruth",
     "ThresholdDisplay",
     "ThresholdProposal",
@@ -114,9 +132,12 @@ __all__ = [
     "collector_for_arm",
     "effective_threshold_display",
     "fixture_dir_from_env",
+    "load_settings",
     "propose_max_plus_sigma",
     "propose_nominal_scaled",
     "reverify_from_fixture",
+    "save_settings_atomic",
+    "settings_path_for",
     "synthetic_calibration",
     "synthetic_residual_run",
     "synthetic_truth",

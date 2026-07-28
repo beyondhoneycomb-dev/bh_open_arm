@@ -1,9 +1,14 @@
 """The quality metrics WP-3B-12 ③ computes over one recorded episode (`02b` §5.2).
 
-Seven measures, each a pure function of a recorded series: loop rate and jitter from
-the frame timestamps, missing-sample count from the frame-index gaps, CAN drop from the
-observation stream, camera drop from the capture sidecar, jerk from the position
-command, and the standard-deviation floor across the state channels.
+Six measures, each a pure function of a recorded series: the cycle-time distribution
+from the recorder's own loop instants, missing-sample count from the frame-index gaps,
+CAN drop from the observation stream, camera drop from the capture sidecar, jerk from the
+position command, and the standard-deviation floor across the state channels.
+
+The cycle time is measured from `CLOCK_MONOTONIC` instants the recorder stamps per loop
+iteration, never from the dataset `timestamp`: that column is the `CTR-PRIM@v1`
+`frame_index / fps` grid, so differencing it can only ever return the configured fps with
+zero spread — a number that looks like a measurement and is the input read back.
 
 The CAN-drop measure exists because of a specific hazard the plan names (`02b` §5.2
 WP-3B-12 ③): the recorder's `_batch_refresh` reuses the last state when a CAN batch is
@@ -21,33 +26,75 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
 from backend.recorder.quality.constants import (
+    CYCLE_TIME_PERCENTILE_P50,
+    CYCLE_TIME_PERCENTILE_P95,
+    CYCLE_TIME_PERCENTILE_P99,
     JERK_UNIT,
     MIN_SAMPLES_FOR_JERK,
     MIN_SAMPLES_FOR_RATE,
+    MIN_SELECTABLE_FPS,
+    NANOS_PER_SECOND,
 )
 from contracts.capture import CameraSlotKey, CaptureSidecar
 from contracts.capture.schema import frame_numbers_continuous, slot_frame_numbers
 
 
-@dataclass(frozen=True)
-class LoopTiming:
-    """Loop-rate and jitter derived from the frame timestamps.
+class CycleTimeError(ValueError):
+    """A cycle-time input the report refuses to reduce to a number.
 
-    Attributes:
-        rate_hz: The recording loop rate, one over the median inter-frame interval.
-        mean_period_s: The mean inter-frame interval in seconds.
-        jitter_std_s: The standard deviation of the inter-frame interval.
-        max_deviation_s: The largest absolute departure of any interval from the mean.
+    Two causes. A target rate below `MIN_SELECTABLE_FPS` has no period to compare a cycle
+    against. A cycle instant that does not advance is broken data rather than a slow cycle
+    — `CLOCK_MONOTONIC` cannot run backwards or stand still across two loop iterations —
+    and differencing it would publish a negative or infinite rate as a measurement.
     """
 
-    rate_hz: float
-    mean_period_s: float
-    jitter_std_s: float
-    max_deviation_s: float
+
+@dataclass(frozen=True)
+class CycleTimeStats:
+    """The recording loop's measured cycle time, against the target the operator chose.
+
+    Every measured field is None when the recorder stamped no cycle instants, never 0.0:
+    a zero would read as a loop that ran at no hertz with perfect jitter, which is a
+    fabricated result standing in for an absent one. `target_fps` and `interval_count` are
+    always present, so an unmeasured episode still records what it was aiming at.
+
+    Attributes:
+        target_fps: The operator-selected rate the cycles were compared against.
+        interval_count: How many cycle intervals were measured; n instants give n-1.
+        p50_s: The median cycle time in seconds.
+        p95_s: The 95th-percentile cycle time in seconds.
+        p99_s: The 99th-percentile cycle time in seconds.
+        max_s: The longest single cycle in seconds.
+        jitter_std_s: The standard deviation of the cycle time in seconds.
+        missed_target_intervals: Cycles that ran longer than the target period.
+        missed_target_share: Those cycles over `interval_count`. Reported, never graded:
+            NORM-013 refuses a pass line on it.
+    """
+
+    target_fps: int
+    interval_count: int
+    p50_s: float | None
+    p95_s: float | None
+    p99_s: float | None
+    max_s: float | None
+    jitter_std_s: float | None
+    missed_target_intervals: int | None
+    missed_target_share: float | None
+
+    def achieved_rate_hz(self) -> float | None:
+        """The rate the median cycle achieves, or None when nothing was measured.
+
+        Derived rather than stored, so the achieved rate and the median it comes from can
+        never drift into being two different claims about one loop.
+        """
+        if self.p50_s is None:
+            return None
+        return 1.0 / self.p50_s
 
 
 @dataclass(frozen=True)
@@ -116,27 +163,90 @@ class StdFloorStats:
     below_floor: tuple[int, ...]
 
 
-def loop_timing(timestamps: Sequence[float]) -> LoopTiming:
-    """Compute loop rate and jitter from a frame-timestamp series.
+def validate_target_fps(target_fps: int) -> int:
+    """Return the operator's target rate, refusing only a rate that has no cycle period.
+
+    NORM-013 declines a lower bound on the achieved loop rate and requires instead that
+    the operator be able to lower the target, so the sole refusal here is arithmetic:
+    below one frame per second there is no period for a cycle to overrun. No ceiling
+    either — a target the machine cannot hold is reported as missed, not rejected.
 
     Args:
-        timestamps: Per-frame timestamps in seconds, in frame order.
+        target_fps: The operator-selected recording rate.
 
     Returns:
-        (LoopTiming) Zeroed when fewer than two frames or a non-positive interval makes
-            the rate undefined.
+        (int) The same rate, once it is usable as a period.
+
+    Raises:
+        CycleTimeError: When the rate falls below `MIN_SELECTABLE_FPS`.
     """
-    if len(timestamps) < MIN_SAMPLES_FOR_RATE:
-        return LoopTiming(rate_hz=0.0, mean_period_s=0.0, jitter_std_s=0.0, max_deviation_s=0.0)
-    periods = np.diff(np.asarray(timestamps, dtype=float))
-    mean_period = float(np.mean(periods))
-    median_period = float(np.median(periods))
-    rate = 1.0 / median_period if median_period > 0.0 else 0.0
-    return LoopTiming(
-        rate_hz=rate,
-        mean_period_s=mean_period,
-        jitter_std_s=float(np.std(periods)),
-        max_deviation_s=float(np.max(np.abs(periods - mean_period))),
+    if target_fps < MIN_SELECTABLE_FPS:
+        raise CycleTimeError(
+            f"target fps {target_fps} is below {MIN_SELECTABLE_FPS} and has no cycle period"
+        )
+    return target_fps
+
+
+def cycle_time_stats(cycle_mono_ns: Sequence[int], target_fps: int) -> CycleTimeStats:
+    """Reduce a loop's cycle instants to the distribution NORM-013 requires reporting.
+
+    The target is validated before the instants are read, so an episode that measured
+    nothing still refuses a rate with no period rather than reporting against one.
+
+    A cycle misses the target when `interval_ns * target_fps > NANOS_PER_SECOND`. That
+    integer form is exact; dividing out a period in nanoseconds would leave a cycle landing
+    on the target sitting on the wrong side of a rounded float, and the usual repair for
+    that is a tolerance — a bar under another name, which is what the ruling refuses.
+
+    Percentiles come from `np.percentile`'s default linear interpolation. The repo holds
+    three percentile helpers and two of them already disagree on the definition
+    (`backend/loadtest/stats.py:14` and `backend/torque_bringup/stop_latency.py:74` take
+    nearest-rank, `backend/sensing/encoding/worker.py:46` interpolates), so there is no
+    canon to reuse; numpy is already this module's dependency and the encoding helper's
+    definition is the one it matches.
+
+    Args:
+        cycle_mono_ns: `CLOCK_MONOTONIC` nanosecond instants, one per loop cycle, in order.
+        target_fps: The operator-selected target rate.
+
+    Returns:
+        (CycleTimeStats) The percentiles, spread and missed-target share over n-1 intervals
+            — the share's denominator is intervals, not frames, because one frame has no
+            cycle time. All-None with `interval_count` 0 below two instants.
+
+    Raises:
+        CycleTimeError: When the target has no period, or an instant does not advance.
+    """
+    validate_target_fps(target_fps)
+    if len(cycle_mono_ns) < MIN_SAMPLES_FOR_RATE:
+        return CycleTimeStats(
+            target_fps=target_fps,
+            interval_count=0,
+            p50_s=None,
+            p95_s=None,
+            p99_s=None,
+            max_s=None,
+            jitter_std_s=None,
+            missed_target_intervals=None,
+            missed_target_share=None,
+        )
+    intervals = np.diff(np.asarray(cycle_mono_ns, dtype=np.int64))
+    if int(np.min(intervals)) <= 0:
+        raise CycleTimeError(
+            f"cycle instants must advance; found a gap of {int(np.min(intervals))} ns"
+        )
+    missed = int(np.count_nonzero(intervals * target_fps > NANOS_PER_SECOND))
+    interval_count = int(intervals.size)
+    return CycleTimeStats(
+        target_fps=target_fps,
+        interval_count=interval_count,
+        p50_s=_nanos_to_seconds(np.percentile(intervals, CYCLE_TIME_PERCENTILE_P50)),
+        p95_s=_nanos_to_seconds(np.percentile(intervals, CYCLE_TIME_PERCENTILE_P95)),
+        p99_s=_nanos_to_seconds(np.percentile(intervals, CYCLE_TIME_PERCENTILE_P99)),
+        max_s=_nanos_to_seconds(np.max(intervals)),
+        jitter_std_s=_nanos_to_seconds(np.std(intervals)),
+        missed_target_intervals=missed,
+        missed_target_share=missed / interval_count,
     )
 
 
@@ -255,6 +365,11 @@ def std_floor_stats(states: Sequence[Sequence[float]], floor: float | None = Non
         per_channel_std=tuple(float(value) for value in per_channel),
         below_floor=below,
     )
+
+
+def _nanos_to_seconds(value: np.floating[Any] | np.integer[Any]) -> float:
+    """Convert a nanosecond magnitude from the cycle-time arithmetic into report seconds."""
+    return float(value) / NANOS_PER_SECOND
 
 
 def _slot_name(slot: CameraSlotKey) -> str:

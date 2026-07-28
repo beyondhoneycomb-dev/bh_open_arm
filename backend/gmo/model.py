@@ -28,7 +28,7 @@ from collections.abc import Sequence
 import numpy as np
 from numpy.typing import NDArray
 
-from backend.friction import FrictionParams
+from backend.friction.active import ActiveFrictionProfile
 from backend.gmo.friction_term import FrictionFeedforward
 from backend.gmo.mass import MassMatrix
 from backend.gravity import MuJoCoV2GravityBackend
@@ -61,12 +61,22 @@ class GmoModelTerms:
         """The arm these terms compute for."""
         return self._gravity.arm
 
+    @property
+    def friction_profile(self) -> ActiveFrictionProfile:
+        """The friction being subtracted, with the stamp saying which robot it describes.
+
+        Reached from the observer as `observer.model.friction_profile`; that is the query
+        NORM-012 requires, since the v1 seed leaves a standing bias in the residual and an
+        operator diagnosing a residual has to be able to rule that bias in or out.
+        """
+        return self._friction.profile
+
     @classmethod
-    def from_friction_params(
-        cls, params: Sequence[FrictionParams], arm: Arm = Arm.RIGHT
+    def from_friction_profile(
+        cls, profile: ActiveFrictionProfile, arm: Arm = Arm.RIGHT
     ) -> GmoModelTerms:
-        """Build model terms from an explicit per-joint friction set (e.g. the identified fit)."""
-        return cls(arm=arm, friction=FrictionFeedforward(params))
+        """Build model terms from an explicit friction profile (e.g. the identified fit)."""
+        return cls(arm=arm, friction=FrictionFeedforward(profile))
 
     def momentum(self, q: Sequence[float], qdot: Sequence[float]) -> NDArray[np.float64]:
         """Return the generalized momentum `p = M(q)*q_dot`, Nm*s."""

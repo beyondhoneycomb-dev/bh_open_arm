@@ -13,6 +13,7 @@ import pytest
 
 from backend.gmo import (
     DEFAULT_OBSERVER_GAIN,
+    NFR_SAF_002_MAX_DETECTION_DELAY_S,
     GmoModelTerms,
     MomentumObserver,
     ObserverConfigError,
@@ -85,3 +86,15 @@ def test_non_positive_dt_is_refused(model_terms: GmoModelTerms) -> None:
     observer = MomentumObserver(model_terms, gain=90.0)
     with pytest.raises(ObserverConfigError):
         observer.update([0.0] * 7, [0.0] * 7, [0.0] * 7, dt=0.0)
+
+
+def test_the_default_gain_meets_the_detection_delay_ceiling() -> None:
+    """NFR-SAF-002: the delay a residual observer adds is `1/K`, and it must not exceed 15 ms.
+
+    Asserted against the gain itself rather than against a measured rise time, because the
+    requirement bounds the gain and a rise-time band wide enough to absorb forward-Euler lateness
+    is also wide enough to pass a gain that misses the ceiling.
+    """
+    delay_s = 1.0 / DEFAULT_OBSERVER_GAIN
+
+    assert delay_s <= NFR_SAF_002_MAX_DETECTION_DELAY_S

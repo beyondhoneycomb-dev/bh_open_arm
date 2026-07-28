@@ -258,11 +258,11 @@ rows:
       - type: runtime_assert
         predicate: "감지 루프 dt 에 대해 K*dt < 2 를 만족하지 않으면 잔차 기반 감지를 켜지 않는다"
         check: "WP-2C-02"
-        status: planned
+        status: active
       - type: ci_static
         predicate: "주파수 값이 통과/실패 판정에 쓰이는 경로 0건 — 계측·표시 전용"
         check: "WP-1-04"
-        status: planned
+        status: active
 
   - norm_id: NORM-009
     contradiction: >-
@@ -287,11 +287,11 @@ rows:
       - type: runtime_assert
         predicate: "운영자가 설정한 임계값이 재기동 후에도 유지된다(디스크 영속)"
         check: "WP-2C-03"
-        status: planned
+        status: active
       - type: ci_static
         predicate: "임계값 UI 문안에 비교 대상이 잔차임이 명시된다"
         check: "WP-G-S12"
-        status: planned
+        status: active
 
   - norm_id: NORM-010
     contradiction: >-
@@ -316,7 +316,7 @@ rows:
       - type: ci_static
         predicate: "홈 기본 프로파일 값이 J4 = pi/2 이며 전 관절 0 프로파일은 기본이 아니다"
         check: "WP-2D-07"
-        status: planned
+        status: active
 
   - norm_id: NORM-011
     contradiction: >-
@@ -340,7 +340,7 @@ rows:
       - type: runtime_assert
         predicate: "운영자가 설정한 관측기 이득이 재기동 후에도 유지된다"
         check: "WP-2C-03"
-        status: planned
+        status: active
 
   - norm_id: NORM-012
     contradiction: >-
@@ -368,7 +368,7 @@ rows:
       - type: runtime_assert
         predicate: "실행 중인 마찰 프로파일의 robot_version 과 재식별 여부가 조회 가능하다"
         check: "WP-2B-07"
-        status: planned
+        status: active
 
   - norm_id: NORM-013
     contradiction: >-
@@ -391,7 +391,7 @@ rows:
       - type: runtime_assert
         predicate: "녹화 세션이 사이클 타임 분포와 목표 미달 비율을 보고한다"
         check: "WP-3B-12"
-        status: planned
+        status: active
 
   - norm_id: NORM-014
     contradiction: >-
@@ -415,7 +415,7 @@ rows:
       - type: ci_static
         predicate: "SCHED_FIFO/sched_setscheduler 호출 0건"
         check: "WP-5-05"
-        status: planned
+        status: active
 
 notes:
   - norm_id: NORM-005

@@ -56,6 +56,12 @@ from backend.loadtest.report import (
     LoadTestReportRefusedError,
     build_load_test_report,
 )
+from backend.loadtest.rt_promotion_scope import (
+    RT_POLICY_ATTRIBUTES,
+    RT_PROMOTION_CALLS,
+    RtPromotionSite,
+    scan_rt_promotion,
+)
 from backend.loadtest.stop_path import (
     StopPathComparison,
     deferred_real_stop_latency,
@@ -63,6 +69,8 @@ from backend.loadtest.stop_path import (
 )
 
 __all__ = [
+    "RT_POLICY_ATTRIBUTES",
+    "RT_PROMOTION_CALLS",
     "BackpressurePolicyVerdict",
     "ClassResult",
     "LeaseDelayResult",
@@ -75,6 +83,7 @@ __all__ = [
     "PublishRateResolution",
     "PublishRateVerdict",
     "RoundTripMeasurement",
+    "RtPromotionSite",
     "StopPathComparison",
     "build_load_test_report",
     "deferred_real_stop_latency",
@@ -84,6 +93,7 @@ __all__ = [
     "measure_soft_estop_path",
     "resolve_publish_rate",
     "run_load",
+    "scan_rt_promotion",
     "verify_backpressure_policy",
     "verify_publish_rate_policy",
 ]

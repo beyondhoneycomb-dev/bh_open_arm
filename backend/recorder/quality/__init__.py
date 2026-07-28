@@ -12,9 +12,11 @@ The layers:
 - `label` — the episode judgment: an automatic SUGGESTION and a human verdict, both kept,
   the human's overriding, a mismatch left queryable; an abort or crash label must carry a
   reason and is never auto-saved (②④⑤, and the "discard without a reason" FAIL_BLOCKING).
-- `metrics` — the seven measures (loop rate, jitter, missing, CAN drop, camera drop, jerk,
-  std floor), each a pure function of a recorded series; CAN drop is surfaced rather than
-  hidden behind the recorder's stale-state reuse (③).
+- `metrics` — the six measures (cycle time, missing, CAN drop, camera drop, jerk, std
+  floor), each a pure function of a recorded series; CAN drop is surfaced rather than hidden
+  behind the recorder's stale-state reuse (③). The cycle time comes from the recorder's own
+  monotonic loop instants, so an episode the recorder did not stamp reports no rate at all
+  rather than the fps it was configured with.
 - `report` — the `FrameSample` the recorder holds, the `QualityReport` it assembles, and a
   gate that grades only against caller-supplied thresholds — none baked in, because the bar
   is `[결정필요]` (⑥).
@@ -53,9 +55,12 @@ from backend.recorder.quality.label import (
 from backend.recorder.quality.metrics import (
     CameraDropStats,
     CanDropStats,
+    CycleTimeError,
+    CycleTimeStats,
     JerkStats,
-    LoopTiming,
     StdFloorStats,
+    cycle_time_stats,
+    validate_target_fps,
 )
 from backend.recorder.quality.report import (
     FrameSample,
@@ -78,6 +83,8 @@ __all__ = [
     "AbortReason",
     "CameraDropStats",
     "CanDropStats",
+    "CycleTimeError",
+    "CycleTimeStats",
     "DatasetStore",
     "DiskDecision",
     "DiskStatus",
@@ -89,7 +96,6 @@ __all__ = [
     "GateOutcome",
     "JerkStats",
     "Judgment",
-    "LoopTiming",
     "Provenance",
     "QualityLabelError",
     "QualityReport",
@@ -101,11 +107,13 @@ __all__ = [
     "Verdict",
     "attempt_recovery",
     "build_report",
+    "cycle_time_stats",
     "evaluate",
     "is_footerless_parquet",
     "isolate",
     "read_sidecar",
     "recover",
     "update_label",
+    "validate_target_fps",
     "write_sidecar",
 ]

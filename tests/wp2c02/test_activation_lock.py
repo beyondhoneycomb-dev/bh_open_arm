@@ -14,6 +14,7 @@ import dataclasses
 import pytest
 
 from backend.detection_gate import (
+    RESIDUAL_DETECTION_TARGET_HZ,
     DetectionActivationMode,
     DetectionActivationRefusedError,
     assert_activation_allowed,
@@ -25,9 +26,11 @@ from backend.safety_bringup.band import FramePattern, resolve_detection_band
 NON_PASS_STATUSES = ("FAIL_BLOCKING", "RETRY_WITH_VARIANT", "DEGRADED_ACCEPTED", "SUPERSEDED", "")
 
 
-def test_deferred_status_locks_activation(deferred_status: str, fmax_deferred) -> None:
+def test_deferred_status_locks_activation(
+    deferred_status: str, fmax_deferred, observer_gain: float
+) -> None:
     """With PG-FRIC-001 not passed, the gate resolves DISABLED and refuses activation."""
-    activation = measure_and_resolve(deferred_status, FramePattern.A, fmax_deferred)
+    activation = measure_and_resolve(deferred_status, FramePattern.A, fmax_deferred, observer_gain)
     assert activation.mode is DetectionActivationMode.DISABLED
     assert activation.locked is True
     assert activation.activation_permitted is False
@@ -36,9 +39,9 @@ def test_deferred_status_locks_activation(deferred_status: str, fmax_deferred) -
 
 
 @pytest.mark.parametrize("status", NON_PASS_STATUSES)
-def test_every_non_pass_status_locks(status: str, fmax_deferred) -> None:
+def test_every_non_pass_status_locks(status: str, fmax_deferred, observer_gain: float) -> None:
     """Any PG-FRIC-001 state other than PASS locks activation — PASS is the only key."""
-    activation = measure_and_resolve(status, FramePattern.B, fmax_deferred)
+    activation = measure_and_resolve(status, FramePattern.B, fmax_deferred, observer_gain)
     assert activation.mode is DetectionActivationMode.DISABLED
     assert activation.locked is True
 
@@ -54,27 +57,33 @@ def test_api_guard_permits_pass(synthetic_pass: str) -> None:
     assert_activation_allowed(synthetic_pass)
 
 
-def test_disabled_verdict_is_frozen_no_bypass(deferred_status: str, fmax_deferred) -> None:
+def test_disabled_verdict_is_frozen_no_bypass(
+    deferred_status: str, fmax_deferred, observer_gain: float
+) -> None:
     """The verdict is frozen: no attribute can be assigned to flip a DISABLED lock to permitted."""
-    activation = measure_and_resolve(deferred_status, FramePattern.A, fmax_deferred)
+    activation = measure_and_resolve(deferred_status, FramePattern.A, fmax_deferred, observer_gain)
     with pytest.raises(dataclasses.FrozenInstanceError):
         activation.mode = DetectionActivationMode.ACTIVE  # type: ignore[misc]
     with pytest.raises(dataclasses.FrozenInstanceError):
         activation.speed_cap_scale = 0.5  # type: ignore[misc]
 
 
-def test_pass_with_full_band_permits(synthetic_pass: str, fmax_deferred) -> None:
-    """A synthetic PASS with a 1 kHz-capable band resolves ACTIVE and permits activation."""
-    activation = measure_and_resolve(synthetic_pass, FramePattern.A, fmax_deferred)
+def test_pass_with_full_band_permits(
+    synthetic_pass: str, fmax_deferred, observer_gain: float
+) -> None:
+    """A synthetic PASS with a target-clearing band resolves ACTIVE and permits activation."""
+    activation = measure_and_resolve(synthetic_pass, FramePattern.A, fmax_deferred, observer_gain)
     assert activation.mode is DetectionActivationMode.ACTIVE
     assert activation.activation_permitted is True
     assert activation.locked is False
     activation.assert_can_activate()
 
 
-def test_band_alone_never_unlocks(deferred_status: str, fmax_deferred) -> None:
+def test_band_alone_never_unlocks(
+    deferred_status: str, fmax_deferred, observer_gain: float
+) -> None:
     """A fully-active band cannot unlock a not-PASS friction verdict — PASS gates it."""
     full_band = resolve_detection_band(FramePattern.A, fmax_deferred)
-    assert full_band.degraded is False
-    activation = resolve_activation(deferred_status, full_band)
+    assert full_band.effective_hz >= RESIDUAL_DETECTION_TARGET_HZ
+    activation = resolve_activation(deferred_status, full_band, observer_gain)
     assert activation.mode is DetectionActivationMode.DISABLED

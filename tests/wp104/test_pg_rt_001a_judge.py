@@ -1,6 +1,6 @@
 """Acceptance ⑤: the PG-RT-001a verdict and its frozen, order-forced retry escalation.
 
-A pass needs every main-path point under the 0.1% budget; a failure escalates through
+A pass needs every measured point under the 0.1% budget; a failure escalates through
 exactly the enumerated variants, in the forced order, and never invents a new one.
 """
 
@@ -57,13 +57,16 @@ def test_escalation_order_is_frozen_and_not_invented() -> None:
     assert "CAN-ownership transfer" in terminal.rationale
 
 
-def test_out_of_band_point_cannot_fail_the_verdict() -> None:
-    # A 300 Hz point is above the 250 Hz band ceiling: it is carried but not judged.
+def test_an_out_of_band_failure_is_judged_and_labelled_not_discarded() -> None:
+    # A 300 Hz point is above the 250 Hz band ceiling. NORM-008 forbids that fact from
+    # deciding anything, so the point still fails the budget and still fails the gate;
+    # what the band ceiling buys is a label on the published record.
     band = (BandPoint(125.0, _PASSING), BandPoint(300.0, _FAILING))
     verdict = judge_pg_rt_001a(band)
-    assert verdict.status == GATE_STATE_PASS
-    # only the in-band point is retained in the judged set.
-    assert [point.target_hz for point in verdict.band_points] == [125.0]
+    assert verdict.status == GATE_STATE_RETRY_WITH_VARIANT
+    assert verdict.failing_points == (BandPoint(300.0, _FAILING),)
+    assert [point.target_hz for point in verdict.band_points] == [125.0, 300.0]
+    assert [point["in_main_path"] for point in verdict.as_record()["band_points"]] == [True, False]
 
 
 def test_band_points_from_sweep_reads_the_harness_record() -> None:

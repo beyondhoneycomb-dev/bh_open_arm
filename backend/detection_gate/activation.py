@@ -1,8 +1,10 @@
 """The WP-2C-02 detection activation gate: the single gateway for 2C real activation (SHAPE-IG).
 
 FR-SAF-030 makes collision detection a function of one fact — PG-FRIC-001 PASS — and FR-SAF-001b
-makes a detection loop that misses 1 kHz a degrade with an effective-delay display, not a silent
-continuation. This module fuses both into one verdict a caller cannot route around:
+makes a detection loop that misses its rate a degrade with an effective-delay display, not a silent
+continuation. NORM-008 settles what that rate is: not the discarded 1 kHz, but the 100 Hz at which
+the forward-Euler residual converges for the configured gain. This module fuses them into one
+verdict a caller cannot route around:
 
   * The lock (①). While PG-FRIC-001 is not PASS the verdict is DISABLED and `activation_permitted`
     is False; `assert_can_activate` and the API-level `assert_activation_allowed` raise. On this
@@ -12,14 +14,19 @@ continuation. This module fuses both into one verdict a caller cannot route arou
     to claim the gate is open.
 
   * The measured downgrade (②). Activation always carries a `DetectionBand` — the loop cycle-time
-    measurement is a required input, never skipped — and a band that misses 1 kHz demotes the mode.
-    The band math (the pattern-B 625 Hz clamp, the ≈1/f effective latency) is WP-1-06's and is
-    reused from `backend.safety_bringup.band`, not re-derived.
+    measurement is a required input, never skipped — and a band under the residual-detection target
+    demotes the mode. The band math (the pattern-B 625 Hz clamp, the ≈1/f effective latency) is
+    WP-1-06's and is reused from `backend.safety_bringup.band`, not re-derived. What is NOT reused
+    is that module's `target_hz`/`degraded` pair: those are the 1 kHz pass/fail flag NORM-008
+    discards, while the rate measurement they ride on is what it keeps. Wiring `band.degraded` back
+    in is the obvious simpler thing to try, and it reinstates the discarded target.
 
   * No silent downgrade (③). A DEGRADED_ACCEPTED verdict is built only through `resolve_activation`,
     and its `__post_init__` refuses to exist unless it carries a speed-cap scale below 1.0 with the
     latency shown. A degrade that would display latency without lowering the cap cannot be
-    constructed, so the alibi 02b §3.3 warns of has no representation.
+    constructed, so the alibi 02b §3.3 warns of has no representation. The same guard carries
+    NORM-008's runtime assert: neither permitted mode can exist over a loop whose `K*dt` reaches
+    the divergence bound, since capping speed does not redeem a residual that means nothing.
 
 This is the general conditional form of the same FR-SAF-030 rule WP-2B-08's `DetectionLock`
 specialises: that lock is unconditional because path B is by definition the friction-unidentified
@@ -37,14 +44,17 @@ from backend.detection_gate.banner import (
     disabled_banner_text,
     reopen_banner_text,
 )
-from backend.detection_gate.constants import GATE_STATE_PASS
+from backend.detection_gate.constants import (
+    GATE_STATE_PASS,
+    RESIDUAL_DETECTION_TARGET_HZ,
+)
+from backend.detection_gate.convergence import assert_gain_converges, gain_converges
 from backend.detection_gate.errors import (
     DetectionActivationRefusedError,
     SilentDowngradeError,
 )
 from backend.rtbench.fmax import FMax
 from backend.safety_bringup.band import DetectionBand, resolve_detection_band
-from backend.safety_bringup.constants import DETECTION_LOOP_TARGET_HZ
 
 # A fully active loop shows no banner; the other three modes each carry one. Named so the
 # "banner is shown" predicate reads off intent rather than an empty-string test.
@@ -54,6 +64,12 @@ NO_BANNER = ""
 # DISABLED/REOPEN states impose none either (detection is not running, so the conservative
 # velocity limiter — WP-2A-04 — is what governs speed, not this gate).
 FULL_SPEED_CAP_SCALE = 1.0
+
+# The exclusive floor of a degrade's speed cap. The cap multiplies commanded jog/teleop velocity,
+# so at zero it is a stop and below zero it reverses the command — neither is the "slower but
+# still moving" state DEGRADED_ACCEPTED means, and both clear an unbounded "below full speed"
+# test, which is why the degrade guard is a range and not a single comparison.
+MIN_SPEED_CAP_SCALE = 0.0
 
 
 class DetectionActivationMode(Enum):
@@ -90,6 +106,9 @@ class DetectionActivation:
         speed_cap_scale: The jog/teleop speed-cap fraction this state enforces. Below 1.0 only in
             DEGRADED, where it is the actual downgrade; 1.0 otherwise.
         banner: The operator banner for this mode, empty only when fully ACTIVE.
+        observer_gain: The residual-loop gain `K` in force. Required, not defaulted: the gate
+            cannot evaluate `K*dt` without it, and a safety gate that assumes `K` is the silent
+            path NORM-008 closes.
     """
 
     mode: DetectionActivationMode
@@ -97,24 +116,39 @@ class DetectionActivation:
     band: DetectionBand
     speed_cap_scale: float
     banner: str
+    observer_gain: float
 
     def __post_init__(self) -> None:
         """Refuse any verdict that violates its mode's safety invariant.
 
+        The convergence check runs first and covers both permitted modes: a verdict that lets
+        detection run over a loop the gain diverges at is not a downgrade to be capped, it is a
+        residual that means nothing, so no amount of speed cap or banner redeems it.
+
         Raises:
-            SilentDowngradeError: If a DEGRADED verdict does not lower the speed cap below 1.0 or
-                shows no effective-delay banner — the silent downgrade acceptance ③ forbids.
-            ValueError: If a non-DEGRADED verdict is internally inconsistent (a locked mode that
-                claims activation, or an ACTIVE mode built over a degraded band).
+            ObserverDivergenceError: If a mode that permits detection does not satisfy `K*dt < 2`
+                over its own measured band (NORM-008's runtime assert).
+            SilentDowngradeError: If a DEGRADED verdict's speed cap is not strictly between zero
+                and 1.0, or it shows no effective-delay banner — the silent downgrade acceptance
+                ③ forbids.
+            ValueError: If a verdict sits on the wrong side of the residual-detection target for
+                its mode, or a non-DEGRADED verdict carries a lowered cap.
         """
+        if self.mode in _PERMITTED_MODES:
+            assert_gain_converges(self.observer_gain, self.band.effective_latency_sec)
         if self.mode is DetectionActivationMode.DEGRADED:
-            if not self.band.degraded:
-                raise ValueError("DEGRADED activation built over a band that is not degraded")
-            if not self.speed_cap_scale < FULL_SPEED_CAP_SCALE:
+            if not self.effective_hz < RESIDUAL_DETECTION_TARGET_HZ:
+                raise ValueError(
+                    f"DEGRADED activation built over {self.effective_hz} Hz, which meets the "
+                    f"{RESIDUAL_DETECTION_TARGET_HZ} Hz residual-detection target"
+                )
+            if not MIN_SPEED_CAP_SCALE < self.speed_cap_scale < FULL_SPEED_CAP_SCALE:
                 raise SilentDowngradeError(
                     f"DEGRADED_ACCEPTED activation carries speed_cap_scale={self.speed_cap_scale}, "
-                    "not below 1.0: a degrade that does not lower the jog/teleop speed cap is the "
-                    "silent downgrade 02b §3.3 forbids (acceptance ③)"
+                    f"outside ({MIN_SPEED_CAP_SCALE}, {FULL_SPEED_CAP_SCALE}): a cap that is not "
+                    "below full speed is the silent downgrade 02b §3.3 forbids, and one at or "
+                    "below zero is a stop or a reversed command wearing the degrade's label "
+                    "(acceptance ③)"
                 )
             if not self.banner:
                 raise SilentDowngradeError(
@@ -122,8 +156,14 @@ class DetectionActivation:
                     "must be displayed (FR-SAF-001b, acceptance ③)"
                 )
             return
-        if self.mode is DetectionActivationMode.ACTIVE and self.band.degraded:
-            raise ValueError("ACTIVE activation built over a degraded band")
+        if (
+            self.mode is DetectionActivationMode.ACTIVE
+            and not self.effective_hz >= RESIDUAL_DETECTION_TARGET_HZ
+        ):
+            raise ValueError(
+                f"ACTIVE activation built over {self.effective_hz} Hz, below the "
+                f"{RESIDUAL_DETECTION_TARGET_HZ} Hz residual-detection target"
+            )
         if self.speed_cap_scale != FULL_SPEED_CAP_SCALE:
             raise ValueError(
                 f"{self.mode.value} activation must carry the full speed cap; "
@@ -155,12 +195,21 @@ class DetectionActivation:
         """The effective detection delay in seconds (≈1/f), the figure FR-SAF-001b shows."""
         return self.band.effective_latency_sec
 
+    @property
+    def converges(self) -> bool:
+        """Whether the residual converges at this gain over this loop period (NORM-008).
+
+        The band's effective latency IS the loop period, so it is passed straight through rather
+        than a second `1/f` being derived here.
+        """
+        return gain_converges(self.observer_gain, self.band.effective_latency_sec)
+
     def assert_can_activate(self) -> None:
         """Refuse activation unless the gate permits it (① the code-level lock).
 
         Raises:
             DetectionActivationRefusedError: If the mode is DISABLED (PG-FRIC-001 not PASS) or
-                ARCHITECTURE_REOPEN (1 kHz unreachable by any pattern).
+                ARCHITECTURE_REOPEN (no achievable rate converges at this gain).
         """
         if self.mode is DetectionActivationMode.DISABLED:
             raise DetectionActivationRefusedError(
@@ -170,25 +219,34 @@ class DetectionActivation:
             )
         if self.mode is DetectionActivationMode.ARCHITECTURE_REOPEN:
             raise DetectionActivationRefusedError(
-                "collision detection cannot activate: the loop misses 1 kHz on every frame "
-                "pattern, which is an architecture-reopen escalation, not an accepted degrade "
-                "(02b §3.2, spec 12 §2.9)"
+                f"collision detection cannot activate: at gain {self.observer_gain} the loop's "
+                f"{self.effective_hz} Hz does not converge the residual, which is an "
+                "architecture-reopen escalation, not an accepted degrade (02b §3.2, NORM-008)"
             )
 
 
-def resolve_activation(pg_fric_001_status: str, band: DetectionBand) -> DetectionActivation:
-    """Resolve the detection activation verdict from the friction gate and the measured band.
+def resolve_activation(
+    pg_fric_001_status: str, band: DetectionBand, observer_gain: float
+) -> DetectionActivation:
+    """Resolve the detection activation verdict from the friction gate, the band, and the gain.
 
-    The single gateway (SHAPE-IG). PG-FRIC-001 decides whether detection may run at all; the band
-    then decides at what rate. A band that misses 1 kHz demotes to DEGRADED_ACCEPTED when the miss
-    is the pattern-B CAN-FD clamp (the designed 625 Hz fallback), or to ARCHITECTURE_REOPEN when it
-    is not clamped — pattern A is the 1 kHz-capable pattern, so a shortfall there means no pattern
-    reaches 1 kHz, which is a design escalation rather than an accepted degrade.
+    The single gateway (SHAPE-IG). PG-FRIC-001 decides whether detection may run at all; the
+    measured rate and the gain together decide in what state. Divergence is tested before the
+    target because it dominates: a rate well above 100 Hz is still invalid if the gain is too
+    large for it, so the escalation is not a rate verdict but a `K*dt` one.
+
+    ARCHITECTURE_REOPEN keeps the shape it always had — no achievable rate meets what detection
+    needs, so this is a design escalation and not an accepted degrade — and only the requirement
+    changes, from an unreachable 1 kHz to the convergence floor. The band between that floor and
+    the target is the real DEGRADED case: the residual does converge there, but it overshoots to
+    roughly twice the contact torque on the way, which is a physical reason to cap speed rather
+    than an invented one.
 
     Args:
         pg_fric_001_status: The PG-FRIC-001 gate-state (`PASS` opens the gate; anything else locks
             it). Hardware-deferred on this host, so it is not PASS here and the gate stays locked.
         band: The measured detection-loop bandwidth (WP-1-06 `resolve_detection_band` output).
+        observer_gain: The residual-loop gain `K` the loop period is judged against.
 
     Returns:
         (DetectionActivation) The resolved verdict — the sole constructor of the type.
@@ -200,35 +258,39 @@ def resolve_activation(pg_fric_001_status: str, band: DetectionBand) -> Detectio
             band=band,
             speed_cap_scale=FULL_SPEED_CAP_SCALE,
             banner=disabled_banner_text(),
+            observer_gain=observer_gain,
         )
-    if not band.degraded:
+    if not gain_converges(observer_gain, band.effective_latency_sec):
+        return DetectionActivation(
+            mode=DetectionActivationMode.ARCHITECTURE_REOPEN,
+            pg_fric_001_status=pg_fric_001_status,
+            band=band,
+            speed_cap_scale=FULL_SPEED_CAP_SCALE,
+            banner=reopen_banner_text(observer_gain, band.effective_latency_sec),
+            observer_gain=observer_gain,
+        )
+    if band.effective_hz >= RESIDUAL_DETECTION_TARGET_HZ:
         return DetectionActivation(
             mode=DetectionActivationMode.ACTIVE,
             pg_fric_001_status=pg_fric_001_status,
             band=band,
             speed_cap_scale=FULL_SPEED_CAP_SCALE,
             banner=NO_BANNER,
+            observer_gain=observer_gain,
         )
-    if band.clamped:
-        scale = _degraded_speed_cap_scale(band)
-        return DetectionActivation(
-            mode=DetectionActivationMode.DEGRADED,
-            pg_fric_001_status=pg_fric_001_status,
-            band=band,
-            speed_cap_scale=scale,
-            banner=degraded_banner_text(band.effective_latency_sec, scale),
-        )
+    scale = _degraded_speed_cap_scale(band)
     return DetectionActivation(
-        mode=DetectionActivationMode.ARCHITECTURE_REOPEN,
+        mode=DetectionActivationMode.DEGRADED,
         pg_fric_001_status=pg_fric_001_status,
         band=band,
-        speed_cap_scale=FULL_SPEED_CAP_SCALE,
-        banner=reopen_banner_text(),
+        speed_cap_scale=scale,
+        banner=degraded_banner_text(band.effective_latency_sec, scale),
+        observer_gain=observer_gain,
     )
 
 
 def measure_and_resolve(
-    pg_fric_001_status: str, frames_per_cycle: int, fmax: FMax
+    pg_fric_001_status: str, frames_per_cycle: int, fmax: FMax, observer_gain: float
 ) -> DetectionActivation:
     """Measure the loop band and resolve the activation verdict in one call (② always measured).
 
@@ -240,12 +302,13 @@ def measure_and_resolve(
         pg_fric_001_status: The PG-FRIC-001 gate-state.
         frames_per_cycle: The CAN read pattern in effect (16 == A, 32 == B).
         fmax: The `WP-1-04` f_max figure the band is bounded by (provisional on this host).
+        observer_gain: The residual-loop gain `K` the measured period is judged against.
 
     Returns:
         (DetectionActivation) The resolved verdict over the measured band.
     """
     band = resolve_detection_band(frames_per_cycle, fmax)
-    return resolve_activation(pg_fric_001_status, band)
+    return resolve_activation(pg_fric_001_status, band, observer_gain)
 
 
 def assert_activation_allowed(pg_fric_001_status: str) -> None:
@@ -279,11 +342,13 @@ def assert_no_silent_downgrade(activation: DetectionActivation) -> None:
         activation: The verdict to check.
 
     Raises:
-        SilentDowngradeError: If a DEGRADED verdict lacks a lowered speed cap or its delay banner.
+        SilentDowngradeError: If a DEGRADED verdict's speed cap is not strictly between zero and
+            full, or its delay banner is missing.
     """
     if activation.mode is not DetectionActivationMode.DEGRADED:
         return
-    if not activation.speed_cap_scale < FULL_SPEED_CAP_SCALE or not activation.banner:
+    lowers_speed = MIN_SPEED_CAP_SCALE < activation.speed_cap_scale < FULL_SPEED_CAP_SCALE
+    if not lowers_speed or not activation.banner:
         raise SilentDowngradeError(
             "DEGRADED_ACCEPTED verdict is missing its speed-cap downgrade or effective-delay "
             "display (acceptance ③)"
@@ -294,16 +359,15 @@ def _degraded_speed_cap_scale(band: DetectionBand) -> float:
     """Derive the jog/teleop speed-cap fraction a degraded loop must enforce.
 
     The cap is lowered in proportion to the detection-rate shortfall: at `effective_hz` instead of
-    the 1 kHz target, holding the worst-case intrusion distance between detection samples to the
-    full-rate budget needs speed scaled by `effective_hz / target`. This is derived from the
-    measured band, not a fixed target (I-6, no target before measurement), and rides the band's
-    provisional f_max, so it is stale when PG-RT-001b re-derives the bound.
+    the residual-detection target, holding the worst-case intrusion distance between detection
+    samples to the full-rate budget needs speed scaled by `effective_hz / target`. It rides the
+    band's provisional f_max, so it is stale when PG-RT-001b re-derives the bound.
 
     Args:
-        band: The degraded detection band.
+        band: A band whose `effective_hz` is below `RESIDUAL_DETECTION_TARGET_HZ` — the only case
+            `resolve_activation` calls this for, so the ratio is below 1.0 without a clamp.
 
     Returns:
-        (float) The speed-cap fraction (< 1.0 for a degraded band), bounded at 1.0.
+        (float) The speed-cap fraction.
     """
-    target = DETECTION_LOOP_TARGET_HZ
-    return min(band.effective_hz / target, FULL_SPEED_CAP_SCALE)
+    return band.effective_hz / RESIDUAL_DETECTION_TARGET_HZ

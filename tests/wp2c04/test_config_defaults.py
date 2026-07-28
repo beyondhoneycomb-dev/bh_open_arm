@@ -20,6 +20,7 @@ from backend.threshold.constants import (
     CONFIRM_SAMPLES_DEFAULT,
     HYSTERESIS_RATIO_DEFAULT,
     JOINT_EFFORT_LIMITS_NM,
+    N_ARM_JOINTS,
     THRESHOLD_DEFAULT_NM,
     THRESHOLD_MIN_NM,
     VEL_COEFF_DEFAULT,
@@ -125,3 +126,29 @@ def _config_with(
         hysteresis_ratio=hysteresis_ratio,
         per_joint_enable=per_joint_enable,
     )
+
+
+def test_the_threshold_floor_is_the_same_number_the_proposer_clamps_to() -> None:
+    """One floor, not two roundings of one floor (FR-SAF-019).
+
+    WP-2C-03's wizard clamps a proposal up to `floor_for_joint`, and this package refuses anything
+    below `THRESHOLD_MIN_NM`. While the two were derived separately — one from the packet T_MAX
+    encoding, one transcribed from spec 12 §2.2's four-decimal print of the same quantity — the
+    clamp landed 0.1 % below the refusal, so a floor-clamped proposal was refused by its own
+    consumer. Exact equality is asserted, not approximate: a tolerance here would re-admit the gap
+    this pins shut.
+    """
+    from backend.safety_bringup.thresholds import floor_for_joint
+
+    proposer_floor = tuple(floor_for_joint(joint) for joint in range(N_ARM_JOINTS))
+
+    assert proposer_floor == THRESHOLD_MIN_NM
+
+
+def test_a_floor_clamped_proposal_is_accepted_by_the_consumer() -> None:
+    """The seam the shared floor closes, stated as the behaviour an operator would have hit."""
+    from backend.safety_bringup.thresholds import floor_for_joint
+
+    clamped = tuple(floor_for_joint(joint) for joint in range(N_ARM_JOINTS))
+
+    assert ThresholdCalibration(thr0=clamped).thr0 == clamped
