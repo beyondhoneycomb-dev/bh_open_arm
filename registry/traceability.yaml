@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/v1/plan/00-실행계획-개요.md@71284ea
+spine_ref: docs/v1/plan/00-실행계획-개요.md@7db7150
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -35067,7 +35067,7 @@ entries:
   - WP-0B-01
   - WP-1-01
   stale_on: []
-  env_hash: sha256:d28ff705fbef7c1e6eb42ad42955994331c6a8d325b829148886a3404a547cbe
+  env_hash: sha256:a9e81b30ac9dff1dac534b0330663b371d925827153f355ed763948e902eada4
   workflow: SHAPE-CF
   exec_class: AI-offline
   justification: 하류 소비자(WP-0B-01·WP-1-01)는 CTR-OWN@v1 소유 레지스트리를 데이터로 소비한다(소유 규율에 종속) — ownership/ 파이썬을
@@ -42491,7 +42491,7 @@ entries:
   downstream:
   - WP-1-02
   stale_on: []
-  env_hash: sha256:d28ff705fbef7c1e6eb42ad42955994331c6a8d325b829148886a3404a547cbe
+  env_hash: sha256:a9e81b30ac9dff1dac534b0330663b371d925827153f355ed763948e902eada4
   workflow: SHAPE-CF
   exec_class: AI-offline
   planned: true
@@ -43401,7 +43401,7 @@ entries:
   - WP-OPS-06
   stale_on:
   - CTR-UNIT:MAJOR_BUMP
-  env_hash: sha256:d28ff705fbef7c1e6eb42ad42955994331c6a8d325b829148886a3404a547cbe
+  env_hash: sha256:a9e81b30ac9dff1dac534b0330663b371d925827153f355ed763948e902eada4
   workflow: SHAPE-CF
   exec_class: AI-offline
   planned: true
@@ -43573,7 +43573,7 @@ entries:
   - WP-0C-02
   - WP-0C-09
   stale_on: []
-  env_hash: sha256:d28ff705fbef7c1e6eb42ad42955994331c6a8d325b829148886a3404a547cbe
+  env_hash: sha256:a9e81b30ac9dff1dac534b0330663b371d925827153f355ed763948e902eada4
   workflow: SHAPE-CF
   exec_class: AI-offline
   planned: true
@@ -44077,7 +44077,7 @@ entries:
   stale_on:
   - CTR-ACT:MAJOR_BUMP
   - CTR-UNIT:MAJOR_BUMP
-  env_hash: sha256:d28ff705fbef7c1e6eb42ad42955994331c6a8d325b829148886a3404a547cbe
+  env_hash: sha256:a9e81b30ac9dff1dac534b0330663b371d925827153f355ed763948e902eada4
   workflow: SHAPE-CF
   exec_class: AI-offline
   justification: 도출된 하류 에지 WP-0A-02는 정적 import가 아니라 계약 조인이다 — 메일박스 타입(TargetMailbox/TimestampedTarget
@@ -44176,7 +44176,7 @@ entries:
   stale_on:
   - CTR-ACT:MAJOR_BUMP
   - CTR-UNIT:MAJOR_BUMP
-  env_hash: sha256:d28ff705fbef7c1e6eb42ad42955994331c6a8d325b829148886a3404a547cbe
+  env_hash: sha256:a9e81b30ac9dff1dac534b0330663b371d925827153f355ed763948e902eada4
   workflow: SHAPE-CF
   exec_class: AI-offline
   justification: 도출된 하류 에지 WP-0A-02는 정적 import가 아니라 계약 조인이다 — 메일박스 타입(TargetMailbox/TimestampedTarget
@@ -49302,7 +49302,7 @@ entries:
   downstream: []
   terminal: true
   stale_on: []
-  env_hash: sha256:d28ff705fbef7c1e6eb42ad42955994331c6a8d325b829148886a3404a547cbe
+  env_hash: sha256:a9e81b30ac9dff1dac534b0330663b371d925827153f355ed763948e902eada4
   workflow: SHAPE-IM
   exec_class: AI-offline
   planned: true
@@ -49444,7 +49444,7 @@ entries:
   - WP-OPS-06
   stale_on:
   - CTR-UNIT:MAJOR_BUMP
-  env_hash: sha256:d28ff705fbef7c1e6eb42ad42955994331c6a8d325b829148886a3404a547cbe
+  env_hash: sha256:a9e81b30ac9dff1dac534b0330663b371d925827153f355ed763948e902eada4
   workflow: SHAPE-CF
   exec_class: AI-offline
   planned: true

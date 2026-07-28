@@ -23,14 +23,25 @@ dev = [
     "mypy>=1.11",
     "types-PyYAML>=6.0",
 ]
-# WP-ENV-01/04: the robot/sim stack the ENV import- and contract-regression checks
-# introspect. Kept OUT of the core `dependencies` so the plan-machine (registry/,
-# ops/, dashboard/) — and `registry.check` — stay light (pyyaml + jsonschema) and
-# never pull torch/lerobot/mujoco. LeRobot is pinned by commit SHA (deps/lerobot.pin,
-# 16 §3.1): a bare `lerobot==0.6.x` spec is refused by deps/phantom.py. `av` is held
-# below 14 because lerobot 0.6.0 uses the pre-14 `av.option` API. The per-target
-# heavy IK/sim packages (openarm_control, openarm_mujoco, mink, torch build) are
-# provisioned per deploy target, not in this universal group — see targets/matrix.yaml.
+# WP-ENV-01/04: everything `backend/`, `sim/` and `packages/` import. Kept OUT of the
+# core `dependencies` so the plan-machine (registry/, ops/, dashboard/) — and
+# `registry.check` — stay light: those three trees import only pyyaml, jsonschema and
+# mcap, verified by AST scan over every `*.py` in them.
+#
+# LeRobot is pinned by commit SHA (deps/lerobot.pin, 16 §3.1): a bare `lerobot==0.6.x`
+# spec is refused by deps/phantom.py. `av` is held below 14 because lerobot 0.6.0 uses
+# the pre-14 `av.option` API.
+#
+# `openarm_control` is pinned EXACTLY, not floored: 02b §「openarm_control IK 채택」
+# records that it has one release and ships no test directory, so the version pin is the
+# only defence against an upstream change. It carries mink, mujoco, numpy, daqp and
+# openarm_mujoco as its own requirements, which is why the IK stack needs no separate
+# entry here. `openarm_driver` is absent on purpose — 01 FR-SYS-010 forbids it on the
+# canonical path (it opens its own CAN socket and double-binds with LeRobot's
+# DamiaoMotorsBus), and backend/can/bind/staticcheck.py fails the build on its import.
+#
+# opencv ships headless: no tree imports a GUI window function, and the GUI build pulls
+# X11 into a container that has no display.
 robot = [
     "lerobot @ git+https://github.com/huggingface/lerobot@30da8e687a6dfc617fcd94afc367ac7071c376ce",
     "python-can>=4.6",
@@ -41,6 +52,22 @@ robot = [
     # python lib directly, no rosbag2). Small and pure-python, but a product-runtime dep
     # ops/telemetry imports eagerly — kept out of core so registry.check stays light.
     "mcap>=1.4",
+    # IK and its physics model (01 §2.9). Brings mink, mujoco, numpy, daqp, openarm_mujoco.
+    "openarm_control==0.1.0",
+    # The four below arrive through openarm_control as well, and are named anyway because this
+    # project imports them DIRECTLY — numpy in 109 files under backend/ and 11 under sim/,
+    # mujoco in 50, mink and openarm_mujoco in one each. A direct import resting on someone
+    # else's requirement list breaks the day that list changes, with no line here to amend.
+    # registry.env.declared_imports fails the build on an import no group covers.
+    "numpy>=2.2",
+    "mujoco>=3.10",
+    "mink>=1.1",
+    "openarm_mujoco>=2.0",
+    "scipy>=1.15",
+    "pandas>=2.2",
+    "pyarrow>=17",
+    "opencv-python-headless>=4.10",
+    "pillow>=10",
 ]
 
 [project.scripts]

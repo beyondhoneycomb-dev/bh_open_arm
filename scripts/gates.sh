@@ -34,6 +34,8 @@ run "registry rules"         python3 -m registry.check --all
 run "normalization ledger"   python3 -m registry.normalization.cli --check
 run "contract index"         python3 -m registry.contracts.cli verify
 run "env hash"               python3 -m registry.env.cli --verify-issued
+run "declared imports"       python3 -m registry.env.declared_imports
+run "lockfile is current"    uv lock --check
 run "pytest"                 python3 -m pytest -q
 
 printf '\n=== frontend ===\n'

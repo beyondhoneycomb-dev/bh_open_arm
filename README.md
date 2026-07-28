@@ -4,6 +4,38 @@ OpenArm v2.0 양팔 로봇 기반 **피지컬 AI 토탈 플랫폼**. 하나의 �
 
 저장소는 명세·계획과 구현을 함께 담는다. 명세는 `docs/v1/spec/`, 실행 계획은 `docs/v1/plan/`, 코드는 `backend/`(런타임) · `contracts/`(경계 계약) · `sim/` · `ops/` · `frontend/`(웹 GUI) · `registry/`(계획 기계)에 있다. 세션별 구현 기록은 `docs/v1/work_log/`.
 
+## 개발 환경 세팅
+
+`uv` 하나로 끝난다. `uv.lock`이 모든 패키지의 버전을 못 박아두므로, 어느 기계에서 받아도 같은 환경이 만들어진다.
+
+```bash
+uv sync --extra dev --extra robot     # 파이썬 의존성 전부
+cd frontend && npm ci && cd ..        # 웹 GUI 의존성
+```
+
+`--extra robot`이 없으면 `registry/`(계획 기계)만 도는 가벼운 환경이 된다 — `backend/`·`sim/`은 안 돌아간다.
+
+의존성 그룹은 세 개다.
+
+| 그룹 | 무엇 | 왜 나눠져 있나 |
+|---|---|---|
+| (기본) | `pyyaml`, `jsonschema` | 계획 기계(`registry/`·`ops/`·`dashboard/`)가 쓰는 전부. 이 셋은 `numpy`조차 import하지 않는다 |
+| `dev` | `pytest`, `ruff`, `mypy` | 검사 도구 |
+| `robot` | `lerobot`, `openarm_control`, `numpy`, `mujoco`, `mink`, `pyarrow`, `opencv`, … | `backend/`·`sim/`·`packages/`가 쓰는 실행 스택 |
+
+**의존성을 추가할 때**: `pyproject.toml`에 적고 `uv lock`을 돌린다. 적지 않고 import하면
+`python -m registry.env.declared_imports`가 잡는다 — 선언 없는 import는 그것을 우연히 가진 기계에서만
+돌아가고 다른 곳에서는 import 오류가 된다.
+
+## 검사 돌리기
+
+```bash
+./scripts/gates.sh        # 게이트 전부 (13종). 판정은 종료 코드로 한다
+```
+
+호스팅 CI는 없다 — 연구개발 단계라 유지 비용이 값어치를 넘어서 제거했다(`docs/v1/plan/02a` WP-ENV-03).
+그래서 `scripts/gates.sh`의 목록이 곧 계약이다: **거기 없는 검사는 아무도 돌리지 않는다.**
+
 ## 문서
 
 - **[docs/v1/spec/](docs/v1/spec/)** — 기능 명세서 (18개 문서, 요구사항 ~1,159개). *무엇을 할 수 있어야 하는가.* 시작점은 [docs/v1/spec/README.md](docs/v1/spec/README.md).
