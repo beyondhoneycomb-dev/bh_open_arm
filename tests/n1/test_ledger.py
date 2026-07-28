@@ -14,7 +14,10 @@ from typing import Any
 from registry.normalization.loader import schema_errors
 from registry.normalization.validator import Corpus, validate
 
-EXPECTED_ROWS = {"NORM-001", "NORM-002", "NORM-003", "NORM-004", "NORM-006", "NORM-007"}
+# The Wave -1 rulings of `02a` §1.3. Later rulings append to the ledger, so this is the
+# set that must be *present*, not the set of everything in the file — pinning equality
+# would make every future ruling look like a broken test.
+WAVE_MINUS_1_ROWS = {"NORM-001", "NORM-002", "NORM-003", "NORM-004", "NORM-006", "NORM-007"}
 EXPECTED_NOTE = "NORM-005"
 
 
@@ -23,11 +26,11 @@ def test_ledger_matches_schema(ledger: dict[str, Any]) -> None:
     assert schema_errors(ledger) == []
 
 
-def test_ledger_loads_the_six_contradictions(ledger: dict[str, Any]) -> None:
-    """All six §1.3 rulings are present, and none is duplicated."""
+def test_ledger_carries_every_wave_minus_1_ruling_exactly_once(ledger: dict[str, Any]) -> None:
+    """All six §1.3 rulings are present, and no row id is duplicated."""
     ids = [row["norm_id"] for row in ledger["rows"]]
-    assert set(ids) == EXPECTED_ROWS
-    assert len(ids) == len(EXPECTED_ROWS)
+    assert set(ids) >= WAVE_MINUS_1_ROWS
+    assert len(ids) == len(set(ids)), "a norm_id appears twice"
 
 
 def test_norm_005_is_a_note_not_a_row(ledger: dict[str, Any]) -> None:

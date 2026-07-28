@@ -227,6 +227,196 @@ rows:
         check: "WP-1-03"
         status: planned
 
+  # 아래 7건의 판정 근거와 검토된 선택지는 docs/guide/03-미결-요구사항-13건-결정요청.md 에 있다.
+  - norm_id: NORM-008
+    contradiction: >-
+      주파수 요구가 게이트인가 계측인가. 12 NFR-SAF-001은 충돌 감지 루프 1 kHz를 요구하고
+      15 NFR-PRF-004는 목표 주파수를 f_max x 0.8 이하로 강제하라고 지시한다. 그러나 LeRobot
+      Python 루프의 실측 사이클 타임이 없고(15 NFR-PRF-054/055 = U-0), 한 사이클 32 CAN
+      프레임이라 CAN-FD 상한이 625 Hz여서 1 kHz는 물리적으로 불가능하다.
+    winners:
+      - NFR-SAF-001
+      - NFR-PRF-004
+      - NFR-PRF-054
+      - NFR-PRF-055
+      - NFR-GUI-004
+    discarded:
+      - file: "12"
+        section: "3.9"
+        quote: "충돌 감지 루프는 1 kHz(주기 1 ms) 로 결정적으로 실행되어야 하며, 주기 지터의 99 퍼센타일이 200 µs 이하여야 한다."
+        req: NFR-SAF-001
+    contract: "CTR-GW@v1"
+    rationale: >-
+      어떤 주파수도 합격/불합격 게이트로 쓰지 않는다. 전부 계측해 GUI에 노출하고, 값은
+      실측(M-8)이 나온 뒤에 판단한다. 다만 충돌 감지 루프만은 예외적으로 하한이 있다 —
+      관측기가 전진 오일러 적분이라 K*dt < 2 에서만 수렴하고, NORM-011이 확정한 K=90
+      에서는 dt < 22 ms, 즉 45 Hz 초과가 필요하다. 10 Hz(K*dt=9)에서는 잔차가
+      45 -> -315 -> 2565 로 발산해 임계값이 매 주기 넘어간다. 그래서 감지 루프 목표를
+      100 Hz(K*dt=0.9, 3주기 수렴)로 둔다. 이는 합격선이 아니라 감지가 성립하는 조건이며,
+      625 Hz CAN 예산에도 여유가 있다.
+    enforcement:
+      - type: runtime_assert
+        predicate: "감지 루프 dt 에 대해 K*dt < 2 를 만족하지 않으면 잔차 기반 감지를 켜지 않는다"
+        check: "WP-2C-02"
+        status: planned
+      - type: ci_static
+        predicate: "주파수 값이 통과/실패 판정에 쓰이는 경로 0건 — 계측·표시 전용"
+        check: "WP-1-04"
+        status: planned
+
+  - norm_id: NORM-009
+    contradiction: >-
+      12 FR-SAF-020 의 근거 문헌은 임계값 경계를 정상 동작 최대치의 5~10 % 범위로 제시해
+      단일 값을 주지 않는다. 상한(10 %)을 쓸지 하한(5 %)을 쓸지, 그리고 그 값이 고정인지
+      운영자가 바꾸는 기본값인지가 갈렸다.
+    winners:
+      - FR-SAF-020
+    discarded:
+      - file: "12"
+        section: "3.3"
+        quote: "bounds exceeding nominal operation max/min by 5–10 %, e.g. ±0.1 τ_max"
+    contract: "CTR-GW@v1"
+    rationale: >-
+      범위의 상한인 0.1 x effort 를 STATIC 기본값으로 채택한다
+      ([4.0, 4.0, 2.7, 2.7, 0.7, 0.7, 0.7] Nm). 고정값이 아니라 기본값이다 — 운영자가
+      바꿀 수 있어야 하고, 바꾼 값은 저장되어 다음 실행에 자동 적용되어야 한다. 그리고
+      이 임계값이 비교되는 대상은 모터에 걸린 총 토크가 아니라 관측기 잔차(설명되지 않는
+      외부 토크)이므로, GUI가 그 사실을 명시해야 한다 — 총 토크로 오해하면 4 Nm 를
+      "팔이 4 Nm 만 내면 선다"로 읽게 되고 그것은 중력 하 정지 자세에서도 넘는 값이다.
+    enforcement:
+      - type: runtime_assert
+        predicate: "운영자가 설정한 임계값이 재기동 후에도 유지된다(디스크 영속)"
+        check: "WP-2C-03"
+        status: planned
+      - type: ci_static
+        predicate: "임계값 UI 문안에 비교 대상이 잔차임이 명시된다"
+        check: "WP-G-S12"
+        status: planned
+
+  - norm_id: NORM-010
+    contradiction: >-
+      홈 자세 이중정본. 04 FR-MAN-047 은 openarm_driver/openarm_mujoco 와 일치하는
+      [0, 0, 0, pi/2, 0, 0, 0, 0] 을 지시하고, MoveIt SRDF 의 named state home 은
+      전 관절 0 이다. 13 FR-GUI-118 은 S-04 가 어느 정의가 활성인지 명시하라고 요구하는데,
+      정본이 정해지지 않으면 표시할 대상 자체가 없다.
+    winners:
+      - FR-MAN-047
+      - FR-GUI-118
+    discarded:
+      - file: "04"
+        section: "3.6"
+        quote: "MoveIt SRDF의 named state home(전 관절 0)은 J4의 기계 하한(하드스톱) 이므로 홈으로 사용해서는 안 된다."
+        req: FR-MAN-047
+    contract: "CTR-GW@v1"
+    rationale: >-
+      [0, 0, 0, pi/2, 0, 0, 0, 0] 이 정본이다. 전 관절 0 은 J4 범위 [0, 2.4435] 의 기계
+      하한이라 그것으로 홈 복귀하면 팔이 스스로 하드스톱에 처박힌다. S-04 는 활성
+      프로파일명과 목표 자세를 실행 전 표시하고 궤적 사전 검증 통과 시에만 실행한다.
+    enforcement:
+      - type: ci_static
+        predicate: "홈 기본 프로파일 값이 J4 = pi/2 이며 전 관절 0 프로파일은 기본이 아니다"
+        check: "WP-2D-07"
+        status: planned
+
+  - norm_id: NORM-011
+    contradiction: >-
+      12 NFR-SAF-002 는 검출 지연을 관측기 이득 K 에 대해 약 1/K 로 두고 K=90 기준
+      15 ms 이하를 요구하는 반면, 같은 행의 근거는 문헌 최고치가 대역통과 적용 시
+      5~6 ms 라고 적어 더 높은 K 를 시사한다.
+    winners:
+      - NFR-SAF-002
+    discarded:
+      - file: "12"
+        section: "3.9"
+        quote: "문헌 최고치는 대역통과 적용 시 5–6 ms"
+    contract: "CTR-GW@v1"
+    rationale: >-
+      K=90 을 채택한다. K 를 올리면 검출은 빨라지지만 잔차의 잡음 민감도가 같이 올라가고,
+      오검출은 팔을 근거 없이 세우는 형태로 나타나 결국 운영자가 감지를 꺼버리는 쪽으로
+      간다. 다만 고정값이 아니라 기본값이다 — 운영자가 바꿀 수 있고 저장되어야 한다.
+      NORM-008 의 감지 루프 100 Hz 는 이 K 값이 수렴하기 위한 조건이므로 K 를 바꾸면
+      루프 주기 조건도 함께 재판정해야 한다(K*dt < 2).
+    enforcement:
+      - type: runtime_assert
+        predicate: "운영자가 설정한 관측기 이득이 재기동 후에도 유지된다"
+        check: "WP-2C-03"
+        status: planned
+
+  - norm_id: NORM-012
+    contradiction: >-
+      12 FR-SAF-031 은 openarm_teleop 의 Fc/k/Fv/Fo, Kp/Kd 를 읽기 전용 seed 로만
+      제공하고 v2 승격에 명시 승인을 요구한다. 그러나 04 FR-MAN-035 가 가리키는 v2 마찰
+      파일은 0 바이트이고, 실측값이 존재하는 파일은 v1 튜닝값뿐이라 그 정책을 따르면
+      v2 에서 쓸 수 있는 값이 하나도 없다.
+    winners:
+      - FR-SAF-031
+      - FR-MAN-035
+    discarded:
+      - file: "12"
+        section: "3.4"
+        quote: "seed 프로파일(읽기 전용, robot_version: \"1.0\" 태그)로만 제공해야 하며, v2 실행 프로파일로 승격하려면 FR-SAF-029 식별 결과와의 관절별 상대오차를 표시하고 명시적 승인"
+        req: FR-SAF-031
+    contract: "CTR-GW@v1"
+    rationale: >-
+      v1 값을 기본 실행 파라미터로 쓴다 — 우선 동작하게 하고, 실기 재식별 경로를 함께
+      제공한다(FR-MAN-035 의 여기 궤적 기반 식별). 근거는 v1 값으로 VR 텔레오퍼레이션이
+      실동작한다는 관찰이다. 남는 위험을 명시해 둔다: 텔레오퍼레이션이 도는 것과 마찰
+      파라미터가 v2 에 맞는 것은 다른 주장이고, 잔차는 마찰 추정을 빼서 만들므로 마찰이
+      틀리면 잔차에 편향이 남아 NORM-009 의 임계값이 어긋난다. 재식별 전까지 충돌 감지의
+      오검출/미검출은 이 편향을 먼저 의심한다.
+    enforcement:
+      - type: runtime_assert
+        predicate: "실행 중인 마찰 프로파일의 robot_version 과 재식별 여부가 조회 가능하다"
+        check: "WP-2B-07"
+        status: planned
+
+  - norm_id: NORM-013
+    contradiction: >-
+      07 NFR-REC-001 은 녹화 루프 레이트에 하한 비율을 요구하나 그 값을 [결정필요] 로
+      남겼고, 인용 가능한 선례는 ALOHA 의 84 % 하나뿐인데 다른 하드웨어에서 나온 값이다.
+    winners:
+      - NFR-REC-001
+    discarded:
+      - file: "07"
+        section: "3.11"
+        quote: "인용 가능한 유일한 선례는 ALOHA의 84%(50 Hz 목표 대비 42 Hz)이며 다른 하드웨어의 값이다."
+    contract: "CTR-REC@v1"
+    rationale: >-
+      하한 비율을 두지 않는다. 남의 하드웨어에서 나온 수치를 우리 합격선으로 박으면
+      시간이 지나 검증된 값으로 인용되며, 이 프로젝트는 그 사고를 이미 한 번 겪었다
+      (NORM-012 의 v1 값). 대신 p50/p95/p99 와 목표 미달 프레임 비율은 항상 보고한다.
+      녹화 fps 는 운영자가 조절할 수 있어야 한다 — 하한이 없는 대신 목표를 스스로
+      낮출 수 있어야 측정이 의미를 갖는다.
+    enforcement:
+      - type: runtime_assert
+        predicate: "녹화 세션이 사이클 타임 분포와 목표 미달 비율을 보고한다"
+        check: "WP-3B-12"
+        status: planned
+
+  - norm_id: NORM-014
+    contradiction: >-
+      13 NFR-GUI-008 은 제어 루프 스레드를 RT 승격(SCHED_FIFO) + mlockall 대상으로
+      요구하나, 같은 문서가 제어 루프를 백엔드 프로세스 안에 두도록 강제하고 있어
+      GIL 이 병목이면 승격의 실효가 없다.
+    winners:
+      - NFR-GUI-008
+    discarded:
+      - file: "13"
+        section: "3.9"
+        quote: "제어 루프 스레드는 RT 승격(SCHED_FIFO) + mlockall 대상"
+        req: NFR-GUI-008
+    contract: "CTR-WS@v1"
+    rationale: >-
+      RT 승격을 범위에서 제외한다. root 권한을 요구하고 우선순위 역전으로 시스템 전체를
+      멈출 수 있는데, GIL 이 병목인 한 얻는 것이 없다. 나머지 세 항목(제어 루프와
+      WS/인코딩 분리, 인코딩이 제어 루프를 막지 않을 것, 사이클 타임 상시 계측)은 그대로
+      유지한다 — 지터의 실제 원인을 보는 수단은 이쪽이다.
+    enforcement:
+      - type: ci_static
+        predicate: "SCHED_FIFO/sched_setscheduler 호출 0건"
+        check: "WP-5-05"
+        status: planned
+
 notes:
   - norm_id: NORM-005
     finding: >-

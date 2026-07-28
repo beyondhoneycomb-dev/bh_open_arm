@@ -79,15 +79,22 @@ def test_no_record_carries_a_foreign_hash(seeded_registry: dict[str, Any]) -> No
     assert stamped == {digest}
 
 
-def test_an_unsettled_contested_record_stays_null(seeded_registry: dict[str, Any]) -> None:
-    """CI-07 stays non-vacuous: a 결정필요 record outside the ledger is left null."""
-    settled = ledger_seed(PLAN_DIR).settled_ids
-    open_records = [
-        record
-        for record in seeded_registry["entries"]
-        if record.get("tag") == TAG_DECISION_REQUIRED
-        and record.get("wp") != WP_DEFERRED
-        and record["req"] not in settled
-    ]
-    assert open_records, "fixture needs a still-undecided requirement"
-    assert all(record.get("normalization") is None for record in open_records)
+def test_the_seeder_stamps_only_what_the_ledger_settles() -> None:
+    """A requirement the ledger does not settle gets no hash — CI-07 stays non-vacuous.
+
+    Asked of the seeder directly rather than by scanning the registry for a leftover
+    undecided record: that phrasing only held while the corpus happened to contain one,
+    so ruling on the last contested requirement would silently empty the sample and the
+    assertion would pass over nothing. Both directions are pinned here — the seeder does
+    stamp what is settled, and does not stamp what is not.
+    """
+    seed = ledger_seed(PLAN_DIR)
+
+    assert seed.settled_ids, "the ledger settles nothing; the seeder would stamp nothing"
+    assert seed.digest is not None
+    settled = next(iter(sorted(seed.settled_ids)))
+    assert seed.normalization_for(settled) == seed.digest
+
+    unsettled = "FR-XXX-999"
+    assert unsettled not in seed.settled_ids
+    assert seed.normalization_for(unsettled) is None
