@@ -14,6 +14,7 @@ caller's concern, which is what keeps the synthetic run and the deferred run hon
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from backend.can.rid.decoder import RidValue, TypeMisread, find_type_misreads
@@ -130,17 +131,25 @@ def _evaluate_motor(dump: RidDump, motor_id: int) -> MotorEvaluation:
     )
 
 
-def evaluate_dump(dump: RidDump, margin_lsb: int) -> DumpEvaluation:
+def evaluate_dump(
+    dump: RidDump, margin_lsb: int, expected_motor_ids: Sequence[int] | None = None
+) -> DumpEvaluation:
     """Run the full RID judgment suite over one interface's dump.
 
     Args:
         dump: The decoded read-backs for one interface.
         margin_lsb: The RID 9 send-period margin in 50 us LSBs.
+        expected_motor_ids: The motors this arm actually has, from the fitted end effector
+            (`backend.endeffector.EndEffectorProfile.motor_send_ids`). Defaults to the full
+            eight-motor registration. A spatula arm has seven, and judging it against eight
+            reports the absent gripper as a motor that failed to answer — a finding about the
+            build, dressed as a fault.
 
     Returns:
         (DumpEvaluation) Misreads, the RID 9 judgment, per-motor limit/protection
         evaluations, the J7 judgment (when read), and DM4340 VMAX judgments.
     """
+    expected = tuple(expected_motor_ids) if expected_motor_ids is not None else ARM_SEND_IDS
     misreads = tuple(find_type_misreads(dump.all_misread_entries()))
 
     observed_rid9 = {
@@ -148,7 +157,7 @@ def evaluate_dump(dump: RidDump, margin_lsb: int) -> DumpEvaluation:
         for mid in dump.motor_ids()
         if dump.motors[mid].has(RID_TIMEOUT)
     }
-    rid9 = judge_rid9_timeout(ARM_SEND_IDS, observed_rid9, margin_lsb)
+    rid9 = judge_rid9_timeout(expected, observed_rid9, margin_lsb)
 
     per_motor = tuple(_evaluate_motor(dump, mid) for mid in dump.motor_ids())
 

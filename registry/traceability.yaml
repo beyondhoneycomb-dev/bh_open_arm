@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/v1/plan/00-실행계획-개요.md@e9d2080
+spine_ref: docs/v1/plan/00-실행계획-개요.md@2335975
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -16809,6 +16809,8 @@ entries:
   owns:
   - glob: backend/gripper_endpoint/**
     mode: EXCLUSIVE
+  - glob: backend/endeffector/**
+    mode: EXCLUSIVE
   - glob: tests/wp2a08/**
     mode: EXCLUSIVE
   contract:
@@ -23064,6 +23066,8 @@ entries:
     path: registry/build/evidence/CG-2A-08d/
   owns:
   - glob: backend/gripper_endpoint/**
+    mode: EXCLUSIVE
+  - glob: backend/endeffector/**
     mode: EXCLUSIVE
   - glob: tests/wp2a08/**
     mode: EXCLUSIVE
@@ -46215,6 +46219,8 @@ entries:
     path: registry/build/evidence/CG-2A-08d/
   owns:
   - glob: backend/gripper_endpoint/**
+    mode: EXCLUSIVE
+  - glob: backend/endeffector/**
     mode: EXCLUSIVE
   - glob: tests/wp2a08/**
     mode: EXCLUSIVE

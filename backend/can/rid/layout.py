@@ -15,7 +15,11 @@ from __future__ import annotations
 
 from backend.can.rid.motor_limits import MotorType
 
-# Send CAN ids for one arm's eight motors (`03` FR-MOT-001, `openarm_cell.yaml`).
+# Send CAN ids for one arm's eight motors (`03` FR-MOT-001, `openarm_cell.yaml`). This is the
+# REGISTRATION — what a fully-populated arm is — and it is not the set to poll. Which of these
+# are on the bus depends on the fitted end effector: the spatula build has no motor 0x08, and
+# polling it walks the controller to ERROR-PASSIVE, degrading the seven joints that are present.
+# Ask `backend.endeffector.EndEffectorProfile.motor_send_ids` before addressing anything.
 ARM_SEND_IDS: tuple[int, ...] = (0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08)
 
 # Per-joint registered motor type, index 0 = J1 .. index 7 = J8 (`03` FR-MOT-001
