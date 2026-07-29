@@ -1,97 +1,70 @@
-"""WP-2C-06 — the reaction-time measurement bench: detection-confirm -> first reaction frame.
+"""WP-2C-06 — the reaction path's declared shape and its no-torque-cut static check.
 
-The reaction time the plan defines is one interval — detection confirmed (`WP-2C-04`) to the
-first reaction MIT frame on the bus (`WP-2C-05`) — and this bench records its histogram and
-splits it into the three stages the same-process reaction path has, so a regression can be
-attributed to a stage and the negative branch's levers (retune the observer, shorten the
-reaction path) become choosable. It renders no verdict: NFR-SAF-002/003/004 are all
-decision-needed and the pass line is fixed after measurement by a regression gate
-(`02b` WP-2C-06 acceptance 2).
+What this package holds is what survives without a clock. The reaction time is not
+measured here and not measured anywhere in this tree: `03` §5.7.0 admits exactly two
+sources for correlating a software event to a bus frame and this rig can supply neither,
+so the number is out of scope rather than approximated
+(`constants.NO_LATENCY_REASON`).
 
-Reuse over re-implementation is the rule here, because two sources for one safety rule is the
-worst outcome:
+What remains is live:
 
-- the `disable_torque` absence is the WP-0A-01 scan (`backend.actuation.find_disable_torque`),
-  run as a publish-gating precondition, not a second scanner — the reaction is a continuous
-  STOP_HOLD MIT frame, never a torque cut (`02b` WP-2C-05);
-- the trusted-clock decision reuses WP-1-05's single-source `ALLOWED_CLOCK_METHODS` and its
-  `ClockProvenance` record (`backend.reaction_bench.clock`), never a second trust set;
-- the full per-segment distributions are the WP-0C-06 histogram
-  (`sim.harness.histogram.CycleTimeHistogram`), not a recomputed percentile triple.
-
-The real on-rig measurement needs torque-ON plus the kernel-clock instrumentation `03` §5.7.0
-demands, neither present on this host; it is deferred to `reverify` and never asserted green
-(`THE ONE RULE`).
+- the absence of `disable_torque` on the reaction path, run as a publish-gating refusal
+  over the WP-0A-01 scan (`backend.actuation.find_disable_torque`) rather than a second
+  scanner. The reaction is a continuous STOP_HOLD MIT send, never a torque cut
+  (`02b` WP-2C-05), and that is true at any latency;
+- the three-stage path shape — select, schedule, CAN — with each stage anchored to the
+  symbol that owns its opening event. All three anchors resolve inside one interpreter,
+  which is the checkable form of the same-process claim (`02b` WP-2C-10) the path's shape
+  rests on.
 
 Public surface:
 
-- `latency` — the `ReactionSample`, its three segments, and the `ReactionTimeDecomposition`.
-- `precondition` — the reused `disable_torque` scan as a publish-gating refusal.
-- `clock` — the trusted-clock refusal reusing WP-1-05's single-source method set.
-- `bench` — the artifact assembly with its precondition and clock refusals.
-- `reverify` — the deferred real-fixture re-verification hook.
+- `path` — the three stages, their anchors, and the anchor refusal.
+- `precondition` — the reused `disable_torque` scan as a refusal.
+- `bench` — the artifact assembly with both refusals.
 """
 
 from __future__ import annotations
 
-from backend.reaction_bench.bench import (
-    REAL_CAPTURE_BASIS,
-    SYNTHETIC_BASIS,
-    build_reaction_time_regression_artifact,
-)
-from backend.reaction_bench.clock import (
-    ReactionLatencyRefusedError,
-    assert_trusted_clock,
-)
-from backend.reaction_bench.constants import (
-    FIXTURE_ENV_VAR,
-    GATE,
-    REFERENCE_NOTE,
-    REFERENCE_TARGETS_DECISION_NEEDED,
-    WP_ID,
-)
-from backend.reaction_bench.latency import (
+from backend.reaction_bench.bench import build_reaction_path_artifact
+from backend.reaction_bench.constants import NO_LATENCY_REASON, WP_ID
+from backend.reaction_bench.path import (
+    REACTION_PATH,
+    REACTION_PATH_END,
     SEGMENT_ORDER,
-    NonMonotonicSampleError,
-    ReactionSample,
+    ReactionPathAnchorMissingError,
+    ReactionPathStage,
     ReactionSegment,
-    ReactionTimeDecomposition,
+    assert_anchors_resolve,
+    path_record,
 )
 from backend.reaction_bench.precondition import (
     DEFAULT_REACTION_PATH_ROOT,
+    REACTION_PATH_TREE,
     DisableTorqueOnReactionPathError,
     NoDisableTorqueCheck,
+    ReactionPathScanEmptyError,
     assert_no_disable_torque,
     check_no_disable_torque,
-)
-from backend.reaction_bench.reverify import (
-    fixture_dir_from_env,
-    parse_capture,
-    reverify_from_fixture,
 )
 
 __all__ = [
     "DEFAULT_REACTION_PATH_ROOT",
-    "FIXTURE_ENV_VAR",
-    "GATE",
-    "REAL_CAPTURE_BASIS",
-    "REFERENCE_NOTE",
-    "REFERENCE_TARGETS_DECISION_NEEDED",
+    "NO_LATENCY_REASON",
+    "REACTION_PATH",
+    "REACTION_PATH_END",
+    "REACTION_PATH_TREE",
     "SEGMENT_ORDER",
-    "SYNTHETIC_BASIS",
     "WP_ID",
     "DisableTorqueOnReactionPathError",
     "NoDisableTorqueCheck",
-    "NonMonotonicSampleError",
-    "ReactionLatencyRefusedError",
-    "ReactionSample",
+    "ReactionPathAnchorMissingError",
+    "ReactionPathScanEmptyError",
+    "ReactionPathStage",
     "ReactionSegment",
-    "ReactionTimeDecomposition",
+    "assert_anchors_resolve",
     "assert_no_disable_torque",
-    "assert_trusted_clock",
-    "build_reaction_time_regression_artifact",
+    "build_reaction_path_artifact",
     "check_no_disable_torque",
-    "fixture_dir_from_env",
-    "parse_capture",
-    "reverify_from_fixture",
+    "path_record",
 ]

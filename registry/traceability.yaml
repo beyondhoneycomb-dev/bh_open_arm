@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/v1/plan/00-실행계획-개요.md@2335975
+spine_ref: docs/v1/plan/00-실행계획-개요.md@34a4635
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -16428,7 +16428,6 @@ entries:
     'on': FAIL
     action: 후클램프 액션만 기록 → FAIL_BLOCKING(intervention·saturation 디버깅 불가)
   downstream:
-  - WP-2A-06
   - WP-2C-09
   stale_on:
   - CTR-ACT:MAJOR_BUMP
@@ -18140,9 +18139,6 @@ entries:
   - id: ART-EVIDENCE-2A06B
     kind: report
     path: registry/build/evidence/CG-2A-06b/
-  - id: ART-EVIDENCE-2A06C
-    kind: report
-    path: registry/build/evidence/CG-2A-06c/
   owns:
   - glob: backend/stopbench/**
     mode: EXCLUSIVE
@@ -18152,42 +18148,23 @@ entries:
     consumes: []
     produces: []
   gate:
-  - PG-STOP-001
   - CG-2A-06a
   - CG-2A-06b
-  - CG-2A-06c
   negative_branch:
-  - gate: PG-STOP-001
-    'on': RETRY_WITH_VARIANT
-    action: '목표 초과 → RETRY_WITH_VARIANT: ① 리스 갱신주기 단축 ② Cat-2 홀드프레임 경로(단일 _mit_control_batch) 확인. 그래도
-      초과 → DEGRADED_ACCEPTED(정지 지연을 UI 상시 표시 + 조그 속도 상한 하향)'
   - gate: CG-2A-06a
     'on': FAIL
-    action: '목표 초과 → RETRY_WITH_VARIANT: ① 리스 갱신주기 단축 ② Cat-2 홀드프레임 경로(단일 _mit_control_batch) 확인. 그래도
-      초과 → DEGRADED_ACCEPTED(정지 지연을 UI 상시 표시 + 조그 속도 상한 하향)'
+    action: ① 실패(앵커 미해소) → 정지 경로가 조용히 바뀐 것이다. 형상 발행 없이 진행 금지 — 선언을 실제 경로에 맞춰 갱신하고 변경 사유를 남긴다 ② 실패 → FAIL_BLOCKING.
+      정지 경로가 토크를 끊고 있다면 예산 이전의 문제이며, 경로를 Cat-2 홀드 프레임 1개(_mit_control_batch 1회)로 되돌린다
   - gate: CG-2A-06b
     'on': FAIL
-    action: '목표 초과 → RETRY_WITH_VARIANT: ① 리스 갱신주기 단축 ② Cat-2 홀드프레임 경로(단일 _mit_control_batch) 확인. 그래도
-      초과 → DEGRADED_ACCEPTED(정지 지연을 UI 상시 표시 + 조그 속도 상한 하향)'
-  - gate: CG-2A-06c
-    'on': FAIL
-    action: '목표 초과 → RETRY_WITH_VARIANT: ① 리스 갱신주기 단축 ② Cat-2 홀드프레임 경로(단일 _mit_control_batch) 확인. 그래도
-      초과 → DEGRADED_ACCEPTED(정지 지연을 UI 상시 표시 + 조그 속도 상한 하향)'
+    action: ① 실패(앵커 미해소) → 정지 경로가 조용히 바뀐 것이다. 형상 발행 없이 진행 금지 — 선언을 실제 경로에 맞춰 갱신하고 변경 사유를 남긴다 ② 실패 → FAIL_BLOCKING.
+      정지 경로가 토크를 끊고 있다면 예산 이전의 문제이며, 경로를 Cat-2 홀드 프레임 1개(_mit_control_batch 1회)로 되돌린다
   downstream: []
   terminal: true
   stale_on: []
   env_hash: null
-  phases:
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: null
-  - workflow: SHAPE-MS
-    exec_class: AI-on-HW
-    owns: []
-    cancel_policy: latch-to-hold
-    after: 0
+  workflow: SHAPE-CF
+  exec_class: AI-offline
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -32172,8 +32149,8 @@ entries:
   - gate: CG-2C-04c
     'on': FAIL
     action: 가속도 리밋 없이 감지 활성 → RETRY_WITH_VARIANT(리밋 활성화 선행)
-  downstream: []
-  terminal: true
+  downstream:
+  - WP-2C-06
   stale_on: []
   env_hash: null
   workflow: SHAPE-IM
@@ -34259,28 +34236,22 @@ entries:
   negative_branch:
   - gate: PG-SAFE-001
     'on': RETRY_WITH_VARIANT
-    action: 목표 초과 → RETRY_WITH_VARIANT(관측기 이득 재조정 / 반응 경로 단축). 지속 초과 → DEGRADED_ACCEPTED(실효 지연 UI 상시 표시)
+    action: ① 실패(앵커 미해소) → 반응 경로가 조용히 바뀐 것이다. 형상 발행 없이 진행 금지 — 선언을 실제 경로에 맞춰 갱신한다 ② 실패 → FAIL_BLOCKING.
+      반응이 토크를 끊으면 브레이크 없는 팔이 낙하한다
   - gate: CG-2C-06a
     'on': FAIL
-    action: 목표 초과 → RETRY_WITH_VARIANT(관측기 이득 재조정 / 반응 경로 단축). 지속 초과 → DEGRADED_ACCEPTED(실효 지연 UI 상시 표시)
+    action: ① 실패(앵커 미해소) → 반응 경로가 조용히 바뀐 것이다. 형상 발행 없이 진행 금지 — 선언을 실제 경로에 맞춰 갱신한다 ② 실패 → FAIL_BLOCKING.
+      반응이 토크를 끊으면 브레이크 없는 팔이 낙하한다
   - gate: CG-2C-06b
     'on': FAIL
-    action: 목표 초과 → RETRY_WITH_VARIANT(관측기 이득 재조정 / 반응 경로 단축). 지속 초과 → DEGRADED_ACCEPTED(실효 지연 UI 상시 표시)
+    action: ① 실패(앵커 미해소) → 반응 경로가 조용히 바뀐 것이다. 형상 발행 없이 진행 금지 — 선언을 실제 경로에 맞춰 갱신한다 ② 실패 → FAIL_BLOCKING.
+      반응이 토크를 끊으면 브레이크 없는 팔이 낙하한다
   downstream: []
   terminal: true
   stale_on: []
   env_hash: null
-  phases:
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: null
-  - workflow: SHAPE-MS
-    exec_class: AI-on-HW
-    owns: []
-    cancel_policy: latch-to-hold
-    after: 0
+  workflow: SHAPE-CF
+  exec_class: AI-offline
   planned: true
   provenance:
     wp_rule: sole-citation
@@ -54691,28 +54662,22 @@ entries:
   negative_branch:
   - gate: PG-SAFE-001
     'on': RETRY_WITH_VARIANT
-    action: 목표 초과 → RETRY_WITH_VARIANT(관측기 이득 재조정 / 반응 경로 단축). 지속 초과 → DEGRADED_ACCEPTED(실효 지연 UI 상시 표시)
+    action: ① 실패(앵커 미해소) → 반응 경로가 조용히 바뀐 것이다. 형상 발행 없이 진행 금지 — 선언을 실제 경로에 맞춰 갱신한다 ② 실패 → FAIL_BLOCKING.
+      반응이 토크를 끊으면 브레이크 없는 팔이 낙하한다
   - gate: CG-2C-06a
     'on': FAIL
-    action: 목표 초과 → RETRY_WITH_VARIANT(관측기 이득 재조정 / 반응 경로 단축). 지속 초과 → DEGRADED_ACCEPTED(실효 지연 UI 상시 표시)
+    action: ① 실패(앵커 미해소) → 반응 경로가 조용히 바뀐 것이다. 형상 발행 없이 진행 금지 — 선언을 실제 경로에 맞춰 갱신한다 ② 실패 → FAIL_BLOCKING.
+      반응이 토크를 끊으면 브레이크 없는 팔이 낙하한다
   - gate: CG-2C-06b
     'on': FAIL
-    action: 목표 초과 → RETRY_WITH_VARIANT(관측기 이득 재조정 / 반응 경로 단축). 지속 초과 → DEGRADED_ACCEPTED(실효 지연 UI 상시 표시)
+    action: ① 실패(앵커 미해소) → 반응 경로가 조용히 바뀐 것이다. 형상 발행 없이 진행 금지 — 선언을 실제 경로에 맞춰 갱신한다 ② 실패 → FAIL_BLOCKING.
+      반응이 토크를 끊으면 브레이크 없는 팔이 낙하한다
   downstream: []
   terminal: true
   stale_on: []
   env_hash: null
-  phases:
-  - workflow: SHAPE-CF
-    exec_class: AI-offline
-    owns: []
-    cancel_policy: finish-step
-    after: null
-  - workflow: SHAPE-MS
-    exec_class: AI-on-HW
-    owns: []
-    cancel_policy: latch-to-hold
-    after: 0
+  workflow: SHAPE-CF
+  exec_class: AI-offline
   planned: true
   provenance:
     wp_rule: sole-citation

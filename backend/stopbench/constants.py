@@ -1,31 +1,28 @@
-"""Named constants for the WP-2A-06 stop-path latency regression bench.
+"""Named constants for the WP-2A-06 stop-path shape and static check.
 
-Every value here is an identifier, a segment name, or a reused reference — never a
-measured pass line. This bench re-measures the deadman-release-to-CAN-hold-frame path
-under the Wave 2A configuration and *decomposes* it, but it decides no target: `04`
-NFR-MAN-002's 20 ms is `[unconfirmed]` and WP-2A-06 acceptance ② forbids nailing it, so
-the reference target is imported from the WP-1-05 producer and carried for reference
-only, never redefined and never compared.
+Every value here is an identifier or a stated constraint — no thresholds, because this
+package judges no quantity. The stop-path latency it once carried is not measured
+anywhere in this tree; `NO_LATENCY_REASON` is why, and it is recorded into the evidence
+so a reader of the artifact never has to guess whether the number is missing or hidden.
 """
 
 from __future__ import annotations
 
-# The WP-1-05 gate this bench re-measures under the 2A configuration. Imported from the
-# producer so the gate name has one definition; WP-2A-06 consumes PG-STOP-001, it does
-# not own it (`03` §5.7 WP binding).
-from backend.torque_bringup.constants import PG_STOP_001, STOP_LATENCY_TARGET_MS
-
 WP_ID = "WP-2A-06"
-GATE = PG_STOP_001
 
-# The `[unconfirmed]` NFR-MAN-002 target, carried into the evidence as a labelled
-# reference only. Reused from WP-1-05 rather than re-stated, so the one number the plan
-# forbids nailing has exactly one home and cannot drift to a second value here.
-REFERENCE_TARGET_MS_UNCONFIRMED = STOP_LATENCY_TARGET_MS
-
-# Environment variable a caller sets to point the re-verification hook at a directory of
-# real stop-path captures (`02a` §4.1). Until it is set, the real on-rig measurement is
-# skipped with a reason rather than asserted green — the stop-latency number is never
-# faked, since it needs rig torque-ON plus the kernel-clock instrumentation `03` §5.7.0
-# demands, neither of which exists on this host.
-FIXTURE_ENV_VAR = "OPENARM_STOPBENCH_REAL_FIXTURE"
+# Why this package publishes no stop latency. `03` §5.7.0 allows exactly two sources for
+# the release instant — a kernel timestamp correlated to SocketCAN by SO_TIMESTAMPING, or
+# an independent GPIO/logic-analyser marker — and the fitted PEAK PCAN-USB Pro FD reports
+# hardware receive timestamps only: transmit timestamping off, no PTP hardware clock. The
+# release instant would therefore come from a software clock, whose error against the
+# other end of the interval is milliseconds, and the 20 ms it would be compared to is
+# itself an [unconfirmed] target (`04` NFR-MAN-002), not a measurement. Subtracting two
+# unaligned clocks is the forgery §5.7.0 rules out, so the measurement is out of scope
+# here rather than approximated.
+NO_LATENCY_REASON = (
+    "no stop-path latency is published: 03 §5.7.0 requires the release instant and the CAN "
+    "frame on one trusted clock domain, and this rig's adapter has hardware receive "
+    "timestamps only (transmit timestamping off, no PTP clock) with no GPIO marker wired, "
+    "so the release instant exists only on a software clock; 04 NFR-MAN-002's 20 ms is an "
+    "[unconfirmed] target in any case. Measurement is owned by PG-STOP-001 (WP-1-05)"
+)

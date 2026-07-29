@@ -1,11 +1,9 @@
-"""Run the offline WP-2A-06 stop-path decomposition over a capture file, and print it.
+"""Print the WP-2A-06 stop-path evidence: the declared shape and the static check.
 
-This is the on-host entry point for the parts of WP-2A-06 that run without a rig: it reads
-one capture in the same schema the re-verification hook consumes, assembles the evidence
-offline (`basis="synthetic-timestamps"` unless the file declares otherwise), and prints it.
-It renders no verdict — the numeric target stays `[unconfirmed]` — and it inherits every
-refusal of the bench: a stop path holding `disable_torque` or a capture with an untrusted
-clock exits non-zero rather than printing a green-looking artifact.
+The on-host entry point for the whole of WP-2A-06 — there is no rig stage. It takes no
+capture file, because no stop-path timing is captured (`03` §5.7.0 cannot be satisfied on
+this rig), and it inherits every refusal of the bench: a stop path holding `disable_torque`
+or a stage anchor that no longer resolves exits non-zero rather than printing an artifact.
 """
 
 from __future__ import annotations
@@ -13,41 +11,34 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from pathlib import Path
 
-from backend.stopbench.bench import SYNTHETIC_BASIS, build_stop_path_regression_artifact
-from backend.stopbench.precondition import DisableTorqueOnStopPathError
-from backend.stopbench.reverify import parse_capture
-from backend.torque_bringup import StopLatencyArtifactRefusedError
+from backend.stopbench.bench import build_stop_path_artifact
+from backend.stopbench.path import StopPathAnchorMissingError
+from backend.stopbench.precondition import (
+    DisableTorqueOnStopPathError,
+    StopPathScanEmptyError,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Assemble and print the offline stop-path decomposition for one capture file.
+    """Assemble and print the stop-path evidence.
 
     Args:
         argv: Command-line arguments, or None to read `sys.argv`.
 
     Returns:
-        (int) 0 on success; 1 when a precondition refuses the artifact.
+        (int) 0 on success; 1 when a refusal blocks the artifact.
     """
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("capture", type=Path, help="capture JSON: samples + clock_provenance")
-    parser.add_argument(
-        "--basis",
-        default=SYNTHETIC_BASIS,
-        help="artifact basis label (default: synthetic-timestamps)",
-    )
-    args = parser.parse_args(argv)
+    parser.parse_args(argv)
 
-    capture = json.loads(args.capture.read_text(encoding="utf-8"))
-    samples, clock_provenance = parse_capture(capture)
     try:
-        artifact = build_stop_path_regression_artifact(
-            samples=samples,
-            clock_provenance=clock_provenance,
-            basis=str(args.basis),
-        )
-    except (DisableTorqueOnStopPathError, StopLatencyArtifactRefusedError) as refusal:
+        artifact = build_stop_path_artifact()
+    except (
+        DisableTorqueOnStopPathError,
+        StopPathAnchorMissingError,
+        StopPathScanEmptyError,
+    ) as refusal:
         print(f"refused: {refusal}", file=sys.stderr)
         return 1
 

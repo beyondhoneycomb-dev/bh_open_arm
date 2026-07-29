@@ -1,58 +1,83 @@
-"""The offline CLI: assembles the decomposition for a capture, refuses an untrusted one.
+"""The CLI prints the reaction-path evidence and exits non-zero when a refusal fires.
 
-The CLI is the on-host entry point for the parts of WP-2C-06 that run without a rig. These
-check it prints an artifact for a trusted capture and exits non-zero — rather than printing a
-green-looking artifact — when the capture's clock cannot be trusted.
+The CLI is the whole of WP-2C-06's operator surface — there is no rig stage and no capture
+file to hand it. These check it prints the artifact and that a refusal reaches the exit
+code rather than being printed as a green-looking record.
+
+Two of the refusals are driven through the real bench rather than a stand-in that raises.
+An exception the CLI does not name still leaves a non-zero exit, so a stand-in proves only
+that something went wrong; it takes the real path to show the operator is told which file
+cut torque instead of being handed a traceback.
 """
 
 from __future__ import annotations
 
 import json
+from functools import partial
 from pathlib import Path
 
 import pytest
 
+from backend.reaction_bench import cli
+from backend.reaction_bench.bench import build_reaction_path_artifact
 from backend.reaction_bench.cli import main
-from backend.torque_bringup.constants import (
-    CLOCK_METHOD_CANDUMP_HW_TIMESTAMP,
-    CLOCK_METHOD_KERNEL_EVDEV_SO_TIMESTAMPING,
-)
+from backend.reaction_bench.path import ReactionPathAnchorMissingError
 
 
-def _write_capture(path: Path, method: str) -> None:
-    """Write a one-sample capture with the given clock method to `path`.
-
-    Args:
-        path: File to write.
-        method: Clock-provenance method to declare.
-    """
-    capture = {
-        "host_id": "cli-host",
-        "clock_provenance": {"method": method, "offset_sec": 1e-6, "uncertainty_sec": 1e-7},
-        "samples": [
-            {
-                "detection_confirm_at": 0.0,
-                "reaction_select_at": 0.002,
-                "scheduler_write_at": 0.005,
-                "can_first_byte_at": 0.009,
-            }
-        ],
-    }
-    path.write_text(json.dumps(capture), encoding="utf-8")
-
-
-def test_cli_prints_artifact_for_a_trusted_capture(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    capture = tmp_path / "capture.json"
-    _write_capture(capture, CLOCK_METHOD_KERNEL_EVDEV_SO_TIMESTAMPING)
-    assert main([str(capture)]) == 0
+def test_cli_prints_the_reaction_path_artifact(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main([]) == 0
     printed = json.loads(capsys.readouterr().out)
     assert printed["wp_id"] == "WP-2C-06"
-    assert printed["reaction_time"]["sample_count"] == 1
+    assert printed["path_shape"]["stage_count"] == 3
+    assert printed["no_latency_reason"]
 
 
-def test_cli_refuses_a_candump_forge_capture(tmp_path: Path) -> None:
-    capture = tmp_path / "capture.json"
-    _write_capture(capture, CLOCK_METHOD_CANDUMP_HW_TIMESTAMP)
-    assert main([str(capture)]) == 1
+def test_cli_takes_no_capture_argument(tmp_path: Path) -> None:
+    # The old capture-file argument went with the measurement; passing one is an error
+    # rather than a silently ignored path.
+    with pytest.raises(SystemExit):
+        main([str(tmp_path / "capture.json")])
+
+
+def test_cli_exits_non_zero_when_a_refusal_fires(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def refuse() -> dict[str, object]:
+        raise ReactionPathAnchorMissingError("stage anchor gone")
+
+    monkeypatch.setattr(cli, "build_reaction_path_artifact", refuse)
+    assert main([]) == 1
+    assert "refused" in capsys.readouterr().err
+
+
+def test_cli_names_the_file_that_cuts_torque(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    (tmp_path / "cutting_reaction.py").write_text(
+        "def react(bus):\n    bus.disable_torque()\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(
+        cli,
+        "build_reaction_path_artifact",
+        partial(build_reaction_path_artifact, reaction_path_root=tmp_path),
+    )
+    assert main([]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "refused" in captured.err
+    assert "cutting_reaction.py" in captured.err
+
+
+def test_cli_refuses_a_scan_that_covered_no_file(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        cli,
+        "build_reaction_path_artifact",
+        partial(build_reaction_path_artifact, reaction_path_root=tmp_path / "absent"),
+    )
+    assert main([]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "refused" in captured.err
+    assert "parsed no file" in captured.err

@@ -1,18 +1,29 @@
-"""PG-STOP-001 evidence: the release-to-CAN-stop latency, and the forge it refuses.
+"""The release-to-CAN-stop latency artifact builder, and the forgery it refuses to publish.
 
-`04` NFR-MAN-002 measures the deadman-release-to-CAN-stop-frame latency, and `03` §5.7.0
-fixes *how*: a kernel clock (evdev kernel timestamp crossed with SO_TIMESTAMPING) or an
-independent GPIO marker. A `candump` hardware timestamp cannot be correlated to the
-release event, so a latency built from one is a forge, not a measurement. `clockProvenance`
-— method, offset, uncertainty — is therefore mandatory: without it the number is
-unfalsifiable, and this module *refuses to publish it* (acceptance ⑥). That refusal is the
-offline-testable core; the real samples come from a real release on real motors and are
-deferred.
+This is the shared builder, not WP-1-05's measurement. WP-1-05 does not carry PG-STOP-001 as
+one of its own gates, the re-verification hook rebuilds no latency from a real capture, and no
+WP-1-05 acceptance asserts one. The live consumers are `backend.loadtest.stop_path`, which
+records the authoritative gate as deferred and names this builder as its re-verification hook,
+and `tests/wp5_05`, which drives the refusal directly. The symbols sit in this package rather
+than in a consumer's tree because the alternative is two divergent copies of the one number
+`04` NFR-MAN-002 forbids nailing.
 
-The one thing this module does not do is judge the number. `04` NFR-MAN-002's 20 ms is an
-`[unconfirmed]` target, and acceptance ⑬ forbids nailing it as a pass line — the measured
-P99 is canon and the rig confirms it. So the target is recorded as a labelled reference and
-never compared; there is no pass/fail on the latency here.
+`03` §5.7.0 admits a stop latency only from a single trusted clock domain: an evdev kernel
+timestamp crossed with SO_TIMESTAMPING, or an independent GPIO marker. The fitted adapter
+(PEAK PCAN-USB Pro FD) reports `Hardware Transmit Timestamp Modes: off` and `PTP Hardware
+Clock: none`, so the instant the deadman is released cannot be timestamped in the same domain
+as the CAN frame it is differenced against. A number produced anyway is two clocks subtracted,
+which `03` §5.7.0 rules a forge — hence the method whitelist rather than a plausibility check
+on the samples.
+
+A real release-to-CAN-stop measurement becomes producible on this rig only with a CAN adapter
+carrying hardware transmit timestamps, a PTP hardware clock disciplining both domains, or an
+independent GPIO marker sampling the deadman release and the frame edge on one counter. The
+builder needs no change when one of those lands: the refusal it enforces is exactly the one
+the missing clock triggers, so a trusted provenance simply stops tripping it.
+
+The builder judges no number. The `[unconfirmed]` target is recorded as a labelled reference
+and never compared, so there is no pass/fail on a latency here.
 """
 
 from __future__ import annotations

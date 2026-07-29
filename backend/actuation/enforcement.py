@@ -18,7 +18,10 @@ hold — both channels are always present. A one-sided frame is unconstructible 
 The MIT gains are validated before anything else (`03` FR-MOT-018, acceptance ⑦):
 `kp` outside `[0,500]` or `kd` outside `[0,5]` is rejected rather than sent, because
 the CAN encoder silently wraps an over-range gain — a wrapped stiffness is a
-different, unrequested command that would run anyway.
+different, unrequested command that would run anyway. Zero damping under a non-zero
+stiffness is rejected on the same pass (`03` FR-MOT-021): that pair encodes cleanly,
+so no encoder bound catches it, and it is the pair Damiao's own documentation says
+makes the motor vibrate or run away.
 
 The gateway works on plain degree vectors of the follower's own width; the fixed-16
 CTR-ACT channel types are assembled at the bimanual dataset boundary, not here, so
@@ -29,12 +32,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from backend.actuation.config import MIT_HOLD_KD, MIT_HOLD_KP
 from backend.actuation.guard import CollisionGuard
 from backend.actuation.safety import (
     KD_MAX,
     KD_MIN,
     KP_MAX,
     KP_MIN,
+    POSITION_CONTROL_KD_FLOOR,
+    POSITION_CONTROL_KP_FLOOR,
     CheckStage,
     FilterInput,
     MotionHistory,
@@ -165,7 +171,8 @@ class ActuationGateway:
             feedforward_torque_nm: Optional per-joint feed-forward torque; clamped by
                 Peak Torque and routed to the MIT frame.
             kp: Optional per-joint stiffness gains to validate against `[0,500]`.
-            kd: Optional per-joint damping gains to validate against `[0,5]`.
+            kd: Optional per-joint damping gains to validate against `[0,5]`, and
+                against the position-command damping floor where kp drives the joint.
 
         Returns:
             (GateResult) The single decision, with a distinct reason on a stop and
@@ -216,6 +223,24 @@ class ActuationGateway:
             return SafetyReason.KP_OUT_OF_RANGE
         if kd is not None and any(not KD_MIN <= value <= KD_MAX for value in kd):
             return SafetyReason.KD_OUT_OF_RANGE
+        return self._validate_position_damping(kp, kd)
+
+    def _validate_position_damping(
+        self, kp: tuple[float, ...] | None, kd: tuple[float, ...] | None
+    ) -> SafetyReason | None:
+        """Refuse zero damping on a joint a stiffness term drives (`03` FR-MOT-021).
+
+        A gain the caller left out is not absent on the wire: `positions_to_batch` fills
+        every MIT frame with `MIT_HOLD_KP`/`MIT_HOLD_KD`, so each joint is judged against
+        the pair it will actually be sent with. Supplying kd alone cannot escape the rule
+        by leaving the stiffness unnamed, and the hold damping is what an unnamed kd is.
+        """
+        supplied = max(len(kp) if kp is not None else 0, len(kd) if kd is not None else 0)
+        for index in range(supplied):
+            stiffness = kp[index] if kp is not None and index < len(kp) else MIT_HOLD_KP
+            damping = kd[index] if kd is not None and index < len(kd) else MIT_HOLD_KD
+            if stiffness > POSITION_CONTROL_KP_FLOOR and damping <= POSITION_CONTROL_KD_FLOOR:
+                return SafetyReason.KD_ZERO_POSITION_CONTROL
         return None
 
     def _reject(

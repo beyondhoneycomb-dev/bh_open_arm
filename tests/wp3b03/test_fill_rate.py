@@ -1,8 +1,10 @@
 """WP-3B-03 — depth fill rate (FR-CAM-040), the measured/hole split of a frame.
 
 The fill-rate *math* runs here on synthetic depth arrays; the live display on a real
-RealSense stream is deferred (`test_reverify_hook`). A pixel of 0 is a hole; every
-other value is measured.
+depth stream is deferred (`test_reverify_hook`). A pixel of 0 is a hole; every other
+value is measured, and that holds whatever produced the frame — the equivalence across
+sensing methods is pinned in `test_reverify_hook`, where the conversion into the
+transport is also what gets enforced.
 """
 
 from __future__ import annotations

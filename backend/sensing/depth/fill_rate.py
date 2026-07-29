@@ -4,6 +4,14 @@
 the fill rate — the fraction of *non-zero* pixels — is the live quality signal the
 depth preview displays, and its complement is the hole fraction the operator watches.
 
+The count is defined on the transport, not on the sensing method, so it means the same
+thing for a projector camera and a stereo one. What differs between them is which
+physical situations land in the hole count — an unreturned pattern versus an unmatched
+or occluded pair — and, more importantly, that a stereo SDK reports its native measure
+as float metres with NaN/±inf rather than as this transport. That conversion happens at
+capture time and is enforced at the fixture boundary (`reverify.load_frame`), because an
+unconverted frame reaching here would be counted, not caught.
+
 Fill rate is computed on the raw `(H, W, 1)` uint16 frame, before encoding: the lossy
 log encoder (`encoding.py`) maps the 0 sentinel to `depth_min`, not back to 0, so the
 holes do not survive quantisation and this measurement must be taken upstream of it.

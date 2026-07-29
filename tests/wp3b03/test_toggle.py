@@ -1,8 +1,9 @@
 """WP-3B-03 acceptance ① — the per-camera use_depth toggle and (H, W, 1) depth shape.
 
 Runs here on synthetic depth arrays (`02b` §6.2 WP-3B-03 ②③): depth is toggled per
-camera, is intelrealsense-only, is never an implicit policy input, and the `{cam}_depth`
-frame is validated against the `CTR-CAM@v1`/`CTR-PRIM@v1` `(H, W, 1)` uint16 shape.
+camera, is refused on a camera whose `CTR-CAM@v1` capabilities omit it, is never an
+implicit policy input, and the `{cam}_depth` frame is validated against the
+`CTR-CAM@v1`/`CTR-PRIM@v1` `(H, W, 1)` uint16 shape.
 """
 
 from __future__ import annotations
@@ -58,7 +59,7 @@ def test_depth_feature_shape_and_key_derive_from_the_contract() -> None:
 
 
 def test_toggle_enables_a_depth_camera_and_rejects_an_rgb_only_one() -> None:
-    """use_depth is intelrealsense-only: enabling it on an RGB-only camera is refused."""
+    """use_depth needs the DEPTH capability: enabling it on an RGB-only camera is refused."""
     registry = CameraRegistry()
     registry.register(_depth_camera("overhead"))
     registry.register(_rgb_camera("front"))

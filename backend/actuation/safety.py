@@ -47,6 +47,17 @@ KP_MAX = 500.0
 KD_MIN = 0.0
 KD_MAX = 5.0
 
+# The damping a position command must carry (`03` FR-MOT-021 / §2.4, `04` FR-MAN-031).
+# Damiao: "When controlling the position, kd cannot be set to 0. Otherwise it will cause
+# the motor vibrate or go out of control." Encodable and admissible are different things —
+# 0 encodes fine, which is why KD_MIN stays the packet floor and this bound is carried
+# apart from it. It applies only where a stiffness term drives the joint toward an angle:
+# at kp=0 the MIT law has no position term at all ("When kp=0 and kd=0, a given t_ff will
+# achieve a given torque output", `04` §2.8), which is the Freedrive frame, so zero damping
+# there is a sanctioned mode rather than the runaway this refuses.
+POSITION_CONTROL_KP_FLOOR = 0.0
+POSITION_CONTROL_KD_FLOOR = 0.0
+
 # A commanded position within this many radians of the present one counts as "not
 # moving" for the stopped-state check. It is a numerical-equality tolerance, not a
 # motion budget: STOP_HOLD admits a hold at present, and only a hold.
@@ -81,6 +92,7 @@ class SafetyReason(Enum):
     MERGED_RATE_GUARD = "merged_rate_guard"
     KP_OUT_OF_RANGE = "kp_out_of_range"
     KD_OUT_OF_RANGE = "kd_out_of_range"
+    KD_ZERO_POSITION_CONTROL = "kd_zero_position_control"
 
 
 class CheckStage(Enum):

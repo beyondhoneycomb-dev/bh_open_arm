@@ -14,11 +14,25 @@ import pytest
 from backend.loadtest import LoadRun, measure_soft_estop_path
 from backend.loadtest.constants import SOFT_ESTOP_PATH_LABEL
 from backend.loadtest.stop_path import deferred_real_stop_latency
-from backend.torque_bringup.constants import PG_STOP_001, STOP_LATENCY_TARGET_MS
+from backend.torque_bringup.constants import (
+    CLOCK_METHOD_CANDUMP_HW_TIMESTAMP,
+    CLOCK_METHOD_INDEPENDENT_GPIO_MARKER,
+    PG_STOP_001,
+    STOP_LATENCY_TARGET_MS,
+)
 from backend.torque_bringup.stop_latency import (
+    ClockProvenance,
     StopLatencyArtifactRefusedError,
     build_stop_latency_artifact,
 )
+
+# A plausible clock offset and its uncertainty for a provenance the builder accepts. Only
+# the method decides the refusal; these two carry into the artifact unjudged.
+_OFFSET_SEC = 1e-4
+_UNCERTAINTY_SEC = 1e-6
+
+# One sample, small enough to be a credible stop latency. Its value is never compared.
+_SAMPLE_SEC = 0.01
 
 
 def test_soft_estop_p99_is_measured_and_compared(saturated_run: LoadRun) -> None:
@@ -54,4 +68,34 @@ def test_authoritative_pg_stop_001_is_deferred() -> None:
 def test_real_stop_latency_refuses_without_clock_provenance() -> None:
     # The deferred path is honest: the real builder refuses a number it cannot trust.
     with pytest.raises(StopLatencyArtifactRefusedError):
-        build_stop_latency_artifact(samples_sec=(0.01,), clock_provenance=None)
+        build_stop_latency_artifact(samples_sec=(_SAMPLE_SEC,), clock_provenance=None)
+
+
+def test_real_stop_latency_refuses_a_candump_hw_timestamp() -> None:
+    # The forge this rig would actually produce. candump is the one capture path available
+    # here, and its hardware timestamp cannot be correlated to the deadman release, so a
+    # latency built from it is two clocks subtracted (03 §5.7.0). Refused by method name,
+    # not by the absence of an allowed one.
+    forged = ClockProvenance(
+        method=CLOCK_METHOD_CANDUMP_HW_TIMESTAMP,
+        offset_sec=_OFFSET_SEC,
+        uncertainty_sec=_UNCERTAINTY_SEC,
+    )
+    with pytest.raises(StopLatencyArtifactRefusedError, match="forge"):
+        build_stop_latency_artifact(samples_sec=(_SAMPLE_SEC,), clock_provenance=forged)
+
+
+def test_real_stop_latency_publishes_under_a_trusted_clock() -> None:
+    # The refusal is a whitelist and not a builder that never publishes: a provenance 03
+    # §5.7.0 does admit produces the artifact.
+    artifact = build_stop_latency_artifact(
+        samples_sec=(_SAMPLE_SEC,),
+        clock_provenance=ClockProvenance(
+            method=CLOCK_METHOD_INDEPENDENT_GPIO_MARKER,
+            offset_sec=_OFFSET_SEC,
+            uncertainty_sec=_UNCERTAINTY_SEC,
+        ),
+    )
+    assert artifact["gate"] == PG_STOP_001
+    assert artifact["p99_sec"] == _SAMPLE_SEC
+    assert artifact["clock_provenance"]["method"] == CLOCK_METHOD_INDEPENDENT_GPIO_MARKER

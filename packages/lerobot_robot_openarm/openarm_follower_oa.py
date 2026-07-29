@@ -43,6 +43,7 @@ from lerobot.robots.robot import RobotAction, RobotObservation
 
 from backend.actuation import (
     ActuationGateway,
+    Clock,
     CollisionGuard,
     DropCounter,
     GateResult,
@@ -50,6 +51,7 @@ from backend.actuation import (
     SafetyLimits,
     WallClock,
 )
+from backend.actuation.config import FRESHNESS_WINDOW_SEC, MIT_HOLD_KD, MIT_HOLD_KP
 from backend.calibration.atomic_io import (
     calibration_path_for,
     load_calibration,
@@ -67,6 +69,7 @@ from backend.calibration.schema import (
 from backend.calibration.verify import ResidualResult, compute_residual
 from backend.can.lock import LockManager, guarded_connect
 from backend.endeffector import EndEffectorProfile, default_profile
+from backend.threshold.constants import JOINT_EFFORT_LIMITS_NM
 from contracts.action import DROP_COUNTER_META
 from contracts.plugin.config import Side
 from contracts.plugin.robot_abc import OpenArmRobot
@@ -107,6 +110,23 @@ GRIPPER_CLOSE_DEFAULT_RAD = math.radians(-45.0)
 # clamp bound. The operational torque bound defaults to the peak (a valid subset).
 PEAK_TORQUE_NM = (40.0, 40.0, 27.0, 27.0, 10.0, 10.0, 10.0, 10.0)
 
+# Per-joint feed-forward torque band the command path refuses outside, newton-metres, in
+# MOTOR_ORDER. The seven arm joints take the URDF effort figures, the same array that ceilings
+# a collision threshold, so one number bounds the torque a joint may be commanded and the
+# torque a joint may be judged by. The gripper slot is None rather than a figure: the URDF
+# declares no effort for joint8 and `03` FR-MOT-047 forbids expressing grip force in Nm at all,
+# so there is no band to be inside and every non-zero value on that slot is refused.
+#
+# On J5-J7 this band (7) is tighter than PEAK_TORQUE_NM (10), so a torque this path admits is
+# already inside the gateway's Peak-Torque clamp and that clamp never alters an accepted value.
+# The two are not redundant: refusal is what a command path owes a caller, clamping is what a
+# proposal generator owes one, and a clamp on a command path would send a torque nobody asked
+# for (`backend/threshold_calib/settings.py` states the same split for thresholds).
+FEEDFORWARD_TORQUE_LIMIT_NM: tuple[float | None, ...] = (*JOINT_EFFORT_LIMITS_NM, None)
+
+# What a slot carries when the caller asked for no feed-forward torque on it.
+NO_FEEDFORWARD_TORQUE_NM = 0.0
+
 # Per-joint velocity ceiling, rad/s (12 §2.5 ARM_JOINT_VELOCITY_LIMITS_RAD_S for the
 # seven arm joints; the gripper reuses the wrist ceiling as a conservative bootstrap
 # pending a hand capture — a real-fixture re-verification hook). Independent of the
@@ -133,8 +153,17 @@ JERK_LIMIT_RAD_S3 = tuple(accel / JERK_RAMP_SEC for accel in ACCEL_LIMIT_RAD_S2)
 # authoritative f_max is measured at PG-RT-001a (WP-1-04), not fixed here.
 CONTROL_PERIOD_SEC = 0.02
 
-# Age past which the source target is stale (matches the actuation spine's window).
-GATEWAY_FRESHNESS_WINDOW_SEC = 0.05
+# Age past which a source is stale — and so the interval of silence past which the action
+# stream counts as interrupted (`03` FR-MOT-058 ②). Bound to the actuation spine's own window
+# rather than restated as a number, so the age this path judges and the age the scheduler tick
+# calls a STALE_SOURCE_HOLD (`backend.actuation.decider.decide`) cannot drift apart. It is two
+# and a half CONTROL_PERIOD_SEC, so a stream that keeps its own declared period is never stale
+# and one that misses three consecutive periods always is.
+GATEWAY_FRESHNESS_WINDOW_SEC = FRESHNESS_WINDOW_SEC
+
+# The side prefixes the bimanual splits every per-motor argument on. A key carrying neither
+# reaches no arm at all.
+SIDE_PREFIXES = ("left", "right")
 
 
 def _mechanical_limits_for_side(side: str) -> dict[str, tuple[float, float]]:
@@ -192,6 +221,25 @@ class SessionError(RuntimeError):
     """
 
 
+class TorqueRefusedError(ValueError):
+    """Raised when a commanded feed-forward torque leaves the band its joint admits.
+
+    Refused and not clamped. A clamp on a command path sends a torque the caller never asked
+    for, so an over-command reaches a 40 Nm brakeless arm as a quieter one instead of as a
+    stop; the caller is the only party that can decide what a bounded command should have been.
+    """
+
+
+class GainRefusedError(ValueError):
+    """Raised when a commanded MIT gain names a motor no arm carries.
+
+    Refused and not dropped. An unrecognised gain key leaves its joint on the hold gains,
+    so a caller asking for a compliant joint would silently get a stiff one — and stiffness
+    is the axis on which a mistake is a fight with the operator's hand rather than a slower
+    move.
+    """
+
+
 class PartialConnectionError(RuntimeError):
     """Raised when a bimanual follower comes up with only one arm connected (01 §4.2 T1).
 
@@ -227,6 +275,7 @@ class OaOpenArmFollower(OpenArmFollower):
         gateway: ActuationGateway | None = None,
         drop_counter: DropCounter | None = None,
         end_effector: EndEffectorProfile | None = None,
+        clock: Clock | None = None,
     ) -> None:
         """Construct the follower without opening any bus.
 
@@ -241,8 +290,12 @@ class OaOpenArmFollower(OpenArmFollower):
                 addressed at all; defaults to the no-gripper build, because addressing a motor
                 that is not on the bus walks the controller to ERROR-PASSIVE and degrades the
                 joints that are.
+            clock: The monotonic source the action-stream watchdog and the collision guard
+                read; the live wall clock otherwise. A fixture passes a `ManualClock` so an
+                elapsed interval is a stated fact rather than a race against the test runner.
         """
         self._end_effector = end_effector if end_effector is not None else default_profile()
+        self._clock = clock if clock is not None else WallClock()
         self._plugin_config = config
         super().__init__(self._build_hardware_config(config))
         if bus is not None:
@@ -255,6 +308,10 @@ class OaOpenArmFollower(OpenArmFollower):
         self._drop_counter = drop_counter if drop_counter is not None else DropCounter()
         self._last_gate_result: GateResult | None = None
         self._last_latch_reason: LatchReason | None = None
+        # When the last command the gateway judged arrived. None until the first one, which
+        # is why a stream's opening command is fresh: there is no earlier action for it to be
+        # late against, and refusing it would make torque-ON unreachable.
+        self._last_action_at: float | None = None
 
     def _build_hardware_config(self, config: OaOpenArmFollowerConfig) -> OpenArmFollowerConfig:
         """Build the full LeRobot hardware config from the minimal plugin config.
@@ -480,6 +537,7 @@ class OaOpenArmFollower(OpenArmFollower):
         action: RobotAction,
         custom_kp: dict[str, float] | None = None,
         custom_kd: dict[str, float] | None = None,
+        feedforward_torque_nm: dict[str, float] | None = None,
     ) -> RobotAction:
         """The safety gateway on the Robot ABC surface — filters every command (11 NFR-INF-008).
 
@@ -488,6 +546,31 @@ class OaOpenArmFollower(OpenArmFollower):
         freshness → workspace/collision → slew → jerk → stopped), records the request
         and the accepted action, and returns the accepted one — a rejected command
         holds at present. This class writes no CAN itself.
+
+        Feed-forward torque (`03` FR-MOT-058) rides beside the action rather than inside
+        it: the stock method hardcodes the MIT tuple's `tau` to 0.0, and the fix is to
+        route a torque into the same filtered decision the position takes, not to add a
+        `{motor}.torque` key. `action` is the recorded training target and CTR-REC@v1
+        makes a torque dimension in it the FAIL_BLOCKING defect, so the torque travels as
+        its own argument the way it does everywhere else in the actuation spine
+        (`TimestampedTarget.feedforward_torque`, `ActuationGateway.submit`). The accepted
+        torque leaves on `last_gate_result.feedforward_torque_nm`, one `Nm` per joint, in
+        the shape the single writer puts in the fifth `_mit_control_batch` slot; a filter
+        rejection zeroes it, so no torque survives a command that held.
+
+        Omitting the torque and passing all zeros are different inputs, not two spellings
+        of one: omitting hands the gateway None, the position-only case it distinguishes.
+
+        A torque that is live must also be a torque that stops. The interval since the last
+        judged command is the age the FRESHNESS stage reads, so a stream that goes quiet
+        for longer than `GATEWAY_FRESHNESS_WINDOW_SEC` gets its next command held at the
+        present pose with every joint's feed-forward torque zeroed (`03` FR-MOT-058 ②).
+        Zeroing tau is not disabling torque and must not be confused with it: this arm has
+        no mechanical brake, so a disable is a fall, while a hold at present with the hold
+        gains standing is the arm staying where it is under power.
+
+        Enabling torque is not done here and is not implied by commanding one — engaging
+        is WP-1-05's, after PG-SAFE-001.
 
         Integration boundary (honest scope): the accepted output is not yet published
         onto the `ActuationScheduler` mailbox. The gateway, the filter, and the
@@ -502,30 +585,155 @@ class OaOpenArmFollower(OpenArmFollower):
 
         Args:
             action: Position action, keys `{motor}.pos` in degrees.
-            custom_kp: Optional per-motor stiffness gains, validated against [0,500].
-            custom_kd: Optional per-motor damping gains, validated against [0,5].
+            custom_kp: Optional per-motor stiffness gains, validated against [0,500]; a motor
+                left out keeps the hold stiffness.
+            custom_kd: Optional per-motor damping gains, validated against [0,5] and against
+                the position-command damping floor; a motor left out keeps the hold damping.
+            feedforward_torque_nm: Optional per-motor feed-forward torque in newton-metres;
+                a motor left out asks for no torque on that joint. None means no torque
+                term at all.
 
         Returns:
             (RobotAction) The accepted position action, keys `{motor}.pos` in degrees.
+
+        Raises:
+            TorqueRefusedError: If a commanded torque names an unknown motor or leaves its
+                joint's effort band.
+            GainRefusedError: If a commanded gain names an unknown motor.
+            EndEffectorError: If a non-zero torque lands on the gripper slot of an arm whose
+                tool has no motor 0x08.
         """
         present = tuple(Deg(angle) for angle in self._read_joint_deg())
         request = tuple(
             Deg(float(action.get(f"{motor}.pos", present[index].value)))
             for index, motor in enumerate(MOTOR_ORDER)
         )
-        kp = tuple(float(value) for value in custom_kp.values()) if custom_kp else None
-        kd = tuple(float(value) for value in custom_kd.values()) if custom_kd else None
+        torque = self._resolve_feedforward_torque(feedforward_torque_nm)
+        kp = self._resolve_gains(custom_kp, MIT_HOLD_KP, "custom_kp")
+        kd = self._resolve_gains(custom_kd, MIT_HOLD_KD, "custom_kd")
+        now = self._clock.now()
         result = self._ensure_gateway().submit(
             request,
             present,
             calibrated=self.is_calibrated,
+            source_age_sec=self._action_gap_sec(now),
+            feedforward_torque_nm=torque,
             kp=kp,
             kd=kd,
         )
         self._last_gate_result = result
+        self._last_action_at = now
         return {
             f"{motor}.pos": result.accepted[index].value for index, motor in enumerate(MOTOR_ORDER)
         }
+
+    def _action_gap_sec(self, now: float) -> float:
+        """Return how long the action stream was silent before the command arriving now.
+
+        The FRESHNESS stage compares this against `GATEWAY_FRESHNESS_WINDOW_SEC`, so a gap
+        wider than the window is what makes the arriving command a stale one: the producer
+        missed its deadline, and whatever torque it now asks for was computed against a pose
+        the arm has since left. The first command of a session reports no gap — nothing
+        preceded it to be late against.
+
+        Args:
+            now: This command's reading of the follower's clock, seconds.
+
+        Returns:
+            (float) Seconds since the previous judged command, or zero for the first.
+        """
+        if self._last_action_at is None:
+            return 0.0
+        return now - self._last_action_at
+
+    def _resolve_gains(
+        self, custom: dict[str, float] | None, hold_gain: float, field: str
+    ) -> tuple[float, ...] | None:
+        """Turn a per-motor gain request into a MOTOR_ORDER vector, refusing unknown motors.
+
+        The vector is filled to full width with the hold gain rather than compacted to the
+        keys the caller supplied, because the gateway judges kp and kd as a pair per joint:
+        a compacted vector pairs the first named stiffness with the first named damping,
+        which are the same joint only by luck, and a rule that holds only by luck is not a
+        rule (`03` FR-MOT-021). The fill value is also what the joint is really sent —
+        `positions_to_batch` writes `MIT_HOLD_KP`/`MIT_HOLD_KD` into every unnamed slot.
+
+        Args:
+            custom: Per-motor gain, or None to command the hold gains on every joint.
+            hold_gain: The gain an unnamed motor carries.
+            field: The argument name, for the refusal message.
+
+        Returns:
+            (tuple[float, ...] | None) The gain in MOTOR_ORDER, or None when the caller
+            named no gain at all.
+
+        Raises:
+            GainRefusedError: On a motor name outside the frozen layout.
+        """
+        if custom is None:
+            return None
+        unknown = sorted(set(custom) - set(MOTOR_ORDER))
+        if unknown:
+            raise GainRefusedError(
+                f"{field} names motors {unknown} that are not in the frozen layout "
+                f"{list(MOTOR_ORDER)}; refused rather than dropped, because a mistyped key "
+                "otherwise leaves the joint the caller meant to retune on the hold gains"
+            )
+        return tuple(float(custom.get(motor, hold_gain)) for motor in MOTOR_ORDER)
+
+    def _resolve_feedforward_torque(
+        self, feedforward_torque_nm: dict[str, float] | None
+    ) -> tuple[Nm, ...] | None:
+        """Turn a per-motor torque request into a MOTOR_ORDER vector, refusing out of band.
+
+        Every refusal here fires before the gateway is touched, so a refused command leaves
+        no gate frame and no history advance — the arm's recorded state is that nothing was
+        commanded, which is what happened.
+
+        Args:
+            feedforward_torque_nm: Per-motor feed-forward torque, newton-metres, or None.
+
+        Returns:
+            (tuple[Nm, ...] | None) The torque in MOTOR_ORDER, or None when the caller
+            asked for no torque term. None and an all-zero vector are deliberately
+            distinct: None is the position-only input the gateway takes.
+
+        Raises:
+            TorqueRefusedError: On an unknown motor name, or a torque outside the band its
+                joint admits.
+            EndEffectorError: On a non-zero gripper-slot torque when this arm's tool has no
+                motor 0x08.
+        """
+        if feedforward_torque_nm is None:
+            return None
+        unknown = sorted(set(feedforward_torque_nm) - set(MOTOR_ORDER))
+        if unknown:
+            raise TorqueRefusedError(
+                f"feed-forward torque names motors {unknown} that are not in the frozen layout "
+                f"{list(MOTOR_ORDER)}; refused rather than dropped, because a mistyped key "
+                "otherwise sends zero torque to the joint the caller meant to drive"
+            )
+        resolved: list[Nm] = []
+        for index, motor in enumerate(MOTOR_ORDER):
+            value = float(feedforward_torque_nm.get(motor, NO_FEEDFORWARD_TORQUE_NM))
+            ceiling = FEEDFORWARD_TORQUE_LIMIT_NM[index]
+            if ceiling is None:
+                # The fitted tool decides whether CAN id 0x08 is a motor at all, so that
+                # refusal is the end-effector profile's to make and carries its message.
+                self._end_effector.assert_gripper_command_allowed(value)
+                if value != NO_FEEDFORWARD_TORQUE_NM:
+                    raise TorqueRefusedError(
+                        f"{motor} feed-forward torque {value} Nm is refused: the URDF declares "
+                        "no effort figure for this slot, and grip force is a per-unit current "
+                        "limit rather than a torque in newton-metres (03 FR-MOT-047)"
+                    )
+            elif not -ceiling <= value <= ceiling:
+                raise TorqueRefusedError(
+                    f"{motor} feed-forward torque {value} Nm is outside the effort band "
+                    f"[{-ceiling:.4g}, {ceiling:.4g}] Nm (URDF effort limit); refused, not clamped"
+                )
+            resolved.append(Nm(value))
+        return tuple(resolved)
 
     def get_observation(self) -> RobotObservation:
         """Return the stock observation plus the CAN packet-drop counter (01 FR-SYS-018).
@@ -570,7 +778,7 @@ class OaOpenArmFollower(OpenArmFollower):
 
     def _build_gateway(self) -> ActuationGateway:
         """Build the arm's enforcement gateway: the ordered filter and fail-closed guard."""
-        guard = CollisionGuard(on_latch=self._on_collision_latch, clock=WallClock())
+        guard = CollisionGuard(on_latch=self._on_collision_latch, clock=self._clock)
         return ActuationGateway(
             safety_filter=SafetyFilter(build_safety_limits(self.side)),
             guard=guard,
@@ -660,6 +868,58 @@ class OaOpenArmFollower(OpenArmFollower):
         """Read the current raw joint angles (degrees) in MOTOR_ORDER."""
         states = self.bus.sync_read_all_states()
         return [float(states.get(motor, {}).get("position", 0.0)) for motor in MOTOR_ORDER]
+
+
+def _refuse_unsided(mapping: dict[str, float] | None, field: str, error: type[ValueError]) -> None:
+    """Refuse a bimanual per-motor argument whose key names neither arm.
+
+    The split is by prefix, so a key with neither prefix reaches no arm and the joint the
+    caller named silently keeps its default. That is the same failure the per-arm path
+    refuses an unknown motor name for, one level up.
+
+    Args:
+        mapping: The per-motor argument, or None.
+        field: The argument name, for the refusal message.
+        error: The refusal this argument's contract raises.
+
+    Raises:
+        ValueError: Of the given type, when a key carries no side prefix.
+    """
+    if mapping is None:
+        return
+    unsided = sorted(
+        key for key in mapping if not any(key.startswith(f"{side}_") for side in SIDE_PREFIXES)
+    )
+    if unsided:
+        raise error(
+            f"{field} keys {unsided} name neither arm; a bimanual key is "
+            f"{{side}}_{{motor}} with side in {list(SIDE_PREFIXES)}, and an unsided key "
+            "reaches no arm at all"
+        )
+
+
+def _for_side(mapping: dict[str, float] | None, prefix: str) -> dict[str, float] | None:
+    """Narrow a bimanual per-motor argument to one arm, stripping the side prefix.
+
+    None stays None: the per-arm gateway reads an absent torque as position-only and an
+    all-zero one as a commanded zero, and collapsing the two would change what an arm the
+    caller never mentioned is asked to do.
+
+    Args:
+        mapping: The per-motor argument keyed `{side}_{motor}`, or None.
+        prefix: The side to narrow to.
+
+    Returns:
+        (dict[str, float] | None) The entries for this side keyed by bare motor name, or
+        None when the caller supplied no such argument.
+    """
+    if mapping is None:
+        return None
+    return {
+        key[len(prefix) + 1 :]: value
+        for key, value in mapping.items()
+        if key.startswith(f"{prefix}_")
+    }
 
 
 class BiOaOpenArmFollower(OpenArmRobot):
@@ -780,12 +1040,40 @@ class BiOaOpenArmFollower(OpenArmRobot):
         observation[DROP_COUNTER_META] = dropped
         return observation
 
-    def send_action(self, action: RobotAction) -> RobotAction:
+    def send_action(
+        self,
+        action: RobotAction,
+        custom_kp: dict[str, float] | None = None,
+        custom_kd: dict[str, float] | None = None,
+        feedforward_torque_nm: dict[str, float] | None = None,
+    ) -> RobotAction:
         """Split a bimanual action by `left_`/`right_` prefix and delegate per arm.
 
         WP-1-03 adds the safety gateway to the per-arm `send_action`; the bimanual
         routes through those single enforcement points rather than around them.
+
+        Gains and feed-forward torque split on the same prefix as the position keys, so the
+        registered bimanual plugin type reaches the torque path (`03` FR-MOT-058) without a
+        caller having to hold `.left_arm` / `.right_arm` — reaching past the pair is how a
+        command gets sent to one arm with the other still commanded by whoever held it last.
+
+        Args:
+            action: Bimanual position action, keys `{side}_{motor}.pos` in degrees.
+            custom_kp: Optional per-motor stiffness, keys `{side}_{motor}`.
+            custom_kd: Optional per-motor damping, keys `{side}_{motor}`.
+            feedforward_torque_nm: Optional per-motor feed-forward torque in newton-metres,
+                keys `{side}_{motor}`.
+
+        Returns:
+            (RobotAction) The accepted bimanual position action.
+
+        Raises:
+            TorqueRefusedError: If a torque key names no arm, or an arm refuses it.
+            GainRefusedError: If a gain key names no arm, or an arm refuses it.
         """
+        _refuse_unsided(feedforward_torque_nm, "feedforward_torque_nm", TorqueRefusedError)
+        _refuse_unsided(custom_kp, "custom_kp", GainRefusedError)
+        _refuse_unsided(custom_kd, "custom_kd", GainRefusedError)
         applied: dict[str, float] = {}
         for prefix, arm in (("left", self.left_arm), ("right", self.right_arm)):
             arm_action = {
@@ -793,6 +1081,12 @@ class BiOaOpenArmFollower(OpenArmRobot):
                 for key, value in action.items()
                 if key.startswith(f"{prefix}_")
             }
-            for key, value in arm.send_action(arm_action).items():
+            accepted = arm.send_action(
+                arm_action,
+                custom_kp=_for_side(custom_kp, prefix),
+                custom_kd=_for_side(custom_kd, prefix),
+                feedforward_torque_nm=_for_side(feedforward_torque_nm, prefix),
+            )
+            for key, value in accepted.items():
                 applied[f"{prefix}_{key}"] = value
         return applied

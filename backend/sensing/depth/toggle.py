@@ -1,16 +1,20 @@
 """Per-camera depth toggle and the `{cam}_depth` (H, W, 1) uint16 shape (WP-3B-03).
 
 `06` §2.4/§2.5 (FR-CAM-038): depth is an *optional, per-camera* sibling of the RGB
-stream, emitted only by the RealSense (`intelrealsense`) class and only when the
-camera's `use_depth` is on. It is never forced — a depth-capable camera stays
-RGB-only until its slot is toggled on, so depth is never an implicit policy input
-(`02b` §6.2 WP-3B-03 ③).
+stream, emitted only when the camera declares the capability and its `use_depth` is on.
+It is never forced — a depth-capable camera stays RGB-only until its slot is toggled on,
+so depth is never an implicit policy input (`02b` §6.2 WP-3B-03 ③).
+
+Nothing here is device-specific. A slot is depth-capable because `CTR-CAM@v1` says its
+capabilities include DEPTH, and the frame is well-formed because `CTR-PRIM@v1` fixes the
+DEPTH frame type at one channel of uint16 — neither statement names a camera family, and
+which families the *runtime* can actually drive is `version_gate`'s question, not this
+module's.
 
 Two facts are consumed from the frozen contracts and restated nowhere:
 
-* the depth channel count and element dtype — `CTR-PRIM@v1` `FRAME_TYPE_CHANNELS` /
-  `FRAME_TYPE_DTYPE` fix depth at one channel of uint16, so the `(H, W, 1)` shape and
-  its dtype are derived from the primitive, not re-declared here.
+* the depth channel count and element dtype, via `constants`, which derives both from
+  `CTR-PRIM@v1` for this package;
 * the depth capability and the dataset depth key — `CTR-CAM@v1` `CameraSpec.has_depth`
   and `dataset_depth_key()`; a slot's depth feature key is the registry's, not a
   string this module assembles.
@@ -24,21 +28,16 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
+from backend.sensing.depth.constants import DEPTH_FRAME_CHANNELS, DEPTH_FRAME_DTYPE
 from contracts.camera_registry import CameraRegistry, CameraSpec
-from contracts.prim import FRAME_TYPE_CHANNELS, FRAME_TYPE_DTYPE, CameraSlotKey, FrameType
-
-# The depth frame's channel count and element dtype, taken from the one place they
-# are defined (`CTR-PRIM@v1`), so a shape check here cannot drift from the contract.
-_DEPTH_CHANNELS = FRAME_TYPE_CHANNELS[FrameType.DEPTH]
-_DEPTH_DTYPE = np.dtype(FRAME_TYPE_DTYPE[FrameType.DEPTH])
+from contracts.prim import CameraSlotKey
 
 
 class DepthToggleError(ValueError):
     """Raised when depth is toggled on for a camera that cannot emit it.
 
-    Depth is intelrealsense-only (`06` §2.5): a camera whose `CTR-CAM@v1`
-    capabilities omit DEPTH cannot be depth-enabled, and asking for it is a
-    configuration error, not a runtime `OA-*` condition.
+    A camera whose `CTR-CAM@v1` capabilities omit DEPTH cannot be depth-enabled, and
+    asking for it is a configuration error, not a runtime `OA-*` condition.
     """
 
 
@@ -91,8 +90,8 @@ def resolve_depth_toggles(
         spec = registry.get(slot)
         if not spec.has_depth:
             raise DepthToggleError(
-                f"camera {slot.value!r} has no depth capability; depth is intelrealsense-only "
-                "(06 §2.5) and cannot be toggled on"
+                f"camera {slot.value!r} has no depth capability in CTR-CAM@v1; depth cannot "
+                "be toggled on for it (06 §2.5)"
             )
         slots.add(slot.value)
     return DepthToggles(frozenset(slots))
@@ -120,7 +119,7 @@ def depth_feature_shape(spec: CameraSpec) -> tuple[int, int, int]:
             f"camera {spec.slot.value!r} has no width/height; its depth shape is undefined "
             "until it is configured (CTR-CAM@v1)"
         )
-    return (spec.height, spec.width, _DEPTH_CHANNELS)
+    return (spec.height, spec.width, DEPTH_FRAME_CHANNELS)
 
 
 def depth_dataset_key(spec: CameraSpec) -> str:
@@ -163,8 +162,8 @@ def validate_depth_frame(spec: CameraSpec, frame: NDArray[np.uint16]) -> None:
             f"camera {spec.slot.value!r} depth frame shape {frame.shape!r} != "
             f"expected {expected_shape!r} (H, W, 1)"
         )
-    if frame.dtype != _DEPTH_DTYPE:
+    if frame.dtype != DEPTH_FRAME_DTYPE:
         raise DepthShapeError(
             f"camera {spec.slot.value!r} depth frame dtype {frame.dtype!r} != "
-            f"expected {_DEPTH_DTYPE!r} (uint16 millimetres)"
+            f"expected {DEPTH_FRAME_DTYPE!r} (uint16 millimetres)"
         )

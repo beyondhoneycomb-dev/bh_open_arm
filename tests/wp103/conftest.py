@@ -15,17 +15,25 @@ import pytest
 
 from backend.actuation import (
     ActuationGateway,
+    Clock,
     CollisionGuard,
     ManualClock,
     SafetyFilter,
     SafetyLimits,
 )
 from backend.calibration.schema import MOTOR_ORDER
+from backend.endeffector import EndEffectorProfile
 from contracts.plugin.config import Side
 from contracts.units import Deg, Nm
 from ops.cancel.scheduler import LatchReason
-from packages.lerobot_robot_openarm.config_oa import OaOpenArmFollowerConfig
-from packages.lerobot_robot_openarm.openarm_follower_oa import OaOpenArmFollower
+from packages.lerobot_robot_openarm.config_oa import (
+    BiOaOpenArmFollowerConfig,
+    OaOpenArmFollowerConfig,
+)
+from packages.lerobot_robot_openarm.openarm_follower_oa import (
+    BiOaOpenArmFollower,
+    OaOpenArmFollower,
+)
 
 # A small joint width for filter scenarios; the real arm is 8, but two joints make a
 # single-check trigger readable and the filter is width-agnostic.
@@ -121,6 +129,7 @@ class FakeArmBus:
         self._position_deg = position_deg
         self.is_connected = True
         self.motors = list(MOTOR_ORDER)
+        self.disable_calls = 0
 
     def sync_read_all_states(self) -> dict[str, dict[str, float]]:
         """Return a readback frame for every motor at the configured position."""
@@ -129,22 +138,70 @@ class FakeArmBus:
             for motor in MOTOR_ORDER
         }
 
+    def disable_torque(self) -> None:
+        """Count a torque drop.
+
+        Nothing on the command path may reach this: with no mechanical brake, dropping torque
+        is the arm falling. A test asserting that a command "held" needs the counter to tell a
+        powered hold apart from a drop, which look identical from the returned action alone.
+        """
+        self.disable_calls += 1
+
     def disconnect(self, disable_torque: bool = False) -> None:
         """Close the bus (no socket was open)."""
         self.is_connected = False
 
 
 @pytest.fixture
+def calibrated(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Report the arm as zeroed so the ZERO stage passes and the rest of the filter runs."""
+    monkeypatch.setattr(OaOpenArmFollower, "is_calibrated", property(lambda _self: True))
+
+
+@pytest.fixture
 def make_follower(tmp_path: Path) -> Callable[..., OaOpenArmFollower]:
-    """Return a factory building a fixture-bus `OaOpenArmFollower` in a temp calib dir."""
+    """Return a factory building a fixture-bus `OaOpenArmFollower` in a temp calib dir.
+
+    The follower is built on a `ManualClock` unless one is passed. Time then moves only
+    where a test advances it, so the action-stream watchdog sees a stated interval rather
+    than however long the runner happened to take between two calls.
+    """
 
     def _make(
         side: Side = Side.LEFT,
         robot_id: str = "wp103_arm",
         position_deg: float = 0.0,
+        end_effector: EndEffectorProfile | None = None,
+        clock: Clock | None = None,
     ) -> OaOpenArmFollower:
         bus = FakeArmBus(position_deg=position_deg)
         config = OaOpenArmFollowerConfig(side=side, id=robot_id, calibration_dir=tmp_path)
-        return OaOpenArmFollower(config, bus=bus)
+        return OaOpenArmFollower(
+            config,
+            bus=bus,
+            end_effector=end_effector,
+            clock=clock if clock is not None else ManualClock(),
+        )
+
+    return _make
+
+
+@pytest.fixture
+def make_bimanual(
+    make_follower: Callable[..., OaOpenArmFollower],
+) -> Callable[..., BiOaOpenArmFollower]:
+    """Return a factory building a `BiOaOpenArmFollower` over two fixture-bus arms."""
+
+    def _make(position_deg: float = 0.0) -> BiOaOpenArmFollower:
+        config = BiOaOpenArmFollowerConfig(id="wp103_pair")
+        return BiOaOpenArmFollower(
+            config,
+            left=make_follower(
+                side=Side.LEFT, robot_id="wp103_pair_left", position_deg=position_deg
+            ),
+            right=make_follower(
+                side=Side.RIGHT, robot_id="wp103_pair_right", position_deg=position_deg
+            ),
+        )
 
     return _make

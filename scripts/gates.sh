@@ -36,7 +36,10 @@ run "contract index"         python3 -m registry.contracts.cli verify
 run "env hash"               python3 -m registry.env.cli --verify-issued
 run "declared imports"       python3 -m registry.env.declared_imports
 run "lockfile is current"    uv lock --check
-run "pytest"                 python3 -m pytest -q
+# Both trees are named because `testpaths` is `tests` alone. The runner in `scripts/` is
+# covered by tests that live beside it: `scripts/**` is the only ownership glob WP-ENV-03
+# declares, and CI-02b refuses a file under `tests/` that no glob claims.
+run "pytest"                 python3 -m pytest -q tests scripts
 
 printf '\n=== frontend ===\n'
 if [ -d frontend/node_modules ]; then

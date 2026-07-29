@@ -1,8 +1,13 @@
-"""Acceptance ⑨⑩: the hard E-Stop kills CAN, drops the arm, and has no recovery-by-read.
+"""The modelled hard-E-Stop terminal state, and the static absence of a recovery-by-read path.
 
-`16` M-2 is the premise: power is cut, CAN dies, "read state after stop and recover" is
-impossible. The drop is a fact (`12` NFR-SAF-009); its speed is not measured (`16` M-3). The
-absence of a recovery path is checked statically over the package.
+`16` M-2 is the premise: power is cut, CAN dies, so "read state after the stop and recover"
+is impossible. The drop is a fact (`12` NFR-SAF-009); its speed is not measured (`16` M-3).
+
+Two unlike checks share this file, and the difference matters. `observe_hard_estop` returns
+the premise as constants, so the tests over it pin the model against a silent edit — they
+measure nothing, and they are not acceptance ⑨⑩. The physical half of ⑨⑩ is deferred to a
+real capture and asserted in `test_deferred_acceptances.test_deferred_hard_estop_drop`. Only
+the static scan below is a finding: no function in the package recovers by reading.
 """
 
 from __future__ import annotations
@@ -17,13 +22,14 @@ from backend.torque_bringup import (
 
 
 def test_estop_kills_can() -> None:
-    # Acceptance ⑨: an E-Stop cuts power, so the CAN bus dies with it (16 M-2).
+    # The model says the bus dies with the power (16 M-2). Pinned, not measured — the
+    # measurement is the deferred capture's.
     record = observe_hard_estop()
     assert record.can_alive is False
 
 
 def test_estop_has_no_recovery_by_state_read() -> None:
-    # Acceptance ⑨: reading state to recover is impossible by design — the bus is dead.
+    # Recovering by reading is impossible by design, so the model may never claim it.
     assert observe_hard_estop().recovery_by_state_read is False
 
 
@@ -44,7 +50,8 @@ def test_recovery_scan_would_catch_a_planted_path(tmp_path: Path) -> None:
 
 
 def test_drop_recorded_but_speed_not_measured() -> None:
-    # Acceptance ⑩: the drop is recorded as a fact; its speed is not measured (16 M-3).
+    # The model records the drop as a fact and leaves its speed unmeasured (16 M-3, §9-10);
+    # a speed appearing here would be a gate the plan removed coming back by accident.
     record = observe_hard_estop()
     assert record.drop_occurred is True
     assert record.drop_speed_measured is False

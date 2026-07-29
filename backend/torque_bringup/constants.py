@@ -1,18 +1,22 @@
 """Named constants for the guarded torque-ON bring-up (WP-1-05).
 
 Every value here is a spec-given identifier, gate name, or provenance label — never a
-measured pass line. The one numeric latency figure recorded, `STOP_LATENCY_TARGET_MS`,
-is the `[unconfirmed]` target of `04` NFR-MAN-002: it is carried into the evidence as a
-*reference* and is never compared against a measurement, because acceptance ⑬ forbids
-nailing a numeric target — the measured P99 is canon and the rig confirms it.
+measured pass line.
+
+The stop-latency block below is not WP-1-05's measurement. It is the single definition of the
+gate id, the trusted clock methods and the `[unconfirmed]` target; `stop_latency` builds the
+artifact from it, and the reader outside this package is `backend.loadtest.stop_path`, which
+imports `PG_STOP_001`, `STOP_LATENCY_PERCENTILE` and `STOP_LATENCY_TARGET_MS`. Stranded here,
+not owned here.
 """
 
 from __future__ import annotations
 
-# The gates this WP gates on (`03` gate table, `02a` §8): PG-SAFE-001 and PG-RID-001 are
-# torque-ON preconditions; PG-STOP-001 is the stop-latency evidence this WP produces. The
-# provisional-f_max lineage (PG-RT-001a/b) is WP-1-04's, so its re-derivation trigger is
-# imported from that producer at its point of use (see stop_latency), not restated here.
+# The gates this WP gates on (`03` gate table, `02a` §8): PG-SAFE-001 and PG-RID-001 are the
+# torque-ON preconditions. PG-STOP-001 is no longer produced here — it is defined for the
+# benches that re-measure it under their own configurations. The provisional-f_max lineage
+# (PG-RT-001a/b) is WP-1-04's, so its re-derivation trigger is imported from that producer at
+# its point of use (see stop_latency), not restated here.
 PG_SAFE_001 = "PG-SAFE-001"
 PG_RID_001 = "PG-RID-001"
 PG_STOP_001 = "PG-STOP-001"
@@ -40,9 +44,10 @@ CLOCK_METHOD_CANDUMP_HW_TIMESTAMP = "candump_hw_timestamp"
 # because the Python/GIL path has a fat tail a mean would hide).
 STOP_LATENCY_PERCENTILE = 99.0
 
-# `04` NFR-MAN-002's `[unconfirmed]` stop-latency target, milliseconds. Recorded in the
-# evidence as a reference only — NEVER a pass/fail threshold (acceptance ⑬). The measured
-# P99 is canon; the rig confirms whether the target is met, this code does not judge it.
+# `04` NFR-MAN-002's `[unconfirmed]` stop-latency target, milliseconds. Recorded in evidence
+# as a reference only — NEVER a pass/fail threshold. It is a target nobody has measured, and
+# on this rig nobody can: the fitted adapter has no transmit timestamps and no PTP clock, so
+# there is no single clock domain to measure it in.
 STOP_LATENCY_TARGET_MS = 20.0
 
 # Environment variable a caller sets to point the re-verification hook at a directory of
