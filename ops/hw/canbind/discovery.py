@@ -33,6 +33,9 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from backend.can.link.parser import LinkState, UnrecognizedLinkFormatError, parse_link_show
+from ops.hw.udev.rules import ARPHRD_CAN_TYPE
+
 # Where the kernel exposes network interfaces. A parameter on the scan functions rather than a
 # constant baked into them, so the tests drive a fixture tree instead of this host.
 SYS_CLASS_NET = Path("/sys/class/net")
@@ -43,8 +46,11 @@ DEV_ID_ATTR = "dev_id"
 # udev property naming the physical position of the adapter.
 ID_PATH_PROPERTY = "ID_PATH"
 
-# A CAN interface's sysfs directory carries this subdirectory; ethernet and loopback do not.
-CAN_MARKER_SUBDIR = "can_bittiming_const"
+# What actually marks a CAN interface in sysfs. Measured on this bench rather than assumed:
+# `can0/type` reads 280 (ARPHRD_CAN) while ethernet reads 1 and loopback 772. The `can_*`
+# bittiming attributes are netlink, not sysfs — they appear in `ip -details link show` and in no
+# file, so keying on one of those names finds nothing on a real host.
+TYPE_ATTR = "type"
 
 _ID_PATH_LINE = re.compile(r"^ID_PATH=(?P<value>.+)$", re.MULTILINE)
 _UDEVADM_TIMEOUT_S = 5.0
@@ -99,7 +105,7 @@ def list_can_channels(sys_class_net: Path = SYS_CLASS_NET) -> list[CanChannel]:
     if not sys_class_net.is_dir():
         return []
     channels = [
-        _read_channel(entry)
+        _read_channel(entry, _link_state_for(entry.name))
         for entry in sorted(sys_class_net.iterdir())
         if _is_can_interface(entry)
     ]
@@ -109,22 +115,22 @@ def list_can_channels(sys_class_net: Path = SYS_CLASS_NET) -> list[CanChannel]:
 def _is_can_interface(entry: Path) -> bool:
     """Report whether a `/sys/class/net` entry is a CAN interface.
 
-    Keys on the bittiming directory the CAN core creates rather than on a name prefix: a renamed
-    interface is still CAN, and an ethernet device called `can_backup` is not.
+    Keys on ARPHRD type rather than on a name prefix: a renamed interface is still CAN, and an
+    ethernet device called `can_backup` is not.
     """
-    return (entry / CAN_MARKER_SUBDIR).exists()
+    return _read_attr(entry / TYPE_ATTR) == ARPHRD_CAN_TYPE
 
 
-def _read_channel(entry: Path) -> CanChannel:
-    """Build one channel record from its sysfs directory."""
+def _read_channel(entry: Path, link: LinkState | None) -> CanChannel:
+    """Build one channel record from its sysfs directory plus its parsed link state."""
     name = entry.name
     return CanChannel(
         interface=name,
         id_path=_id_path_for(name),
         dev_id=_read_attr(entry / DEV_ID_ATTR),
         driver=_driver_for(entry),
-        state=_read_attr(entry / "can_state").upper(),
-        bitrate_bps=_read_int(entry / "can_bittiming" / "bitrate"),
+        state=link.state.upper() if link else "",
+        bitrate_bps=link.bitrate if link else None,
     )
 
 
@@ -174,6 +180,31 @@ def _id_path_for(interface: str) -> str:
         return ""
     match = _ID_PATH_LINE.search(completed.stdout)
     return match.group("value").strip() if match else ""
+
+
+def _link_state_for(interface: str) -> LinkState | None:
+    """Return the parsed `ip -details link show` state, or None when it cannot be read.
+
+    State and bitrate live in netlink, not sysfs, so this is the only place they come from.
+    WP-0B-02's parser is reused rather than re-implemented: a second reader of the same text
+    would drift from the one the link-verification gate judges against.
+    """
+    try:
+        completed = subprocess.run(  # noqa: S603 — fixed argv, no shell
+            ["ip", "-details", "link", "show", interface],  # noqa: S607
+            capture_output=True,
+            text=True,
+            timeout=_UDEVADM_TIMEOUT_S,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if completed.returncode != 0:
+        return None
+    try:
+        return parse_link_show(completed.stdout, interface)
+    except UnrecognizedLinkFormatError:
+        return None
 
 
 def bring_up_command(interface: str, bitrate_bps: int, data_bitrate_bps: int) -> list[str]:

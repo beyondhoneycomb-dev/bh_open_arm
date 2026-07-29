@@ -32,6 +32,10 @@ from ops.hw.canbind import (
     save_binding,
 )
 from ops.hw.canbind.identify import ChannelMotion, IdentificationError
+from ops.hw.udev.rules import ARPHRD_CAN_TYPE
+
+# What this bench's ethernet interface reads; CAN reads 280 and loopback 772.
+ARPHRD_ETHERNET = "1"
 
 # The two channels of one PCAN-USB Pro FD as this bench actually reports them: one shared
 # ID_PATH, distinct dev_id, no serial anywhere.
@@ -54,15 +58,17 @@ _CH1 = CanChannel(
 )
 
 
-def _write_iface(root: Path, name: str, *, dev_id: str, is_can: bool = True) -> None:
-    """Write a fake `/sys/class/net/<name>` tree."""
+def _write_iface(root: Path, name: str, *, dev_id: str, arphrd: str = ARPHRD_CAN_TYPE) -> None:
+    """Write a fake `/sys/class/net/<name>` tree.
+
+    Mirrors what this bench actually exposes, which is less than a first guess assumes: `type`
+    and `dev_id` are files, and the `can_*` bittiming attributes are NOT — they live in netlink
+    and reach us only through `ip -details link show`. A fixture that invents them lets a
+    detector keyed on them pass here and find nothing on a real host.
+    """
     entry = root / name
     entry.mkdir(parents=True)
-    if is_can:
-        (entry / "can_bittiming_const").mkdir()
-        (entry / "can_bittiming").mkdir()
-        (entry / "can_bittiming" / "bitrate").write_text("1000000\n", encoding="utf-8")
-        (entry / "can_state").write_text("ERROR-ACTIVE\n", encoding="utf-8")
+    (entry / "type").write_text(f"{arphrd}\n", encoding="utf-8")
     (entry / "dev_id").write_text(f"{dev_id}\n", encoding="utf-8")
 
 
@@ -88,10 +94,10 @@ def test_a_missing_axis_becomes_an_explicit_marker_not_an_empty_string() -> None
 
 
 def test_only_can_interfaces_are_enumerated(tmp_path: Path) -> None:
-    """Keys on the CAN core's bittiming directory, not on a name prefix."""
+    """Keys on ARPHRD type, not on a name prefix — `can_backup` is ethernet and must not count."""
     _write_iface(tmp_path, "can0", dev_id="0x0")
-    _write_iface(tmp_path, "eth0", dev_id="0x0", is_can=False)
-    _write_iface(tmp_path, "can_backup", dev_id="0x0", is_can=False)
+    _write_iface(tmp_path, "enp129s0", dev_id="0x0", arphrd=ARPHRD_ETHERNET)
+    _write_iface(tmp_path, "can_backup", dev_id="0x0", arphrd=ARPHRD_ETHERNET)
 
     found = list_can_channels(tmp_path)
 
@@ -308,3 +314,20 @@ def test_read_baseline_snapshots_every_interface() -> None:
     live[0] = 1.0
 
     assert baseline["can0"][0] == 0.0
+
+
+def test_the_sysfs_marker_matches_what_this_bench_exposes(tmp_path: Path) -> None:
+    """A detector keyed on an attribute the kernel does not create finds nothing on the rig.
+
+    The first version of this module keyed on a `can_bittiming_const` directory and passed every
+    test, because the fixture created the directory the detector was looking for. On the real
+    PCAN-USB Pro FD no such file exists — `can0/` carries `type` and `dev_id` and no `can_*`
+    attribute at all, because bittiming is netlink. This pins the marker to the measured shape.
+    """
+    _write_iface(tmp_path, "can0", dev_id="0x0")
+    entry = tmp_path / "can0"
+
+    assert (entry / "type").read_text(encoding="utf-8").strip() == ARPHRD_CAN_TYPE
+    assert not (entry / "can_bittiming_const").exists()
+    assert not (entry / "can_state").exists()
+    assert [c.interface for c in list_can_channels(tmp_path)] == ["can0"]
