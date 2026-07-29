@@ -15,6 +15,26 @@ cd frontend && npm ci && cd ..        # 웹 GUI 의존성
 
 `--extra robot`이 없으면 `registry/`(계획 기계)만 도는 가벼운 환경이 된다 — `backend/`·`sim/`은 안 돌아간다.
 
+### 런타임 버전
+
+잠금 파일은 **패키지**를 못 박지만 그것을 실행하는 **런타임**은 못 박지 못한다. 그래서 따로 선언한다.
+
+| 런타임 | 요구 | 어디에 선언돼 있나 |
+|---|---|---|
+| Python | `>=3.12` | `pyproject.toml:7` (`requires-python`) |
+| Node.js | `^22.13.0 \|\| >=24` | `frontend/package.json` (`engines.node`) · `frontend/.nvmrc`(=24) |
+
+Node 하한이 이 모양인 이유는 두 조건의 교집합이기 때문이다. 발명한 숫자가 아니다.
+
+1. `frontend/package-lock.json`에서 가장 엄격한 `engines.node`가 `^20.19.0 || ^22.13.0 || >=24`다
+   (`@eslint-community/eslint-utils`, `eslint-visitor-keys@5` 2건 — eslint·typescript-eslint의 전이 의존).
+2. 그중 20 라인은 **2026-04-30에 지원이 끝났다**(`nodejs/Release` `schedule.json`). 끝난 라인은
+   하한에 넣지 않는다. 22 Jod는 2027-04-30까지, 24 Krypton은 2028-04-30까지다.
+
+`engines`는 `npm ci`를 **실패시키지 않는다** — 맞지 않으면 `EBADENGINE` 경고만 낸다
+(`engine-strict`가 기본 `false`). 즉 이건 차단이 아니라 **선언**이다. 경고가 보이면 그 기계의
+Node가 오래됐다는 뜻이고, 지금 당장 뭔가 깨졌다는 뜻은 아니다.
+
 의존성 그룹은 세 개다.
 
 | 그룹 | 무엇 | 왜 나눠져 있나 |

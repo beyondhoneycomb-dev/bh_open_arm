@@ -7084,6 +7084,8 @@ entries:
     mode: EXCLUSIVE
   - glob: frontend/package-lock.json
     mode: EXCLUSIVE
+  - glob: frontend/.nvmrc
+    mode: EXCLUSIVE
   - glob: frontend/vite.config.ts
     mode: EXCLUSIVE
   - glob: frontend/tsconfig.json
@@ -7188,6 +7190,8 @@ entries:
   - glob: frontend/package.json
     mode: EXCLUSIVE
   - glob: frontend/package-lock.json
+    mode: EXCLUSIVE
+  - glob: frontend/.nvmrc
     mode: EXCLUSIVE
   - glob: frontend/vite.config.ts
     mode: EXCLUSIVE
@@ -7419,6 +7423,8 @@ entries:
   - glob: frontend/package.json
     mode: EXCLUSIVE
   - glob: frontend/package-lock.json
+    mode: EXCLUSIVE
+  - glob: frontend/.nvmrc
     mode: EXCLUSIVE
   - glob: frontend/vite.config.ts
     mode: EXCLUSIVE
