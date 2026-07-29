@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/v1/plan/00-실행계획-개요.md@7db7150
+spine_ref: docs/v1/plan/00-실행계획-개요.md@602ee83
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
