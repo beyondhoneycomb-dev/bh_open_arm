@@ -17,18 +17,23 @@ from pathlib import Path
 import pytest
 
 from backend.endeffector import (
+    DEFAULT_TOOL_ID,
     GRIPPER_SEND_ID,
     GRIPPER_SLOT_INDEX,
-    EndEffector,
+    TOOL_FIXED_SPATULA,
+    TOOL_GRIPPER,
     EndEffectorError,
-    EndEffectorProfile,
     RigEndEffectors,
+    default_profile,
     default_rig,
     gripper_build,
     load_rig,
+    profile_for,
+    registered_tools,
     rig_path,
     save_rig,
     spatula_build,
+    tool_by_id,
 )
 
 
@@ -78,8 +83,9 @@ def test_the_default_rig_is_the_spatula_build() -> None:
     """
     rig = default_rig()
 
-    assert rig.left.end_effector is EndEffector.FIXED_SPATULA
-    assert rig.right.end_effector is EndEffector.FIXED_SPATULA
+    assert rig.left.tool_id == DEFAULT_TOOL_ID
+    assert rig.right.tool_id == DEFAULT_TOOL_ID
+    assert not rig.left.has_actuated_gripper
     assert rig.total_motor_count == 14
 
 
@@ -106,9 +112,9 @@ def test_the_record_survives_a_save_and_load_round_trip(tmp_path: Path) -> None:
     save_rig(path, original)
     loaded = load_rig(path)
 
-    assert loaded.left.end_effector is EndEffector.FIXED_SPATULA
+    assert loaded.left.tool_id == TOOL_FIXED_SPATULA
     assert loaded.left.tool_mass_kg == 1.2
-    assert loaded.right.end_effector is EndEffector.GRIPPER
+    assert loaded.right.tool_id == TOOL_GRIPPER
     assert loaded.right.tool_mass_kg == 0.9
 
 
@@ -124,8 +130,8 @@ def test_a_zero_tool_mass_is_refused(tmp_path: Path) -> None:
     """A fitted tool has positive mass; zero is an unmeasured one wearing a number."""
     path = rig_path(tmp_path)
     path.write_text(
-        '{"version": 1, "arms": {"left": {"end_effector": "fixed_spatula", "tool_mass_kg": 0},'
-        ' "right": {"end_effector": "fixed_spatula", "tool_mass_kg": null}}}',
+        '{"version": 1, "arms": {"left": {"tool_id": "fixed_spatula", "tool_mass_kg": 0},'
+        ' "right": {"tool_id": "fixed_spatula", "tool_mass_kg": null}}}',
         encoding="utf-8",
     )
 
@@ -137,12 +143,12 @@ def test_an_unknown_end_effector_name_is_refused(tmp_path: Path) -> None:
     """A record naming a build we do not have cannot say whether motor 0x08 is on the bus."""
     path = rig_path(tmp_path)
     path.write_text(
-        '{"version": 1, "arms": {"left": {"end_effector": "vacuum"},'
-        ' "right": {"end_effector": "fixed_spatula"}}}',
+        '{"version": 1, "arms": {"left": {"tool_id": "vacuum"},'
+        ' "right": {"tool_id": "fixed_spatula"}}}',
         encoding="utf-8",
     )
 
-    with pytest.raises(EndEffectorError, match="unknown end effector"):
+    with pytest.raises(EndEffectorError, match="unknown tool"):
         load_rig(path)
 
 
@@ -150,7 +156,7 @@ def test_a_missing_arm_is_refused(tmp_path: Path) -> None:
     """Half a record must not silently default the other half onto the bus."""
     path = rig_path(tmp_path)
     path.write_text(
-        '{"version": 1, "arms": {"left": {"end_effector": "fixed_spatula"}}}', encoding="utf-8"
+        '{"version": 1, "arms": {"left": {"tool_id": "fixed_spatula"}}}', encoding="utf-8"
     )
 
     with pytest.raises(EndEffectorError, match="right"):
@@ -188,7 +194,7 @@ def test_a_profile_is_immutable() -> None:
     profile = spatula_build()
 
     with pytest.raises(AttributeError):
-        profile.end_effector = EndEffector.GRIPPER  # type: ignore[misc]
+        profile.tool = tool_by_id(TOOL_GRIPPER)  # type: ignore[misc]
 
 
 def test_the_two_builds_differ_by_exactly_the_gripper_motor() -> None:
@@ -202,7 +208,69 @@ def test_the_two_builds_differ_by_exactly_the_gripper_motor() -> None:
 
 def test_a_profile_built_directly_carries_its_mass() -> None:
     """The dataclass is the record shape the loader produces; both paths must agree."""
-    profile = EndEffectorProfile(end_effector=EndEffector.FIXED_SPATULA, tool_mass_kg=2.5)
+    profile = profile_for(TOOL_FIXED_SPATULA, 2.5)
 
     assert profile.tool_mass_kg == 2.5
     assert not profile.has_actuated_gripper
+
+
+# ── 질량은 개발을 막지 않는다 ──────────────────────────────────────────────────────────
+
+
+def test_an_unmeasured_mass_blocks_nothing_the_arm_does() -> None:
+    """Tool mass cannot be measured with torque off, so requiring it would block the torque-off
+    stages that have nothing to do with mass. Everything the arm needs to move must work with
+    the mass still unknown."""
+    profile = default_profile()
+
+    assert not profile.mass_is_measured
+    assert profile.motor_count == 7
+    assert profile.motor_send_ids
+    profile.assert_gripper_command_allowed(0.0)
+
+
+def test_only_the_payload_computation_refuses_an_unmeasured_mass() -> None:
+    """The refusal belongs where the number would silently become wrong — gravity compensation
+    subtracting a payload nobody weighed puts a constant offset on the collision residual."""
+    with pytest.raises(EndEffectorError, match="has not been measured"):
+        default_profile().payload_mass_kg()
+
+
+def test_a_measured_mass_can_be_attached_later() -> None:
+    """Calibration is the path the mass arrives by; the profile must accept it after the fact."""
+    measured = default_profile().with_measured_mass(1.35)
+
+    assert measured.mass_is_measured
+    assert measured.payload_mass_kg() == 1.35
+    assert measured.tool_id == DEFAULT_TOOL_ID
+
+
+def test_a_non_positive_measured_mass_is_refused() -> None:
+    """An unmeasured tool is None; zero is an unmeasured one wearing a number."""
+    with pytest.raises(EndEffectorError, match="not positive"):
+        default_profile().with_measured_mass(0.0)
+
+
+# ── 도구 등록부는 열려 있다 ────────────────────────────────────────────────────────────
+
+
+def test_a_new_tool_is_a_row_not_a_branch() -> None:
+    """Future tools are expected. Consumers must ask what a tool does, not which one it is."""
+    tools = registered_tools()
+
+    assert {t.tool_id for t in tools} >= {TOOL_GRIPPER, TOOL_FIXED_SPATULA}
+    for tool in tools:
+        expected = 8 if tool.gripper_motor else 7
+        assert len(tool.motor_send_ids) == expected, tool.tool_id
+
+
+def test_an_unregistered_tool_is_refused_with_the_known_ids() -> None:
+    """The answer decides whether motor 0x08 is polled; a wrong guess degrades the bus."""
+    with pytest.raises(EndEffectorError, match="registered tools are"):
+        tool_by_id("vacuum")
+
+
+def test_every_registered_tool_carries_the_seven_arm_joints() -> None:
+    """A tool changes the end effector, not the arm. Any tool dropping an arm joint is a bug."""
+    for tool in registered_tools():
+        assert set(tool.motor_send_ids) >= set(range(0x01, 0x08)), tool.tool_id

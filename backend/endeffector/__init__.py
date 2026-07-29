@@ -1,25 +1,22 @@
-"""Which end effector each arm carries — gripper, or the fixed spatula that replaces it.
+"""Which tool each arm carries — an open registry, and what follows from the fitted one.
 
-Both builds stay supported. What separates them is one motor: the pinch gripper is CAN id
-`0x08`, and the spatula build does not have it. Everything downstream that touches the bus asks
-`motor_send_ids` rather than assuming eight, because polling a motor that is not there walks the
-CAN controller to `ERROR-PASSIVE` and degrades the seven joints that are.
+Today: the v2 pinch gripper and a fixed spatula. More are expected, so a tool is a row in
+`tools.TOOL_REGISTRY` rather than a branch; consumers ask what a tool *does* (`gripper_motor`)
+instead of which one it *is*.
 
-`profile` holds one arm's build and what follows from it; `rig` holds both arms' builds and
-persists them next to the CAN channel binding. The default is the spatula build — see `rig` for
-why that asymmetry is deliberate.
+One capability drives the rest and it is electrical: whether CAN id `0x08` is a motor on that
+arm. Polling one that is not there walks the controller to `ERROR-PASSIVE` and degrades the seven
+joints that are, so `motor_send_ids` — not the eight-motor registration — is the polling truth.
+
+Tool mass is optional throughout. It cannot be measured with torque off, so requiring it would
+block work that has nothing to do with mass; `payload_mass_kg()` is the one place that refuses.
 """
 
 from backend.endeffector.profile import (
-    ARM_SLOT_WIDTH,
-    GRIPPER_BUILD_SEND_IDS,
-    GRIPPER_SEND_ID,
-    GRIPPER_SLOT_INDEX,
-    SPATULA_BUILD_SEND_IDS,
-    EndEffector,
-    EndEffectorError,
     EndEffectorProfile,
+    default_profile,
     gripper_build,
+    profile_for,
     spatula_build,
 )
 from backend.endeffector.rig import (
@@ -34,10 +31,25 @@ from backend.endeffector.rig import (
     rig_path,
     save_rig,
 )
+from backend.endeffector.tools import (
+    ARM_JOINT_SEND_IDS,
+    ARM_SLOT_WIDTH,
+    DEFAULT_TOOL_ID,
+    GRIPPER_SEND_ID,
+    GRIPPER_SLOT_INDEX,
+    TOOL_FIXED_SPATULA,
+    TOOL_GRIPPER,
+    TOOL_REGISTRY,
+    EndEffectorError,
+    ToolDefinition,
+    registered_tools,
+    tool_by_id,
+)
 
 __all__ = [
+    "ARM_JOINT_SEND_IDS",
     "ARM_SLOT_WIDTH",
-    "GRIPPER_BUILD_SEND_IDS",
+    "DEFAULT_TOOL_ID",
     "GRIPPER_SEND_ID",
     "GRIPPER_SLOT_INDEX",
     "RIG_FILENAME",
@@ -45,15 +57,21 @@ __all__ = [
     "SIDES",
     "SIDE_LEFT",
     "SIDE_RIGHT",
-    "SPATULA_BUILD_SEND_IDS",
-    "EndEffector",
+    "TOOL_FIXED_SPATULA",
+    "TOOL_GRIPPER",
+    "TOOL_REGISTRY",
     "EndEffectorError",
     "EndEffectorProfile",
     "RigEndEffectors",
+    "ToolDefinition",
+    "default_profile",
     "default_rig",
     "gripper_build",
     "load_rig",
+    "profile_for",
+    "registered_tools",
     "rig_path",
     "save_rig",
     "spatula_build",
+    "tool_by_id",
 ]

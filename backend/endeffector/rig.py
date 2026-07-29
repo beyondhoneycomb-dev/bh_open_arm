@@ -21,19 +21,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from backend.endeffector.profile import (
-    EndEffector,
-    EndEffectorError,
-    EndEffectorProfile,
-    spatula_build,
-)
+from backend.endeffector.profile import EndEffectorProfile, default_profile, profile_for
+from backend.endeffector.tools import EndEffectorError
 
 RIG_FILENAME = "end_effectors.json"
 RIG_VERSION = 1
 
 FIELD_VERSION = "version"
 FIELD_ARMS = "arms"
-FIELD_END_EFFECTOR = "end_effector"
+FIELD_TOOL_ID = "tool_id"
 FIELD_TOOL_MASS_KG = "tool_mass_kg"
 
 SIDE_LEFT = "left"
@@ -75,8 +71,8 @@ class RigEndEffectors:
 
 
 def default_rig() -> RigEndEffectors:
-    """Both arms on the spatula build — the shape that cannot poll an absent motor."""
-    return RigEndEffectors(left=spatula_build(), right=spatula_build())
+    """Both arms on the default tool — the one with no motor on `0x08`."""
+    return RigEndEffectors(left=default_profile(), right=default_profile())
 
 
 def rig_path(directory: Path) -> Path:
@@ -95,7 +91,7 @@ def save_rig(path: Path, rig: RigEndEffectors) -> None:
             FIELD_VERSION: RIG_VERSION,
             FIELD_ARMS: {
                 side: {
-                    FIELD_END_EFFECTOR: rig.for_side(side).end_effector.value,
+                    FIELD_TOOL_ID: rig.for_side(side).tool_id,
                     FIELD_TOOL_MASS_KG: rig.for_side(side).tool_mass_kg,
                 }
                 for side in SIDES
@@ -165,14 +161,9 @@ def _profile_from(path: Path, side: str, raw: Any) -> EndEffectorProfile:
     """Build one arm's profile from its stored object."""
     if not isinstance(raw, dict):
         raise EndEffectorError(f"{path} has no record for the {side} arm")
-    name = raw.get(FIELD_END_EFFECTOR)
-    try:
-        end_effector = EndEffector(name)
-    except ValueError as bad:
-        known = ", ".join(member.value for member in EndEffector)
-        raise EndEffectorError(
-            f"{path}: {side} names an unknown end effector {name!r}; known are {known}"
-        ) from bad
+    name = raw.get(FIELD_TOOL_ID)
+    if not isinstance(name, str):
+        raise EndEffectorError(f"{path}: {side} carries no {FIELD_TOOL_ID}")
     mass = raw.get(FIELD_TOOL_MASS_KG)
     if mass is not None:
         if isinstance(mass, bool) or not isinstance(mass, int | float):
@@ -183,4 +174,7 @@ def _profile_from(path: Path, side: str, raw: Any) -> EndEffectorProfile:
                 "an unweighed one is null rather than zero"
             )
         mass = float(mass)
-    return EndEffectorProfile(end_effector=end_effector, tool_mass_kg=mass)
+    try:
+        return profile_for(name, mass)
+    except EndEffectorError as bad:
+        raise EndEffectorError(f"{path}: {side} {bad}") from bad
