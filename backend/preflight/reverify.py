@@ -16,6 +16,7 @@ exercise, now pointed at real motors.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 
 from backend.can.rid.reverify import (
@@ -36,7 +37,9 @@ __all__ = [
 
 
 def reverify_rid_crosscheck(
-    fixture_dir: Path, margin_lsb: int = DEFAULT_MARGIN_LSB
+    fixture_dir: Path,
+    margin_lsb: int = DEFAULT_MARGIN_LSB,
+    expected_motor_ids: Sequence[int] | None = None,
 ) -> list[CheckResult]:
     """Re-run the RID torque gate against real captured dumps, one per interface.
 
@@ -48,6 +51,9 @@ def reverify_rid_crosscheck(
     Args:
         fixture_dir: Directory of captured RID dump JSON files, one per interface.
         margin_lsb: RID 9 send-period margin in 50 µs LSBs for the timeout branch.
+        expected_motor_ids: The motors the arm actually has, from the fitted end effector.
+            Defaults to the eight-motor registration; a gripper-less rig has seven and would
+            otherwise report the absent gripper as a motor that failed to answer.
 
     Returns:
         (list[CheckResult]) One RID cross-check result per capture, in load order.
@@ -57,5 +63,5 @@ def reverify_rid_crosscheck(
     """
     return [
         check_rid_crosscheck(RidCrosscheck.confirmed(evaluation))
-        for evaluation in reverify_from_fixture(fixture_dir, margin_lsb)
+        for evaluation in reverify_from_fixture(fixture_dir, margin_lsb, expected_motor_ids)
     ]

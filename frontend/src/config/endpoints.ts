@@ -12,6 +12,11 @@ export const WS_ENDPOINT_PATH = "/ws";
 // the browser does REST get/set against this endpoint only.
 export const CONFIG_ENDPOINT = "/api/config";
 
+// The end-effector tools the backend registry has (read-only). The registry is
+// open — tools are added there, not here — so the browser asks for the choices
+// instead of carrying a list that would go stale the day a tool is registered.
+export const CONFIG_TOOLS_ENDPOINT = `${CONFIG_ENDPOINT}/tools`;
+
 // Per-screen domain-spec lookup (CG-G-00c): each screen resolves which domain
 // specification document it is the window onto, addressable under this base.
 export const SPEC_ENDPOINT_BASE = "/api/spec";

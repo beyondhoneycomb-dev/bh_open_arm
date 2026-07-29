@@ -1,15 +1,22 @@
 """Acceptance ⑨-c ⑨-d ⑩: three-way derivation, register-never-canon, self-approval, default-on.
 
-The load-bearing arithmetic fact: for the DM4340 joints the register V_MAX (8 rad/s) exceeds
-both the catalogue (5.45) and the URDF (5.4454), so the canon resolves away from the register.
-The register is never the minimum on any joint — hardware cannot be the source of its own
-safety limit.
+The load-bearing arithmetic fact: for the DM4340 joints the register V_MAX exceeds both the
+catalogue (5.45) and the URDF (5.4454), so the canon resolves away from the register. The
+register is never the minimum on any joint — hardware cannot be the source of its own safety
+limit.
+
+The register figure is read from `MOTOR_LIMIT_PARAMS` rather than written here. It moved once
+already: `16` §3.1 registered "DM4340 24V/48V VMAX (8 vs 10)" as unresolved, and this bench
+answered it at 24 V with a measured 10.0. A literal in this file would have made the property
+under test — canon is below register — pass or fail on a transcription instead of on the
+relation.
 """
 
 from __future__ import annotations
 
 import pytest
 
+from backend.can.rid.motor_limits import MOTOR_LIMIT_PARAMS, MotorType
 from backend.safety_bringup import (
     DerivationSelfApprovalError,
     VelocitySource,
@@ -29,11 +36,12 @@ def test_three_way_table_has_seven_rows() -> None:
 
 
 def test_dm4340_canon_is_urdf_not_register() -> None:
-    # ⑨-c: the DM4340 joints (J3/J4, index 2/3) resolve to URDF 5.4454, not register 8.
+    # 9-c: the DM4340 joints (J3/J4, index 2/3) resolve to URDF 5.4454, not to the register.
+    register_vmax = MOTOR_LIMIT_PARAMS[MotorType.DM4340].v_max
     table = three_way_table()
     for index in (2, 3):
         row = table[index]
-        assert row.register_vmax_rad_s == 8.0
+        assert row.register_vmax_rad_s == register_vmax
         assert row.canon_source is VelocitySource.URDF
         assert row.canon_rad_s == pytest.approx(5.4454)
         assert row.canon_rad_s < row.register_vmax_rad_s

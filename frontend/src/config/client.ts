@@ -40,18 +40,24 @@ export async function fetchConfig(fetchImpl: FetchLike = fetch): Promise<ParsedC
   return parseConfig(await readJson(response));
 }
 
-// PATCH one subobject. Only the named subobject is sent; the backend applies its
-// own atomic write and blast-radius isolation and returns the new whole config,
-// which is re-parsed the same way as a GET.
+// PUT one subobject to its own path: the subobject IS the body, and the backend
+// replaces that one and leaves the others alone, so a malformed endEffector can
+// never wipe layout. What the write responds with is the backend's choice and is
+// not read — the canon is re-read whole with a GET, which is the same parse a
+// fresh load does. One extra round trip on an operator action, and no guess about
+// a body shape this side does not own.
 export async function saveSubobject<K extends ConfigSubobjectKey>(
   key: K,
   value: RuntimeConfig[K],
   fetchImpl: FetchLike = fetch,
 ): Promise<ParsedConfig> {
-  const response = await fetchImpl(CONFIG_ENDPOINT, {
-    method: "PATCH",
+  const response = await fetchImpl(`${CONFIG_ENDPOINT}/${key}`, {
+    method: "PUT",
     headers: JSON_HEADERS,
-    body: JSON.stringify({ [key]: value }),
+    body: JSON.stringify(value),
   });
-  return parseConfig(await readJson(response));
+  if (!response.ok) {
+    throw new ConfigRequestError(response.status, response.statusText);
+  }
+  return fetchConfig(fetchImpl);
 }

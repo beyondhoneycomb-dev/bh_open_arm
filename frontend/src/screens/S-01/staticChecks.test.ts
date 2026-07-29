@@ -16,6 +16,9 @@
 //     (15's cycle-time vs 16's Quest-accuracy 'M-8') appears nowhere.
 //   - facade / I-2: no socket, no reconnect, no browser wall-clock, no external
 //     origin.
+//   - the end-effector control names no tool id and holds no tool list: the
+//     registry is the backend's and open, so the choices are fetched and the
+//     branch is on what a tool does (gripperMotor), never on which one it is.
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, extname, join } from "node:path";
@@ -177,6 +180,58 @@ describe("facade / invariant I-2: no socket, no reconnect, no stamp, no external
   it("reaches no external origin (air-gap, FR-GUI-008)", () => {
     for (const { path, code } of SOURCES) {
       expect(code, `${path} must reach no external URL`).not.toMatch(/https?:\/\//);
+    }
+  });
+});
+
+describe("the end-effector control holds no copy of the tool registry", () => {
+  // The registry is the backend's and it is open. A tool id written here would
+  // have to be edited every time a tool is registered, and would offer or hide a
+  // tool the backend disagrees about.
+  const TOOL_ID_LITERALS: Array<[string, RegExp]> = [
+    ["a registered tool id", /fixed_spatula/],
+    ["a registered tool id", /["'`]gripper["'`]/],
+  ];
+
+  const TOOL_LIST_CONSTANTS =
+    /\b(?:TOOL_REGISTRY|TOOL_LIST|TOOL_IDS|TOOL_LABELS|KNOWN_TOOLS|REGISTERED_TOOLS|AVAILABLE_TOOLS)\b/;
+
+  const END_EFFECTOR_SOURCES = SOURCES.filter(({ path }) => /endEffector|EndEffector/i.test(path));
+
+  it("scans the end-effector source set (non-vacuous)", () => {
+    expect(END_EFFECTOR_SOURCES.length).toBeGreaterThan(0);
+  });
+
+  it("names no registered tool id and declares no tool list", () => {
+    const offenders: string[] = [];
+    for (const { path, code } of SOURCES) {
+      for (const [label, pattern] of TOOL_ID_LITERALS) {
+        if (pattern.test(code)) {
+          offenders.push(`${path}: ${label} (${pattern})`);
+        }
+      }
+      if (TOOL_LIST_CONSTANTS.test(code)) {
+        offenders.push(`${path}: a tool-list constant`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("renders the choices from the fetched list and branches on the capability, not on an id", () => {
+    const view = SOURCES.find(({ path }) => path.endsWith("EndEffectorView.tsx"));
+    expect(view).toBeDefined();
+    expect(view?.code).toMatch(/tools\.map/);
+    expect(view?.code).toMatch(/tool\.gripperMotor/);
+
+    for (const { path, code } of SOURCES) {
+      expect(code, `${path} must not branch on one tool id`).not.toMatch(/toolId\s*===\s*["'`]/);
+    }
+  });
+
+  it("disables no control — an unmeasured mass must block nothing", () => {
+    for (const { path, code } of END_EFFECTOR_SOURCES) {
+      expect(code, `${path} must not disable a control`).not.toMatch(/\bdisabled\b/);
+      expect(code, `${path} must not make a control read-only`).not.toMatch(/\breadOnly\b/);
     }
   });
 });

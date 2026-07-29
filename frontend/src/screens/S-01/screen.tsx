@@ -19,6 +19,12 @@
 //   - CG-5-02f use_velocity_and_torque + push_to_hub shown   → ControlStatusView
 //   - CG-5-02g intruder-detection status shown               → ControlStatusView
 //   - CG-5-02c public health omits holder/profile            → health.ts
+//
+// One panel here is a control rather than a readout: which end effector each arm
+// carries is rig setup, and it sits beside the CAN readout because the fitted
+// tool is what decides whether the eighth CAN id is addressed at all. It still
+// computes nothing — the choices are the backend registry's and the fitted tool
+// is the stored config's.
 
 import { useMemo } from "react";
 
@@ -27,6 +33,7 @@ import { CameraStatusView } from "./CameraStatusView";
 import { ControlStatusView } from "./ControlStatusView";
 import { CriticalAlertsView } from "./CriticalAlertsView";
 import { CycleTimeView } from "./CycleTimeView";
+import { EndEffectorPanel } from "./EndEffectorPanel";
 import { ResourceView } from "./ResourceView";
 import { SessionsView } from "./SessionsView";
 import { SubsystemGridView } from "./SubsystemGridView";
@@ -57,6 +64,7 @@ export default function DashboardScreen({ source }: DashboardScreenProps) {
 
         <div className="oa-dash__col">
           <ControlStatusView connection={data.connection} can={data.can} flags={data.flags} />
+          <EndEffectorPanel />
           <CycleTimeView cycleTime={data.cycleTime} />
         </div>
 

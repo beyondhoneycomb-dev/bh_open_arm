@@ -7,10 +7,12 @@
 // coupled data flags and intruder status are shown, and the CRITICAL-only area
 // leads with the backend-flagged rows.
 
-import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render as renderTree, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import type { ReactElement, ReactNode } from "react";
 
 import DashboardScreen from "./screen";
+import { ConfigProvider } from "../../app/ConfigContext";
 import { resolveScreen } from "../../routes/screenResolver";
 import { defaultDashboardData } from "./dashboardSource";
 import { CANONICAL_SUBSYSTEM_IDS } from "./types";
@@ -21,6 +23,33 @@ import type {
   DiagnosticState,
   SubsystemStatus,
 } from "./types";
+
+// The end-effector control reads the shared runtime config, which the app supplies
+// at its root, so these renders supply it too. The injected fetch keeps the config
+// load off the network; the tool registry is EndEffectorPanel.test's subject and is
+// left unserved here.
+function configFetch(): typeof fetch {
+  return vi.fn(
+    async () =>
+      new Response(
+        JSON.stringify({
+          layout: { sidebarCollapsed: false, density: "comfortable" },
+          theme: { mode: "system" },
+          presets: { viewPresets: {} },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+  ) as unknown as typeof fetch;
+}
+
+function ConfigWrapper({ children }: { children: ReactNode }) {
+  return <ConfigProvider fetchImpl={configFetch()}>{children}</ConfigProvider>;
+}
+
+// Wrapped through the `wrapper` option so a rerender keeps the provider.
+function render(ui: ReactElement) {
+  return renderTree(ui, { wrapper: ConfigWrapper });
+}
 
 function sourceWith(overrides: Partial<DashboardData>): DashboardSource {
   const base = defaultDashboardData();

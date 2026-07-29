@@ -379,3 +379,57 @@
 .oa-dash__state--unavailable .oa-dash__tile-value {
   color: var(--oa-unavail, #57606a);
 }
+
+/* End-effector control. The tool that puts a motor on the eighth CAN id is
+   marked so the consequence is visible before the radio is read, and the
+   unmeasured-mass line is styled as a fact, not as an error. */
+.oa-dash__ee-arm {
+  margin: 0 0 0.6rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--oa-border, #d8dee4);
+  border-radius: 6px;
+  background: var(--oa-bg, #f6f8fa);
+}
+
+.oa-dash__ee-arm-label {
+  font-weight: 600;
+  padding: 0 0.3rem;
+}
+
+.oa-dash__ee-mass {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  color: var(--oa-muted, #57606a);
+}
+
+.oa-dash__ee-choice {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.4rem;
+  align-items: start;
+  padding: 0.45rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+
+.oa-dash__ee-choice[data-gripper-motor="true"] {
+  border-color: var(--oa-warning, #b45309);
+}
+
+.oa-dash__ee-tool {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.oa-dash__ee-tool-label {
+  font-weight: 600;
+}
+
+.oa-dash__ee-consequence {
+  font-size: 0.82rem;
+  color: var(--oa-muted, #57606a);
+}
+
+.oa-dash__ee-choice[data-gripper-motor="true"] .oa-dash__ee-consequence {
+  color: var(--oa-warning, #b45309);
+}

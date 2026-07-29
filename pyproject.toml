@@ -68,6 +68,14 @@ robot = [
     "pyarrow>=17",
     "opencv-python-headless>=4.10",
     "pillow>=10",
+    # WP-G-00's backend half (13 FR-GUI-004): the runtime_config canon and the REST surface the
+    # browser reads it through. pydantic is named although FastAPI already requires it, because
+    # backend/config/model.py imports it directly and a direct import resting on someone else's
+    # requirement list breaks the day that list changes. httpx is what `fastapi.testclient`
+    # drives the routes with — the routes are exercised in-process, so no port is ever bound.
+    "fastapi>=0.115",
+    "pydantic>=2.9",
+    "httpx>=0.27",
 ]
 
 [project.scripts]

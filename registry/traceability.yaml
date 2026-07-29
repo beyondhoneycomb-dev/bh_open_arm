@@ -7110,6 +7110,10 @@ entries:
     mode: EXCLUSIVE
   - glob: frontend/public/**
     mode: EXCLUSIVE
+  - glob: backend/config/**
+    mode: EXCLUSIVE
+  - glob: tests/wpg00_backend/**
+    mode: EXCLUSIVE
   contract:
     consumes:
     - CTR-OWN@v1
@@ -7216,6 +7220,10 @@ entries:
   - glob: frontend/src/config/**
     mode: EXCLUSIVE
   - glob: frontend/public/**
+    mode: EXCLUSIVE
+  - glob: backend/config/**
+    mode: EXCLUSIVE
+  - glob: tests/wpg00_backend/**
     mode: EXCLUSIVE
   contract:
     consumes:
@@ -7449,6 +7457,10 @@ entries:
   - glob: frontend/src/config/**
     mode: EXCLUSIVE
   - glob: frontend/public/**
+    mode: EXCLUSIVE
+  - glob: backend/config/**
+    mode: EXCLUSIVE
+  - glob: tests/wpg00_backend/**
     mode: EXCLUSIVE
   contract:
     consumes:
@@ -35079,7 +35091,7 @@ entries:
   - WP-0B-01
   - WP-1-01
   stale_on: []
-  env_hash: sha256:a9e81b30ac9dff1dac534b0330663b371d925827153f355ed763948e902eada4
+  env_hash: sha256:a344450f00a67aa04110c465f4ffb2347d0374f5f64be2305328ddfcd9e99fbc
   workflow: SHAPE-CF
   exec_class: AI-offline
   justification: 하류 소비자(WP-0B-01·WP-1-01)는 CTR-OWN@v1 소유 레지스트리를 데이터로 소비한다(소유 규율에 종속) — ownership/ 파이썬을
@@ -42503,7 +42515,7 @@ entries:
   downstream:
   - WP-1-02
   stale_on: []
-  env_hash: sha256:a9e81b30ac9dff1dac534b0330663b371d925827153f355ed763948e902eada4
+  env_hash: sha256:a344450f00a67aa04110c465f4ffb2347d0374f5f64be2305328ddfcd9e99fbc
   workflow: SHAPE-CF
   exec_class: AI-offline
   planned: true
@@ -43413,7 +43425,7 @@ entries:
   - WP-OPS-06
   stale_on:
   - CTR-UNIT:MAJOR_BUMP
-  env_hash: sha256:a9e81b30ac9dff1dac534b0330663b371d925827153f355ed763948e902eada4
+  env_hash: sha256:a344450f00a67aa04110c465f4ffb2347d0374f5f64be2305328ddfcd9e99fbc
   workflow: SHAPE-CF
   exec_class: AI-offline
   planned: true
@@ -43585,7 +43597,7 @@ entries:
   - WP-0C-02
   - WP-0C-09
   stale_on: []
-  env_hash: sha256:a9e81b30ac9dff1dac534b0330663b371d925827153f355ed763948e902eada4
+  env_hash: sha256:a344450f00a67aa04110c465f4ffb2347d0374f5f64be2305328ddfcd9e99fbc
   workflow: SHAPE-CF
   exec_class: AI-offline
   planned: true
@@ -44089,7 +44101,7 @@ entries:
   stale_on:
   - CTR-ACT:MAJOR_BUMP
   - CTR-UNIT:MAJOR_BUMP
-  env_hash: sha256:a9e81b30ac9dff1dac534b0330663b371d925827153f355ed763948e902eada4
+  env_hash: sha256:a344450f00a67aa04110c465f4ffb2347d0374f5f64be2305328ddfcd9e99fbc
   workflow: SHAPE-CF
   exec_class: AI-offline
   justification: 도출된 하류 에지 WP-0A-02는 정적 import가 아니라 계약 조인이다 — 메일박스 타입(TargetMailbox/TimestampedTarget
@@ -44188,7 +44200,7 @@ entries:
   stale_on:
   - CTR-ACT:MAJOR_BUMP
   - CTR-UNIT:MAJOR_BUMP
-  env_hash: sha256:a9e81b30ac9dff1dac534b0330663b371d925827153f355ed763948e902eada4
+  env_hash: sha256:a344450f00a67aa04110c465f4ffb2347d0374f5f64be2305328ddfcd9e99fbc
   workflow: SHAPE-CF
   exec_class: AI-offline
   justification: 도출된 하류 에지 WP-0A-02는 정적 import가 아니라 계약 조인이다 — 메일박스 타입(TargetMailbox/TimestampedTarget
@@ -49316,7 +49328,7 @@ entries:
   downstream: []
   terminal: true
   stale_on: []
-  env_hash: sha256:a9e81b30ac9dff1dac534b0330663b371d925827153f355ed763948e902eada4
+  env_hash: sha256:a344450f00a67aa04110c465f4ffb2347d0374f5f64be2305328ddfcd9e99fbc
   workflow: SHAPE-IM
   exec_class: AI-offline
   planned: true
@@ -49458,7 +49470,7 @@ entries:
   - WP-OPS-06
   stale_on:
   - CTR-UNIT:MAJOR_BUMP
-  env_hash: sha256:a9e81b30ac9dff1dac534b0330663b371d925827153f355ed763948e902eada4
+  env_hash: sha256:a344450f00a67aa04110c465f4ffb2347d0374f5f64be2305328ddfcd9e99fbc
   workflow: SHAPE-CF
   exec_class: AI-offline
   planned: true

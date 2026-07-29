@@ -51,7 +51,13 @@ class LimitParam:
 # physical safety limits (peak torque is a separate, smaller clamp, `03` FR-MOT-037).
 MOTOR_LIMIT_PARAMS: dict[MotorType, LimitParam] = {
     MotorType.DM4310: LimitParam(p_max=12.5, v_max=30.0, t_max=10.0),
-    MotorType.DM4340: LimitParam(p_max=12.5, v_max=8.0, t_max=28.0),
+    # v_max measured, not transcribed. `16` §3.1 registered "DM4340 24V/48V VMAX (8 vs 10)"
+    # as unresolved: the OpenArm-LeRobot path carries 8 while the motorbridge `4340P`
+    # variant carries 10, and which one applies depends on the supply. This bench answered
+    # it — at 24 V both J3 and J4 read RID 22 = 10.0 on both arms, and `03` §2.1 lists J3 as
+    # a DM-J4340P. VMAX is a packet scaling constant, so an 8 here would put every velocity
+    # command and readback off by 10/8 with no error anywhere.
+    MotorType.DM4340: LimitParam(p_max=12.5, v_max=10.0, t_max=28.0),
     MotorType.DM8009: LimitParam(p_max=12.5, v_max=45.0, t_max=54.0),
     MotorType.DM3507: LimitParam(p_max=12.5, v_max=50.0, t_max=5.0),
 }

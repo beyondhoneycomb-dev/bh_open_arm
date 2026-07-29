@@ -18,6 +18,7 @@ bound test skips with a reason. The directory holds one dump JSON per interface 
 from __future__ import annotations
 
 import os
+from collections.abc import Sequence
 from pathlib import Path
 
 from backend.can.rid.dump import load_dump
@@ -46,7 +47,9 @@ def fixture_dir_from_env() -> Path | None:
 
 
 def reverify_from_fixture(
-    fixture_dir: Path, margin_lsb: int = DEFAULT_MARGIN_LSB
+    fixture_dir: Path,
+    margin_lsb: int = DEFAULT_MARGIN_LSB,
+    expected_motor_ids: Sequence[int] | None = None,
 ) -> list[DumpEvaluation]:
     """Re-run the full RID judgment against real captured dumps.
 
@@ -58,6 +61,11 @@ def reverify_from_fixture(
     Args:
         fixture_dir: Directory of captured dump JSON files, one per interface.
         margin_lsb: RID 9 send-period margin in 50 us LSBs for the timeout branch.
+        expected_motor_ids: The motors the arm actually has, from the fitted end effector
+            (`backend.endeffector.EndEffectorProfile.motor_send_ids`). Defaults to the full
+            eight-motor registration. A rig with no gripper has seven, and judging it against
+            eight reports the absent motor as one that failed to answer — a fact about the
+            build, dressed as a fault. Observed on this bench before the argument existed.
 
     Returns:
         (list[DumpEvaluation]) One evaluation per capture file, ordered by filename.
@@ -68,4 +76,4 @@ def reverify_from_fixture(
     dump_files = sorted(fixture_dir.glob("*.json"))
     if not dump_files:
         raise FileNotFoundError(f"no *.json RID capture in {fixture_dir}")
-    return [evaluate_dump(load_dump(path), margin_lsb) for path in dump_files]
+    return [evaluate_dump(load_dump(path), margin_lsb, expected_motor_ids) for path in dump_files]
