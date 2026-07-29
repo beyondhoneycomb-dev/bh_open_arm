@@ -8,7 +8,14 @@ from __future__ import annotations
 
 import pytest
 
-from backend.calibration.schema import MOTOR_ORDER, CalibrationError, ZeroMethod
+from backend.calibration.schema import (
+    MOTOR_COUNT,
+    MOTOR_ORDER,
+    CalibrationError,
+    ZeroMethod,
+)
+from backend.endeffector import gripper_build
+from packages.lerobot_robot_openarm.openarm_follower_oa import GRIPPER_MOTOR_NAME
 
 
 def test_set_zero_refused_while_torque_enabled(make_follower) -> None:
@@ -72,3 +79,34 @@ def test_set_zero_refused_when_residual_exceeds_tolerance(make_follower) -> None
     # The bad zero was not persisted.
     assert follower.is_calibrated is False
     assert follower.calibration_model is None
+
+
+def test_set_zero_never_addresses_an_absent_gripper_motor(make_follower) -> None:
+    """A build with no gripper must not receive a 0xFE for motor `gripper`.
+
+    `DamiaoMotorsBus.set_zero_position(None)` walks every motor the bus was constructed with,
+    and an unanswered frame is not an error return — the transmit error counter climbs and the
+    controller falls to ERROR-PASSIVE, degrading the joints that ARE present. Measured on this
+    bench: sixteen unanswered frames took both channels there.
+    """
+    follower, bus = make_follower()
+    follower.connect_readonly()
+
+    follower.set_zero(zero_method=ZeroMethod.HARDSTOP_BUMP, rest_confirmed=True)
+
+    zeroed = bus.set_zero_calls[-1]
+    assert zeroed is not None, "set_zero must name its motors, never fall back to the bus default"
+    assert GRIPPER_MOTOR_NAME not in zeroed
+    assert len(zeroed) == MOTOR_COUNT - 1
+
+
+def test_set_zero_addresses_the_gripper_when_one_is_fitted(make_follower) -> None:
+    """The variant must not break the build it was added alongside."""
+    follower, bus = make_follower(end_effector=gripper_build())
+    follower.connect_readonly()
+
+    follower.set_zero(zero_method=ZeroMethod.HARDSTOP_BUMP, rest_confirmed=True)
+
+    zeroed = bus.set_zero_calls[-1]
+    assert GRIPPER_MOTOR_NAME in zeroed
+    assert len(zeroed) == MOTOR_COUNT

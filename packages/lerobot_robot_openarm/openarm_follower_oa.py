@@ -66,6 +66,7 @@ from backend.calibration.schema import (
 )
 from backend.calibration.verify import ResidualResult, compute_residual
 from backend.can.lock import LockManager, guarded_connect
+from backend.endeffector import EndEffectorProfile, default_profile
 from contracts.action import DROP_COUNTER_META
 from contracts.plugin.config import Side
 from contracts.plugin.robot_abc import OpenArmRobot
@@ -92,6 +93,10 @@ SET_ZERO_SETTLE_SEC = 0.2
 # Gripper endpoint seeds (radians). v2 pinch is a revolute joint over −45°..0° with no
 # load cell, so the real endpoints are captured by hand (16 D-5); these are only the
 # pre-capture defaults, and their `captured` flags stay False until a hand capture.
+# The gripper's slot name in the frozen MOTOR_ORDER layout. The slot is always present; the
+# motor behind it is not, which is why zeroing filters on it rather than assuming eight.
+GRIPPER_MOTOR_NAME = MOTOR_ORDER[-1]
+
 GRIPPER_OPEN_DEFAULT_RAD = 0.0
 GRIPPER_CLOSE_DEFAULT_RAD = math.radians(-45.0)
 
@@ -221,6 +226,7 @@ class OaOpenArmFollower(OpenArmFollower):
         bus: DamiaoMotorsBus | None = None,
         gateway: ActuationGateway | None = None,
         drop_counter: DropCounter | None = None,
+        end_effector: EndEffectorProfile | None = None,
     ) -> None:
         """Construct the follower without opening any bus.
 
@@ -231,7 +237,12 @@ class OaOpenArmFollower(OpenArmFollower):
             gateway: An optional pre-built enforcement gateway (a fixture injects one
                 over a fake CAN writer); built lazily from this arm's side otherwise.
             drop_counter: An optional CAN packet-drop counter; a fresh one otherwise.
+            end_effector: Which tool this arm carries. Decides whether the gripper motor is
+                addressed at all; defaults to the no-gripper build, because addressing a motor
+                that is not on the bus walks the controller to ERROR-PASSIVE and degrades the
+                joints that are.
         """
+        self._end_effector = end_effector if end_effector is not None else default_profile()
         self._plugin_config = config
         super().__init__(self._build_hardware_config(config))
         if bus is not None:
@@ -418,7 +429,13 @@ class OaOpenArmFollower(OpenArmFollower):
         time.sleep(SET_ZERO_SETTLE_SEC)
         # The single 0xFE emission point in the whole codebase (acceptance ③). Every
         # per-motor set-zero goes through this one call.
-        self.bus.set_zero_position()
+        #
+        # Named motors, never the bare default: `DamiaoMotorsBus.set_zero_position(None)` walks
+        # every motor the bus was constructed with, and on a build whose end effector has no
+        # gripper that includes an id nothing answers on. An unanswered frame is not an error
+        # return — the transmit error counter climbs and the controller falls to ERROR-PASSIVE,
+        # which degrades the joints that ARE present. Measured on this bench.
+        self.bus.set_zero_position(list(self._zeroable_motors()))
 
         measured = self._read_joint_deg()
         residual = compute_residual(measured, reference)
@@ -626,6 +643,18 @@ class OaOpenArmFollower(OpenArmFollower):
     def _warmup_feedback(self) -> None:
         """Read the motor states once to warm the feedback cache (torque untouched)."""
         self.bus.sync_read_all_states()
+
+    def _zeroable_motors(self) -> tuple[str, ...]:
+        """The motor names this arm actually carries, in MOTOR_ORDER order.
+
+        `MOTOR_ORDER` is the frozen eight-slot contract, not an inventory: the gripper slot is
+        always in the layout and the gripper motor is not always on the bus. Zeroing keys on the
+        fitted end effector so no frame is addressed to an absent motor.
+        """
+        profile = self._end_effector
+        if profile.has_actuated_gripper:
+            return tuple(MOTOR_ORDER)
+        return tuple(name for name in MOTOR_ORDER if name != GRIPPER_MOTOR_NAME)
 
     def _read_joint_deg(self) -> list[float]:
         """Read the current raw joint angles (degrees) in MOTOR_ORDER."""

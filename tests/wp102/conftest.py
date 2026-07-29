@@ -39,6 +39,9 @@ class FakeDamiaoBus:
         self._connect_fails = connect_fails
         self._position_deg = position_deg
         self.commands: list[str] = []
+        # Which motors each 0xFE named. `None` means the upstream default — every motor on
+        # the bus — which reaches an absent gripper on a no-gripper build.
+        self.set_zero_calls: list[object] = []
 
     @property
     def is_connected(self) -> bool:
@@ -62,8 +65,13 @@ class FakeDamiaoBus:
         self.commands.append("disable_torque")
 
     def set_zero_position(self, motors: object = None) -> None:
-        """Record a 0xFE set-zero command and re-base the reported position to 0."""
+        """Record a 0xFE set-zero command, with WHICH motors it named, and re-base to 0.
+
+        The argument is recorded because `None` means "every motor on the bus" upstream, and on
+        a build whose end effector has no gripper that reaches an id nothing answers on.
+        """
         self.commands.append("set_zero_position")
+        self.set_zero_calls.append(list(motors) if isinstance(motors, list) else motors)
         self._position_deg = 0.0
 
     def sync_read_all_states(self) -> dict[str, dict[str, float]]:
@@ -90,9 +98,10 @@ def make_follower(tmp_path: Path):
         robot_id: str = "test_arm",
         connect_fails: bool = False,
         position_deg: float = 0.0,
+        end_effector: object = None,
     ) -> tuple[OaOpenArmFollower, FakeDamiaoBus]:
         bus = FakeDamiaoBus(connect_fails=connect_fails, position_deg=position_deg)
         config = OaOpenArmFollowerConfig(side=side, id=robot_id, calibration_dir=tmp_path)
-        return OaOpenArmFollower(config, bus=bus), bus
+        return OaOpenArmFollower(config, bus=bus, end_effector=end_effector), bus
 
     return _make
