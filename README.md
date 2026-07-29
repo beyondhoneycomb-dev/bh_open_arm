@@ -11,9 +11,15 @@ OpenArm v2.0 양팔 로봇 기반 **피지컬 AI 토탈 플랫폼**. 하나의 �
 ```bash
 uv sync --extra dev --extra robot     # 파이썬 의존성 전부
 cd frontend && npm ci && cd ..        # 웹 GUI 의존성
+uv run oa-index                       # registry/build/** 생성 — 새 클론에는 없다
 ```
 
 `--extra robot`이 없으면 `registry/`(계획 기계)만 도는 가벼운 환경이 된다 — `backend/`·`sim/`은 안 돌아간다.
+
+셋째 줄을 빼면 `./scripts/gates.sh`가 **반드시 빨간불이 된다** — `registry indexes`(182개 파일 없음)와
+`pytest` 3건(`registry/build/gate_index.json` 없음)이 실패한다. `registry/build/**`는 `GENERATED`라서
+git에 넣지 않고(`.gitignore`의 `build/`) 각 기계에서 만든다. 즉 이건 선택 단계가 아니라
+**클론 직후 한 번은 반드시 필요한 단계**다. `uv sync` 뒤여야 한다 — `oa-index`가 그때 설치된다.
 
 ### 런타임 버전
 
@@ -23,6 +29,17 @@ cd frontend && npm ci && cd ..        # 웹 GUI 의존성
 |---|---|---|
 | Python | `>=3.12` | `pyproject.toml:7` (`requires-python`) |
 | Node.js | `^22.13.0 \|\| >=24` | `frontend/package.json` (`engines.node`) · `frontend/.nvmrc`(=24) |
+
+둘 중 **`engines.node`가 실효 선언**이다 — `npm`이 실제로 평가해서 안 맞으면 `EBADENGINE`을 낸다.
+`.nvmrc`는 버전 관리자(nvm·fnm)가 깔린 기계에서만 읽히고, 이 개발 PC에는 없다(node는 apt의
+`/usr/bin/node`). 그래서 `.nvmrc`는 편의고 `engines`가 계약이다.
+
+> `.nvmrc`처럼 **새 파일을 프런트엔드에 들이면** `CI-02b`(고아 파일)가 막는다 — 모든 파일은 어떤
+> WP의 `owns[]`가 청구해야 한다. 그 청구는 `registry/traceability.yaml`의 `WP-G-00` 레코드
+> **3건 전부**에 같은 글롭으로 들어가야 한다(`CI-14c`: 같은 `wp`의 WP 단위 필드는 완전히 같아야
+> 한다). 그리고 `CI-02b`가 보는 파일 목록은 디스크가 아니라 **`git ls-files`**다
+> (`registry/checks/corpus.py:401` — "ignore 규칙의 정의를 하나로 두기 위해"). 즉 디스크에서
+> 지우는 것만으로는 안 풀리고, 인덱스에서 빠져야 풀린다.
 
 Node 하한이 이 모양인 이유는 두 조건의 교집합이기 때문이다. 발명한 숫자가 아니다.
 
