@@ -143,3 +143,45 @@ describe("end-effector selector", () => {
     expect(screen.getByTestId("ee-config-notice")).toBeInTheDocument();
   });
 });
+
+// The four refusals below were all UNTESTED when this file first landed: each mutation kept the
+// suite green. They are grouped because they share one consequence — a tool id that is wrong,
+// stale or unreadable decides whether CAN id 0x08 is polled on that arm, and polling a motor
+// that is not on the bus walks the controller to ERROR-PASSIVE, degrading the seven joints that
+// are present. A selection shown for an id the backend does not register is worse than none.
+describe("refusals that decide whether an absent motor gets polled", () => {
+  it("shows no selection at all when the stored id is not registered", () => {
+    renderView({ endEffector: fitted("retired_tool", REGISTRY[0].toolId) });
+
+    const leftArm = screen.getByTestId("ee-arm-left");
+    for (const choice of REGISTRY) {
+      const radio = within(leftArm).getByDisplayValue(choice.toolId) as HTMLInputElement;
+      expect(radio.checked).toBe(false);
+    }
+  });
+
+  it("treats an id differing only in case as unregistered", () => {
+    // Case-folding the comparison would make "Pinch_V9" select the gripper tool — a silent
+    // promotion from "no motor 0x08" to "motor 0x08 is polled".
+    renderView({ endEffector: fitted("Pinch_V9", REGISTRY[0].toolId) });
+
+    const leftArm = screen.getByTestId("ee-arm-left");
+    const gripperRadio = within(leftArm).getByDisplayValue("pinch_v9") as HTMLInputElement;
+    expect(gripperRadio.checked).toBe(false);
+  });
+
+  it("shows no fitted tool when the config could not be read", () => {
+    renderView({ endEffector: null });
+
+    expect(screen.queryByTestId("ee-arm-left")).toBeNull();
+    expect(screen.queryByTestId("ee-arm-right")).toBeNull();
+  });
+
+  it("shows no fitted tool when the registry could not be read", () => {
+    // Without the registry there is nothing to check a stored id against, so a rendered
+    // selection would be an unverified claim about which motors exist.
+    renderView({ tools: [], toolsNotice: TOOLS_UNREADABLE_TEXT });
+
+    expect(screen.queryByTestId("ee-arm-left")).toBeNull();
+  });
+});

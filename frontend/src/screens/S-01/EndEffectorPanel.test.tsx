@@ -183,3 +183,30 @@ describe("wired end-effector control", () => {
     expect(container.querySelectorAll('input[type="radio"]').length).toBe(0);
   });
 });
+
+// Writing one arm must not disturb the other. Clearing both arms' toolMassKg on a single-arm
+// write kept the whole suite green, because every other fixture already carries null on the
+// untouched arm — so the fixture here deliberately gives the untouched arm a measured mass and
+// a non-default tool. A cleared mass is not cosmetic: it is the number gravity compensation
+// subtracts, and losing it reappears as a standing offset in the collision residual.
+describe("writing one arm leaves the other arm's record alone", () => {
+  it("preserves the sibling arm's tool and its measured mass", async () => {
+    const backend = standInBackend({
+      left: { toolId: "fixed_spatula", toolMassKg: null },
+      right: { toolId: "gripper", toolMassKg: 1.37 },
+    });
+    const { container } = renderPanel(backend);
+    await screen.findByTestId("ee-arm-left");
+
+    fireEvent.click(radio(container, "left", "gripper"));
+
+    await waitFor(() => {
+      const put = backend.calls.find((call) => call.method === "PUT");
+      expect(put).toBeDefined();
+      const sent = put?.body as EndEffectorConfig;
+      expect(sent.left.toolId).toBe("gripper");
+      expect(sent.right.toolId).toBe("gripper");
+      expect(sent.right.toolMassKg).toBe(1.37);
+    });
+  });
+});

@@ -14,13 +14,14 @@ import pytest
 from backend.config.constants import (
     APP_DIRECTORY,
     CONFIG_FILENAME,
+    DENSITY_DEFAULT,
     FIELD_TOOL_ID,
     SUBOBJECT_END_EFFECTOR,
     SUBOBJECT_LAYOUT,
     XDG_CONFIG_HOME_FALLBACK,
     XDG_CONFIG_HOME_VAR,
 )
-from backend.config.model import default_document
+from backend.config.model import SUBOBJECT_KEYS, default_document
 from backend.config.store import (
     RuntimeConfigStore,
     UnknownSubobjectError,
@@ -172,3 +173,19 @@ def test_relative_xdg_config_home_is_ignored(
 def test_store_path_is_the_named_file_under_the_caller_directory(tmp_path: Path) -> None:
     """The directory is the caller's; the file name is this package's."""
     assert RuntimeConfigStore(directory=tmp_path).path == tmp_path / CONFIG_FILENAME
+
+
+def test_an_undecodable_file_falls_back_instead_of_escaping(tmp_path: Path) -> None:
+    """One invalid byte in the stored file must not take the REST surface down with it.
+
+    `UnicodeDecodeError` is not a subclass of `OSError` or `JSONDecodeError`, so leaving it out
+    of the except clause let it propagate through every route — a corrupt config wedged the whole
+    API rather than defaulting. Confirmed by mutation before this test existed.
+    """
+    store = RuntimeConfigStore(tmp_path)
+    store.path.write_bytes(b'{"layout": {"density": "\xff"}}')
+
+    parsed = store.load()
+
+    assert set(parsed.defaulted) == set(SUBOBJECT_KEYS)
+    assert parsed.document.layout.density == DENSITY_DEFAULT

@@ -75,10 +75,11 @@ def create_app(store: RuntimeConfigStore) -> FastAPI:
 
     @app.get(TOOLS_ROUTE)
     def read_tools() -> list[dict[str, Any]]:
-        """The registered tool choices.
+        """The registered tool choices, straight from the registry.
 
-        Declared ahead of the `{subobject}` route so this path is matched here rather than read
-        as the name of a subobject.
+        Mapped from `registered_tools()` on every call rather than cached: the browser must not
+        hold its own copy of the tool list, and neither should this route — a tool added to the
+        registry has to reach the GUI without a second edit here.
         """
         return [tool_choice(tool) for tool in registered_tools()]
 

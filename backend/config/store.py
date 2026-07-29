@@ -125,7 +125,12 @@ def load_document(path: Path) -> ParsedDocument:
         return ParsedDocument(document=default_document(), defaulted=())
     try:
         raw: Any = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        # UnicodeDecodeError is not a subclass of the other two, and leaving it out let one
+        # invalid byte in the stored file escape as an unhandled exception through every route —
+        # a corrupt config wedged the whole REST surface instead of falling back to defaults.
+        # Every read failure lands here for the same reason: an unreadable document has no
+        # surviving structure to isolate within, so all four subobjects default and say so.
         return ParsedDocument(document=default_document(), defaulted=SUBOBJECT_KEYS)
     return parse_document(raw)
 

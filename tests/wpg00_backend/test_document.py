@@ -32,7 +32,13 @@ from backend.config.model import (
     default_document,
     parse_document,
 )
-from backend.endeffector import DEFAULT_TOOL_ID, SIDE_LEFT, TOOL_GRIPPER, tool_by_id
+from backend.endeffector import (
+    DEFAULT_TOOL_ID,
+    SIDE_LEFT,
+    SIDE_RIGHT,
+    TOOL_GRIPPER,
+    tool_by_id,
+)
 from tests.wpg00_backend.conftest import GRIPPER_ON_BOTH_ARMS, NON_DEFAULT_LAYOUT
 
 UNREGISTERED_TOOL_ID = "vacuum_cup"
@@ -151,3 +157,29 @@ def test_extra_field_in_a_subobject_is_refused() -> None:
     """`extra="forbid"`: a field the model does not know is a field nothing would ever read."""
     with pytest.raises(ValidationError):
         LayoutConfig.model_validate({**NON_DEFAULT_LAYOUT, "sidebarWidthPx": 240})
+
+
+def test_a_typo_in_an_arm_key_is_refused_not_ignored() -> None:
+    """`extra="forbid"` on the arm model, asserted rather than assumed.
+
+    Swapping this model to `extra="ignore"` left all 47 tests green, so a mistyped key would
+    have been dropped in silence and the arm would carry the default tool. That default decides
+    whether CAN id 0x08 is polled, so a dropped key is not a cosmetic loss.
+    """
+    document = {
+        SUBOBJECT_END_EFFECTOR: {
+            SIDE_LEFT: {"tooId": TOOL_GRIPPER},
+            SIDE_RIGHT: {FIELD_TOOL_ID: TOOL_GRIPPER},
+        }
+    }
+
+    parsed = parse_document(document)
+
+    # The subobject is reported defaulted, which is right — but the fact that MATTERS is what the
+    # arm ends up carrying. `extra="forbid"` is what turns the typo into a rejection instead of a
+    # dropped key, and without it this arm silently reads as the default tool. The default decides
+    # whether CAN id 0x08 is polled, so the assertion is on the tool, not only on the report.
+    assert SUBOBJECT_END_EFFECTOR in parsed.defaulted
+    assert parsed.document.end_effector.left.tool_id == DEFAULT_TOOL_ID, (
+        "a mistyped key must not leave the arm quietly carrying a tool nobody chose"
+    )
