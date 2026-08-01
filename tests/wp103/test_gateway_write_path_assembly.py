@@ -65,6 +65,11 @@ RIGHT_ADMITTED_DEG = RIGHT_PRESENT_DEG + ADMITTED_STEP_DEG
 WRIST_MOTOR = MOTOR_ORDER[4]
 WRIST_TORQUE_NM = 5.0
 
+# What the gripper slot reports on a build with no motor on 0x08: the read names the fitted
+# motors, so the slot is widened back to the frozen layout with this rather than with an answer
+# from a motor that is not on the bus.
+UNREAD_SLOT_DEG = 0.0
+
 # What a held frame carries on every joint: no feed-forward torque, no commanded motion.
 HELD_TORQUE_NM = 0.0
 HELD_VELOCITY_RAD_S = 0.0
@@ -139,15 +144,22 @@ def emitted_angles_rad(batch: tuple[ExecutedMitCommand, ...]) -> tuple[float, ..
 def bimanual_pose_rad(left_deg: float, right_deg: float) -> tuple[float, ...]:
     """Build the arm-major bimanual angle vector for two per-arm angles, radians.
 
+    The gripper slot carries `UNREAD_SLOT_DEG` rather than the arm's angle. The present-pose read
+    names the motors the fitted tool carries, and on the default build that is seven — nothing
+    answers on `0x08`, so a poll of it is an unanswered frame that walks the controller toward
+    ERROR-PASSIVE. The slot is still in the frozen layout and still commanded, and the value it
+    reports is the width-widening default rather than a reading of a motor that is not there.
+
     Args:
-        left_deg: The angle on every left-arm joint.
-        right_deg: The angle on every right-arm joint.
+        left_deg: The angle every fitted left-arm joint reports.
+        right_deg: The angle every fitted right-arm joint reports.
 
     Returns:
         (tuple[float, ...]) The sixteen angles, left arm first.
     """
-    per_joint = [left_deg] * len(MOTOR_ORDER) + [right_deg] * len(MOTOR_ORDER)
-    return tuple(deg_to_rad(Deg(degrees)).value for degrees in per_joint)
+    fitted = len(MOTOR_ORDER) - 1
+    per_arm = [[angle] * fitted + [UNREAD_SLOT_DEG] for angle in (left_deg, right_deg)]
+    return tuple(deg_to_rad(Deg(degrees)).value for arm in per_arm for degrees in arm)
 
 
 def assembled_pair(
@@ -278,7 +290,13 @@ def test_the_mailbox_carries_the_accepted_vector_not_the_request(
 
     published = harness.mailbox.take_latest()
     assert published is not None
-    held = (LEFT_PRESENT_DEG,) * len(MOTOR_ORDER) + (RIGHT_PRESENT_DEG,) * len(MOTOR_ORDER)
+    fitted = len(MOTOR_ORDER) - 1
+    held = (
+        (LEFT_PRESENT_DEG,) * fitted
+        + (UNREAD_SLOT_DEG,)
+        + (RIGHT_PRESENT_DEG,) * fitted
+        + (UNREAD_SLOT_DEG,)
+    )
     assert tuple(angle.value for angle in published.request.values) == pytest.approx(held)
     assert all(angle.value != UNSAFE_RATE_DEG for angle in published.request.values)
 

@@ -42,6 +42,7 @@ class FakeDamiaoBus:
         # Which motors each 0xFE named. `None` means the upstream default — every motor on
         # the bus — which reaches an absent gripper on a no-gripper build.
         self.set_zero_calls: list[object] = []
+        self.read_calls: list[object] = []
 
     @property
     def is_connected(self) -> bool:
@@ -74,12 +75,19 @@ class FakeDamiaoBus:
         self.set_zero_calls.append(list(motors) if isinstance(motors, list) else motors)
         self._position_deg = 0.0
 
-    def sync_read_all_states(self) -> dict[str, dict[str, float]]:
-        """Return a readback frame for every motor at the configured position."""
+    def sync_read_all_states(self, motors: list[str] | None = None) -> dict[str, dict[str, float]]:
+        """Return a readback frame for the named motors, or for every motor when none are named.
+
+        The argument is recorded for the same reason `set_zero_position`'s is: `None` means
+        "every motor on the bus" upstream, and on a build whose end effector has no gripper that
+        reaches an id nothing answers on.
+        """
         self.commands.append("sync_read_all_states")
+        self.read_calls.append(list(motors) if isinstance(motors, list) else motors)
+        named = MOTOR_ORDER if motors is None else motors
         return {
             motor: {"position": self._position_deg, "velocity": 0.0, "torque": 0.0}
-            for motor in MOTOR_ORDER
+            for motor in named
         }
 
 

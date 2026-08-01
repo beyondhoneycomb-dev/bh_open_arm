@@ -131,12 +131,21 @@ class FakeArmBus:
         self.is_connected = True
         self.motors = list(MOTOR_ORDER)
         self.disable_calls = 0
+        self.read_motors: list[list[str] | None] = []
 
-    def sync_read_all_states(self) -> dict[str, dict[str, float]]:
-        """Return a readback frame for every motor at the configured position."""
+    def sync_read_all_states(self, motors: list[str] | None = None) -> dict[str, dict[str, float]]:
+        """Return a readback frame for the named motors, or for every motor when none are named.
+
+        The argument is honoured rather than ignored because `None` means "every motor on the
+        bus" upstream, and on a build whose end effector has no gripper that reaches an id
+        nothing answers on. A double that swallowed the argument would answer for the absent
+        motor and hide the caller that asked for it.
+        """
+        self.read_motors.append(None if motors is None else list(motors))
+        named = MOTOR_ORDER if motors is None else motors
         return {
             motor: {"position": self._position_deg, "velocity": 0.0, "torque": 0.0}
-            for motor in MOTOR_ORDER
+            for motor in named
         }
 
     def disable_torque(self) -> None:

@@ -87,7 +87,9 @@ from packages.lerobot_robot_openarm.config_oa import (
 # CAN interface name per arm. These are the socketcan defaults; the authoritative
 # fixed interface names come from the CAN-hygiene wave (WP-0B-05) and are confirmed at
 # hardware bring-up. The value is only read when the bus is actually opened (deferred),
-# so a placeholder here never affects the offline flow.
+# so a placeholder here never affects the offline flow. A caller that has the operator's
+# persisted role-to-channel answer passes it as `port` instead: the two arms are
+# indistinguishable by CAN id (03 §2.1), so this map is a placeholder and never evidence.
 PORT_BY_SIDE = {"left": "can0", "right": "can1"}
 _DEFAULT_PORT = "can0"
 
@@ -284,6 +286,7 @@ class OaOpenArmFollower(OpenArmFollower):
         end_effector: EndEffectorProfile | None = None,
         clock: Clock | None = None,
         publisher: AcceptedTargetPublisher | None = None,
+        port: str | None = None,
     ) -> None:
         """Construct the follower without opening any bus.
 
@@ -306,11 +309,15 @@ class OaOpenArmFollower(OpenArmFollower):
                 filters and still returns the accepted action, but nothing reaches the single
                 writer and no joint is commanded — which is what an arm built outside a
                 torque-ON session is.
+            port: The CAN interface this arm opens on. Given by a caller holding the
+                operator's persisted role-to-channel answer; `PORT_BY_SIDE` otherwise, which
+                is a placeholder rather than an identification — the arms answer on the same
+                CAN ids and the adapter has been seen at two different USB port paths.
         """
         self._end_effector = end_effector if end_effector is not None else default_profile()
         self._clock = clock if clock is not None else WallClock()
         self._plugin_config = config
-        super().__init__(self._build_hardware_config(config))
+        super().__init__(self._build_hardware_config(config, port))
         if bus is not None:
             self.bus = bus
         self._torque_enabled = False
@@ -324,15 +331,21 @@ class OaOpenArmFollower(OpenArmFollower):
         self._watchdog = ActionStreamWatchdog(self._clock)
         self._publisher = publisher
 
-    def _build_hardware_config(self, config: OaOpenArmFollowerConfig) -> OpenArmFollowerConfig:
+    def _build_hardware_config(
+        self, config: OaOpenArmFollowerConfig, port: str | None
+    ) -> OpenArmFollowerConfig:
         """Build the full LeRobot hardware config from the minimal plugin config.
 
         The plugin config carries only `side` and the velocity/torque switch (the
         frozen CTR-PLUG@v1 surface); the CAN and motor hardware fields come from
-        LeRobot's follower defaults, and the port is derived from the side.
+        LeRobot's follower defaults. The port is the caller's when they have the
+        operator's channel record, and the side-derived placeholder otherwise — that
+        placeholder is also what the lock check reads, so the two cannot be given
+        different answers.
 
         Args:
             config: The plugin config.
+            port: The CAN interface to open on, or None for the side placeholder.
 
         Returns:
             (OpenArmFollowerConfig) The full hardware config.
@@ -347,7 +360,7 @@ class OaOpenArmFollower(OpenArmFollower):
         return OpenArmFollowerConfig(
             id=config.id,
             calibration_dir=config.calibration_dir,
-            port=PORT_BY_SIDE.get(side_str, _DEFAULT_PORT),
+            port=port if port is not None else PORT_BY_SIDE.get(side_str, _DEFAULT_PORT),
             side=side_str,
             use_velocity_and_torque=config.use_velocity_and_torque,
         )
@@ -503,7 +516,7 @@ class OaOpenArmFollower(OpenArmFollower):
         # gripper that includes an id nothing answers on. An unanswered frame is not an error
         # return — the transmit error counter climbs and the controller falls to ERROR-PASSIVE,
         # which degrades the joints that ARE present. Measured on this bench.
-        self.bus.set_zero_position(list(self._zeroable_motors()))
+        self.bus.set_zero_position(list(self._fitted_motors()))
 
         measured = self._read_joint_deg()
         residual = compute_residual(measured, reference)
@@ -875,14 +888,14 @@ class OaOpenArmFollower(OpenArmFollower):
 
     def _warmup_feedback(self) -> None:
         """Read the motor states once to warm the feedback cache (torque untouched)."""
-        self.bus.sync_read_all_states()
+        self.bus.sync_read_all_states(list(self._fitted_motors()))
 
-    def _zeroable_motors(self) -> tuple[str, ...]:
+    def _fitted_motors(self) -> tuple[str, ...]:
         """The motor names this arm actually carries, in MOTOR_ORDER order.
 
         `MOTOR_ORDER` is the frozen eight-slot contract, not an inventory: the gripper slot is
-        always in the layout and the gripper motor is not always on the bus. Zeroing keys on the
-        fitted end effector so no frame is addressed to an absent motor.
+        always in the layout and the gripper motor is not always on the bus. Every bus call keys
+        on the fitted end effector so no frame is addressed to an absent motor.
         """
         profile = self._end_effector
         if profile.has_actuated_gripper:
@@ -890,8 +903,16 @@ class OaOpenArmFollower(OpenArmFollower):
         return tuple(name for name in MOTOR_ORDER if name != GRIPPER_MOTOR_NAME)
 
     def _read_joint_deg(self) -> list[float]:
-        """Read the current raw joint angles (degrees) in MOTOR_ORDER."""
-        states = self.bus.sync_read_all_states()
+        """Read the current raw joint angles (degrees) in MOTOR_ORDER.
+
+        The poll names the fitted motors and the answer is widened back to the frozen layout, so
+        a slot with no motor behind it reports the same zero it always did without a frame being
+        addressed to it. `sync_read_all_states()` with no argument walks every motor the bus was
+        constructed with, and on this bench that includes an id that answered 0 of 20 polls —
+        sixteen unanswered frames took both channels to ERROR-PASSIVE. This read runs once per
+        `send_action`, so the bare form was one unanswered frame per command.
+        """
+        states = self.bus.sync_read_all_states(list(self._fitted_motors()))
         return [float(states.get(motor, {}).get("position", 0.0)) for motor in MOTOR_ORDER]
 
 

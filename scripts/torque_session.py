@@ -12,12 +12,18 @@ produced a "the E-Stop circuit is not connected" verdict. `--run` therefore prin
 timetable, forks the worker with `start_new_session`, and returns at once; `--status` reads what
 the worker has recorded so far and is the command that carries the verdict.
 
-What this runner refuses to do is the reason it is short. It engages nothing itself: the
-guarded torque-ON sequence (`backend.torque_bringup.sequence`) drives a `TorqueEngageBus`, and
-no module in this repository binds that protocol to a real `DamiaoMotorsBus`. Opening a second
-write path here would put a torque frame outside the single writer the safety filter guards, so
-each step that needs motion refuses by name instead. Every capture is round-tripped through its
-own hook's loader before it is written, and a capture the hook refuses is never written at all.
+What this runner does not do itself is the reason it is short. It opens no write path: the
+engage drives the rig binding (`backend.torque_bringup.rig`) assembled over the real arms by
+`scripts.rig_session`, so every torque-bearing frame it causes leaves the way a
+commanded frame does — `send_action` filters, the publisher fills the mailbox, one scheduler
+tick performs the one CAN write. A second write path opened here would put a torque frame
+outside the single writer the safety filter guards, so what is missing is refused by name
+instead. Every capture is round-tripped through its own hook's loader before it is written, and
+a capture the hook refuses is never written at all.
+
+An engaged arm is an arm being refreshed. Past the RID-9 no-send ceiling the motor stops
+applying the last MIT command, and with no brake that is a fall, so the engage leaves a thread
+re-sending the hold and the release stops it before dropping torque.
 
 Entry point is `scripts/torque_session.sh`, which supplies the repository root on `sys.path`.
 """
@@ -35,6 +41,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -132,6 +139,48 @@ TORQUE_LEFT_LIVE_DETAIL = (
 # meaning beyond being non-zero, which is what makes a hold-at-present displacement of 0 mean
 # something.
 SYNTHETIC_POSE_STEP_RAD = 0.05
+
+# The single writer this rig's two CAN channels need, as a factory over the per-arm slot plan
+# (`scripts.rig_session.ArmWriteSlots`). None is why both torque steps refuse,
+# and it is the one wire this session is missing.
+#
+# `BusCanWriter` binds one bus and one motor-name order, and one scheduler emission is
+# `BIMANUAL_BATCH_WIDTH` slots wide across two channels whose eight motor names are the same
+# eight names. Handed sixteen names over one channel it writes eight frames and the second arm's
+# angles land on the first arm's motors — measured on this host: a left slot asking for 0.0 rad
+# arrived as 458.4°. Handed eight it raises on the batch width. So the split that carries one
+# emission to both channels, and leaves the unfitted slot alone, has to exist first, and it
+# belongs in `backend/actuation` — the one tree `find_producer_can_access` exempts — because a
+# split written anywhere else puts the CAN write symbol outside it.
+BIMANUAL_CAN_WRITER: Callable[[Any], Any] | None = None
+
+# How often the engaged hold is re-sent while the arm is energized, seconds. Past the RID-9
+# no-send ceiling (`12` NFR-SAF-007, `RID9_NO_SEND_MARGIN_SEC`) the motor stops applying the
+# last MIT command, and with no brake that is the arm falling rather than the arm stopping.
+# Half the ceiling, so one whole missed period still lands inside it.
+HOLD_REFRESH_DIVISOR = 2.0
+
+# What a step records when the operator is holding the arm. `GuardedTorqueOn.disengage` refuses
+# without this declaration, and it comes from the timetable rather than a prompt: the operator
+# was shown this step's wall-clock instant and its instruction before anything engaged, and this
+# process is detached from the terminal a question would have gone to.
+ARM_SUPPORTED_BY_TIMETABLE = True
+
+# Capture blocks the engage writes, and the keys inside them. `engage` is what the WP-1-05
+# re-verification hook reads; `rig_engage` is what the rig-engage acceptance reads. Named once
+# so the producer and the hooks cannot drift on a spelling.
+CAPTURE_ENGAGE_BLOCK = "engage"
+CAPTURE_RIG_ENGAGE_BLOCK = "rig_engage"
+CAPTURE_SEND_IDS_KEY = "send_ids"
+CAPTURE_PRESENT_KEY = "present_pose_rad"
+CAPTURE_FRAME_KEY = "engaged_frame"
+CAPTURE_ZERO_RESIDUAL_BLOCK = "zero_residual"
+CAPTURE_WITHIN_TOLERANCE_KEY = "within_tolerance"
+CAPTURE_INTERFACES_KEY = "interfaces"
+
+# The capture file stem the engage writes under. One file per host, which is the shape every
+# hook in this tree globs for.
+ENGAGE_CAPTURE_NAME = "engage"
 
 
 ARM_LEFT = "left"
@@ -239,6 +288,10 @@ class SessionConfig:
             argv. No capture payload records it: the attestation on a threshold calibration is
             where it belongs, and that producer refuses before it builds one.
         candump_path: A real capture of bus traffic, or None when the operator supplied none.
+        manifest_path: The startup manifest declaring the four torque-ON gate preconditions,
+            PG-SAFE-001's PASS hash among them. None when the operator supplied none, which
+            is a refusal rather than an assumed PASS: `02a` §7 makes the manifest — not the
+            code — the place a precondition either exists or does not.
     """
 
     arm: str
@@ -246,6 +299,7 @@ class SessionConfig:
     rid_capture_dir: Path
     operator: str
     candump_path: Path | None
+    manifest_path: Path | None = None
 
 
 @dataclass
@@ -527,7 +581,381 @@ def _require_torque_write_path(step_key: str) -> None:
     )
 
 
-def _release_torque(_config: SessionConfig) -> str:
+def _require_bimanual_writer(step_key: str) -> Callable[[Any], Any]:
+    """Return the single-writer factory, refusing while this rig has none.
+
+    The rig binding exists and the enforcement point publishes into the scheduler's mailbox;
+    what is missing is the one object that carries a scheduler emission to two CAN channels.
+    `BIMANUAL_CAN_WRITER` is where it is read from, so this refusal and the admission gate that
+    reports it cannot drift apart.
+
+    Args:
+        step_key: The step asking, for the refusal message.
+
+    Returns:
+        (Callable[[Any], Any]) The factory that builds the writer from the per-arm slot plan.
+
+    Raises:
+        SessionRefusedError: While no writer exists. Engaging without one means 0xFC with no
+            frame behind it, and the only `CanWriter` in the tree misaddresses this rig: over
+            one channel with sixteen names it puts the right arm's angles on the left arm's
+            motors, which on a brakeless arm is a commanded jump.
+    """
+    factory = BIMANUAL_CAN_WRITER
+    if factory is not None:
+        return factory
+    raise SessionRefusedError(
+        f"{step_key}: 토크 쓰기 경로가 절반만 조립돼 있다 — 두 채널에 하나의 이미션을 실어\n"
+        "  보내는 단일 작성자가 없다.\n"
+        "  지금 있는 유일한 프로덕션 CanWriter 는 BusCanWriter 이고, 그것은 버스 하나와 모터\n"
+        "  이름 순서 하나에 묶인다. 이 리그는 채널이 둘이고 두 팔의 모터 이름 여덟 개가 같은\n"
+        "  여덟 개다 — 한 채널에 16개 이름을 주면 프레임 8개만 나가고 오른팔 각도가 왼팔\n"
+        "  모터에 실린다(이 호스트에서 실측: 0.0 rad 를 요구한 왼팔 슬롯이 458.4°로 도착).\n"
+        "  8개를 주면 배치 폭에서 거부한다. 그래서 이미션을 두 채널로 쪼개고 장착되지 않은\n"
+        "  슬롯(0x08)을 건너뛰는 작성자가 먼저 있어야 하고, 그 자리는 backend/actuation 이다\n"
+        "  — find_producer_can_access 가 면제하는 단 하나의 트리이고, 그 밖에서 쪼개면 CAN\n"
+        "  쓰기 심볼이 그 트리 밖으로 나간다."
+    )
+
+
+@dataclass
+class LiveTorqueSession:
+    """What the engage energized, kept so the release drops exactly that.
+
+    Ownership: owns the assembled rig session (its two channel locks and two open sockets) and
+    the thread re-sending the hold. The engage puts one of these here and the release takes it;
+    nothing else may hold one, because two of them would be two writers on one channel.
+
+    Attributes:
+        guarded: The `GuardedTorqueOn` session whose `disengage` is the way out.
+        rig: The assembled write path, held so the release can give the locks back.
+        maintainer: The thread keeping the hold alive, stopped before the drop.
+    """
+
+    guarded: Any
+    rig: Any
+    maintainer: HoldMaintainer
+
+
+# The one live torque session in this process. A module-level holder because the engage and the
+# release are two separately scheduled steps of one worker, each called with nothing but the
+# session config — and the release has to drop what the engage energized rather than a fresh
+# assembly's idea of it.
+_LIVE_SESSION: LiveTorqueSession | None = None
+
+
+class HoldMaintainer(threading.Thread):
+    """Re-sends the engaged hold until it is told to stop.
+
+    An engage puts one frame on the bus; the arm stays up because the frame keeps being sent.
+    Past the RID-9 no-send ceiling the motor stops applying the last MIT command, and with no
+    brake that is the arm falling — so between the engage step and the release step, seventy
+    seconds later, something has to keep ticking.
+
+    Ownership: borrows the assembled rig and drives its `maintain_hold`, which is one scheduler
+    tick and so one CAN write. It is the only thread that touches the bus while it runs, which
+    is why the release stops and joins it before dropping torque: `disable_torque` and a MIT
+    write share one socket.
+
+    Threading: one instance per engaged session. A tick that raises stops the loop and is kept
+    in `failure`, because a maintenance loop that died silently is an arm nobody is refreshing.
+    """
+
+    def __init__(self, rig: Any, period_sec: float) -> None:
+        """Bind the maintainer to the rig whose hold it re-sends.
+
+        Args:
+            rig: The assembled rig; its `maintain_hold` is one tick.
+            period_sec: Interval between re-sends, under the RID-9 no-send ceiling.
+        """
+        super().__init__(name="oa-hold-maintainer", daemon=True)
+        self._rig = rig
+        self._period_sec = period_sec
+        # Not `_stop`: `threading.Thread._stop` is a method its own bootstrap calls when `run`
+        # returns, and shadowing it with an Event makes the thread raise on its way out.
+        self._stop_event = threading.Event()
+        self.failure: BaseException | None = None
+        self.ticks = 0
+
+    def run(self) -> None:
+        """Re-send the hold every period until stopped, recording the tick that failed."""
+        while not self._stop_event.is_set():
+            try:
+                self._rig.maintain_hold()
+            except BaseException as failure:  # noqa: BLE001 — a dead loop is the whole finding
+                self.failure = failure
+                return
+            self.ticks += 1
+            self._stop_event.wait(self._period_sec)
+
+    def stop(self) -> None:
+        """Stop re-sending and wait for the loop to leave the bus alone.
+
+        Tolerant of never having started, because the engage records the live session before it
+        engages: a bus that raised before 0xFC leaves a session the release still has to close.
+        """
+        self._stop_event.set()
+        if self.ident is not None:
+            self.join()
+
+
+def _end_effector_record() -> Any:
+    """Return what each arm carries, from the operator's record or the no-gripper default.
+
+    The record is read when it exists, because which tool is bolted on is a fact about the
+    bench that changes without any file changing. The fallback is `default_rig()` — both arms
+    on the build with no motor on `0x08` — and that asymmetry is deliberate: defaulting to a
+    gripper on a rig without one makes every poll address an id nobody answers on, which walks
+    the controller to ERROR-PASSIVE and degrades the seven joints that are present.
+
+    Returns:
+        (RigEndEffectors) What each arm carries.
+
+    Raises:
+        SessionRefusedError: If either arm's record declares the gripper motor. That is the
+            same rule the admission gate applies, re-applied to the record the engage will
+            actually poll with: the gate reads the default profile, so a record that disagrees
+            with it would reach the bus unjudged.
+    """
+    from backend.config.store import default_config_directory
+    from backend.endeffector import GRIPPER_SEND_ID, SIDES, default_rig, load_rig, rig_path
+
+    record = rig_path(default_config_directory())
+    rig = load_rig(record) if record.is_file() else default_rig()
+    for side in SIDES:
+        profile = rig.for_side(side)
+        if GRIPPER_SEND_ID in profile.motor_send_ids:
+            raise SessionRefusedError(
+                f"{side} 팔의 기록된 도구 {profile.tool_id} 가 {GRIPPER_SEND_ID:#04x} 를 "
+                "선언한다. 이 벤치에서 그 id 는 20회 폴링 중 0회 응답했고, 응답 없는 프레임은 "
+                "컨트롤러를 ERROR-PASSIVE 로 끌어내려 실제로 있는 7관절까지 열화시킨다. "
+                "그리퍼를 실제로 장착했다면 모터 프로브부터 다시 뜬다."
+            )
+    return rig
+
+
+def _startup_manifest(config: SessionConfig) -> Any:
+    """Read the startup manifest the engage is admitted against.
+
+    Args:
+        config: This session's config, carrying the manifest path.
+
+    Returns:
+        (TorqueOnManifest) The four declared gate preconditions.
+
+    Raises:
+        SessionRefusedError: If no manifest was supplied, or it cannot be read. `02a` §7 makes
+            the PG-SAFE-001 PASS hash a declared manifest field, so a manifest this runner
+            filled in itself would be the code asserting the gate it is supposed to be gated by.
+    """
+    from backend.torque_bringup.cli import manifest_from_document
+
+    if config.manifest_path is None:
+        raise SessionRefusedError(
+            "기동 매니페스트가 없다 (--manifest). PG-SAFE-001 의 PASS 해시는 매니페스트가 "
+            "선언하는 값이고, 러너가 스스로 채우면 그것은 게이트를 통과한 증거가 아니라 "
+            "게이트를 대신 선언한 것이 된다."
+        )
+    try:
+        return manifest_from_document(json.loads(config.manifest_path.read_text(encoding="utf-8")))
+    except (OSError, ValueError, KeyError, TypeError) as refusal:
+        raise SessionRefusedError(
+            f"기동 매니페스트를 읽을 수 없다 ({config.manifest_path}): {refusal}"
+        ) from refusal
+
+
+def _preflight_report(config: SessionConfig, iface: str, locks: Any) -> Any:
+    """Run the five torque-ON preconditions for the selected arm on its own channel.
+
+    The report is built under the locks the session already holds, because one of the five is
+    the writer lock: a report taken with the lock released describes a different host than the
+    one about to engage.
+
+    Every dump of this channel is judged and the blocking verdict wins, for the reason
+    `_admit_preflight` states — choosing between two dumps of one channel by filename lets a
+    passing dump stand in for a failing one.
+
+    Args:
+        config: This session's config.
+        iface: The channel the selected arm is on, as the binding resolved it.
+        locks: The manager holding both channels' locks.
+
+    Returns:
+        (PreflightReport) The report the engage authorizes against.
+
+    Raises:
+        SessionRefusedError: If the RID capture directory holds no dump of this channel.
+    """
+    from backend.can.link import parse_link_show
+    from backend.can.rid.reverify import reverify_from_fixture
+    from backend.endeffector import default_profile
+    from backend.preflight import JogSessionPreflight, PreflightInputs, RidCrosscheck
+    from contracts.plugin.config import Side
+    from packages.lerobot_robot_openarm.openarm_follower_oa import build_safety_limits
+
+    completed = run_command(["ip", "-details", "link", "show", iface])
+    link = parse_link_show(completed.stdout, iface) if completed.returncode == 0 else None
+    evaluations = [
+        evaluation
+        for evaluation in reverify_from_fixture(
+            config.rid_capture_dir, expected_motor_ids=default_profile().motor_send_ids
+        )
+        if evaluation.iface == iface
+    ]
+    if not evaluations:
+        raise SessionRefusedError(f"{config.rid_capture_dir} 에 {iface} RID 덤프가 없다")
+    reports = [
+        JogSessionPreflight().run(
+            PreflightInputs(
+                rid=RidCrosscheck.confirmed(evaluation),
+                side=Side.LEFT if config.arm == ARM_LEFT else Side.RIGHT,
+                link=link,
+                lock_state=locks.lock_state([iface])[0],
+                clamp_canon=build_safety_limits(config.arm),
+            )
+        )
+        for evaluation in evaluations
+    ]
+    blocking = [report for report in reports if not report.may_enable_torque]
+    return blocking[0] if blocking else reports[0]
+
+
+def _assemble_rig(step_key: str, end_effectors: Any) -> Any:
+    """Assemble the whole write path over both arms, with nothing energized.
+
+    Args:
+        step_key: The step assembling, so a refusal names the step the operator was called for.
+        end_effectors: What each arm carries.
+
+    Returns:
+        (RigSession) The assembled session; torque is off on every motor.
+
+    Raises:
+        SessionRefusedError: If no single writer exists, or the assembly refused.
+    """
+    from backend.config.store import default_config_directory
+    from scripts.rig_session import RigAssemblyError, build_rig_session
+
+    make_writer = _require_bimanual_writer(step_key)
+    directory = default_config_directory()
+    try:
+        return build_rig_session(
+            make_can_writer=make_writer,
+            end_effectors=end_effectors,
+            calibration_dir=directory / CALIBRATION_DIRNAME,
+            robot_ids=CALIBRATION_ROBOT_IDS,
+            config_directory=directory,
+        )
+    except RigAssemblyError as refusal:
+        raise SessionRefusedError(f"{step_key}: 쓰기 경로를 조립할 수 없다: {refusal}") from refusal
+
+
+def _engaged_frame_for_arm(rig_session: Any, arm: str, fitted: tuple[str, ...]) -> list[Any]:
+    """Return the fitted slice of the frame the single writer emitted for this arm's engage.
+
+    The emission is one bimanual frame, so this arm's joints occupy its own half of it in the
+    frozen arm-major order. Only the fitted slots are carried into the capture, because the
+    hook compares the frame against a pose that is the fitted width and no motor answers behind
+    the rest.
+
+    Args:
+        rig_session: The assembled session.
+        arm: Which arm engaged.
+        fitted: This arm's fitted motor names, in the order the read addressed them.
+
+    Returns:
+        (list) One `ExecutedMitCommand` per fitted motor.
+
+    Raises:
+        SessionRefusedError: If no frame was emitted for the engage. The engage compares the
+            emission to the decision before and after 0xFC, so a missing one means the record
+            of what reached the motors is gone.
+    """
+    from backend.calibration.schema import MOTOR_ORDER
+    from backend.endeffector import SIDES
+
+    emitted = rig_session.rig.for_side(arm).last_emitted_frame
+    if emitted is None:
+        raise SessionRefusedError(
+            "인게이지가 단일 작성자의 프레임을 남기지 않았다. 모터에 실제로 무엇이 갔는지에 "
+            "대한 기록이 없으면 캡처는 아무것도 판정할 수 없다."
+        )
+    offset = SIDES.index(arm) * len(MOTOR_ORDER)
+    return [emitted[offset + MOTOR_ORDER.index(name)] for name in fitted]
+
+
+def _zero_residual_within_tolerance(arm: str) -> bool:
+    """Whether the persisted zero for an arm is inside the per-joint tolerance.
+
+    Read off the calibration the arm actually loaded and recomputed through the one definition
+    of the tolerance, rather than transcribed from the file's own verdict field.
+
+    Args:
+        arm: Which arm.
+
+    Returns:
+        (bool) True when every joint's residual is within tolerance.
+    """
+    from backend.calibration.atomic_io import calibration_path_for, load_calibration
+    from backend.calibration.verify import compute_residual
+    from backend.config.store import default_config_directory
+
+    directory = default_config_directory() / CALIBRATION_DIRNAME
+    calibration = load_calibration(calibration_path_for(directory, CALIBRATION_ROBOT_IDS[arm]))
+    residual = compute_residual(
+        list(calibration.motor_zero_raw), list(calibration.urdf_zero_offset)
+    )
+    return residual.within_tolerance
+
+
+def _engage_payload(
+    config: SessionConfig, rig_session: Any, result: Any, frame: list[Any]
+) -> dict[str, Any]:
+    """Build the capture the WP-1-05 hooks read, entirely out of what was measured.
+
+    Two blocks carry the same ids and pose because two hooks read them: the re-verification
+    hook rebuilds the hold from `engage`, and the rig-engage acceptance compares the frame the
+    writer emitted against the pose in `rig_engage`. Neither derives the other's numbers.
+
+    Args:
+        config: This session's config.
+        rig_session: The assembled session, for the channel each arm was on.
+        result: The `EngageResult` the guarded engage returned.
+        frame: The fitted slice of the frame the single writer emitted.
+
+    Returns:
+        (dict[str, Any]) The capture payload.
+    """
+    send_ids = [int(send_id) for send_id in result.send_ids]
+    present = [float(angle.value) for angle in result.present]
+    return {
+        "host_id": platform.node() or config.operator,
+        CAPTURE_INTERFACES_KEY: dict(rig_session.interfaces),
+        CAPTURE_ENGAGE_BLOCK: {
+            CAPTURE_SEND_IDS_KEY: send_ids,
+            CAPTURE_PRESENT_KEY: present,
+        },
+        CAPTURE_RIG_ENGAGE_BLOCK: {
+            CAPTURE_SEND_IDS_KEY: send_ids,
+            CAPTURE_PRESENT_KEY: present,
+            CAPTURE_FRAME_KEY: [
+                {
+                    "kp": float(command.kp),
+                    "kd": float(command.kd),
+                    "q": float(command.q.value),
+                    "dq": float(command.dq.value),
+                    "tau": float(command.tau.value),
+                }
+                for command in frame
+            ],
+        },
+        CAPTURE_ZERO_RESIDUAL_BLOCK: {
+            CAPTURE_WITHIN_TOLERANCE_KEY: _zero_residual_within_tolerance(config.arm)
+        },
+    }
+
+
+def _release_torque(config: SessionConfig) -> str:
     """Drop torque on the fitted motors, ending the session.
 
     Not the stop path. `04` NFR-MAN-002 makes a stop a Cat-2 hold frame; this is the operator
@@ -540,28 +968,144 @@ def _release_torque(_config: SessionConfig) -> str:
     detached from the terminal that would have carried a question. Asking here would be a
     question nobody can answer.
 
+    The hold maintainer is stopped and joined before the drop. `disable_torque` and a MIT write
+    share one socket, and a drop racing a re-send is a frame going out after the motors were
+    told to let go.
+
+    A selection that runs this step alone assembles its own session and drops there. Refusing
+    for want of an engage in this process would strand an operator whose arm was energized by
+    something else, and this is the step whose whole content is them taking its weight.
+
+    Args:
+        config: This session's config.
+
     Returns:
         (str) The recorded line naming the ids the drop addressed.
 
     Raises:
-        SessionRefusedError: While the torque write path is unassembled, since there is then
-            nothing energized to release and claiming otherwise would record a drop that never
-            reached a motor.
+        SessionRefusedError: While no single writer exists, or if the assembly refused. Nothing
+            is energized in either case, so there is nothing to release.
     """
+    global _LIVE_SESSION
+
     _require_torque_write_path("release")
-    raise SessionRefusedError(
-        "release: 토크 쓰기 경로는 있으나 이 단계의 해제 코드가 아직 이 러너에 없다. "
-        "해제했다고 기록하고 실제로는 프레임이 나가지 않으면, 브레이크 없는 팔이 켜진 채로 "
-        "세션이 통과로 끝난다."
-    )
+    live = _LIVE_SESSION
+    if live is None:
+        return _release_a_session_this_process_did_not_engage(config)
+
+    _LIVE_SESSION = None
+    live.maintainer.stop()
+    try:
+        dropped = live.guarded.disengage(arm_supported=ARM_SUPPORTED_BY_TIMETABLE)
+    finally:
+        live.rig.close()
+    ids = " ".join(f"{send_id:#04x}" for send_id in dropped)
+    line = f"{ids} 토크 해제, 유지 틱 {live.maintainer.ticks}회"
+    if live.maintainer.failure is not None:
+        # The loop died before the release reached it, so the arm was unrefreshed for some part
+        # of the session. The drop still happened and the operator still has the weight; what
+        # they need is to know the hold was not being sent.
+        return f"{line}; 유지 루프가 먼저 죽었다: {live.maintainer.failure}"
+    return line
 
 
-def _produce_engage(_config: SessionConfig) -> Measurement:
-    """Guarded torque-ON: read the present pose, hold it, record the engage."""
+def _release_a_session_this_process_did_not_engage(config: SessionConfig) -> str:
+    """Assemble the rig and drop torque on the fitted motors, having engaged nothing.
+
+    Args:
+        config: This session's config.
+
+    Returns:
+        (str) The recorded line naming the ids the drop addressed.
+
+    Raises:
+        SessionRefusedError: If the write path cannot be assembled.
+    """
+    from backend.torque_bringup import GuardedTorqueOn
+
+    end_effectors = _end_effector_record()
+    rig_session = _assemble_rig("release", end_effectors)
+    try:
+        guarded = GuardedTorqueOn(
+            rig_session.rig.for_side(config.arm),
+            end_effectors.for_side(config.arm),
+            _preflight_report(config, rig_session.interfaces[config.arm], rig_session.locks),
+            _startup_manifest(config),
+        )
+        dropped = guarded.disengage(arm_supported=ARM_SUPPORTED_BY_TIMETABLE)
+    finally:
+        rig_session.close()
+    ids = " ".join(f"{send_id:#04x}" for send_id in dropped)
+    return f"{ids} 토크 해제 (이 프로세스가 인게이지한 적은 없다)"
+
+
+def _produce_engage(config: SessionConfig) -> Measurement:
+    """Guarded torque-ON: read the present pose, hold it, record the engage.
+
+    The order is `GuardedTorqueOn.engage`'s and not this function's: authorize against both
+    gates, prove the stop path cuts no torque, read the fitted motors' present pose, build the
+    kp>0 hold, drive the whole write path once with torque still off and compare what the writer
+    emitted against what the enforcement point decided, then 0xFC — and compare the frame after
+    it too. Nothing here can reorder that, which is the point of it living there.
+
+    What this adds is what happens next: the hold is re-sent from its own thread until the
+    release step, because past the RID-9 no-send ceiling the motor stops applying the last MIT
+    command and this arm has no brake.
+
+    Args:
+        config: This session's config.
+
+    Returns:
+        (Measurement) The engage capture, sourced from the rig.
+
+    Raises:
+        SessionRefusedError: If the write path is unassembled, if the manifest is missing, if
+            the record declares a motor this bench does not have, or if the assembly refused.
+    """
+    global _LIVE_SESSION
+
+    from backend.actuation.config import RID9_NO_SEND_MARGIN_SEC
+    from backend.torque_bringup import GuardedTorqueOn
+    from backend.torque_bringup.rig import fitted_motor_names
+
     _require_torque_write_path("engage")
-    raise SessionRefusedError(
-        "engage: 토크 쓰기 경로는 있으나 이 단계의 측정 코드가 아직 이 러너에 없다. "
-        "합성값을 대신 넣지 않는다 — 훅은 그것을 실측으로 읽는다."
+    # Both halves of the write path are asked before anything else, because everything after
+    # this reads the operator's persisted state and then opens two sockets. A refusal that lands
+    # after the channels are held has already told the operator the session is going ahead.
+    _require_bimanual_writer("engage")
+    end_effectors = _end_effector_record()
+    manifest = _startup_manifest(config)
+    profile = end_effectors.for_side(config.arm)
+    rig_session = _assemble_rig("engage", end_effectors)
+    maintainer = HoldMaintainer(rig_session.rig, RID9_NO_SEND_MARGIN_SEC / HOLD_REFRESH_DIVISOR)
+    guarded = GuardedTorqueOn(
+        rig_session.rig.for_side(config.arm),
+        profile,
+        _preflight_report(config, rig_session.interfaces[config.arm], rig_session.locks),
+        manifest,
+    )
+    # Recorded before the engage, not after it. A bus that raises once 0xFC has left leaves the
+    # arm energized, and the release step has to have something to drop.
+    _LIVE_SESSION = LiveTorqueSession(guarded=guarded, rig=rig_session, maintainer=maintainer)
+    try:
+        result = guarded.engage()
+    except BaseException:
+        if guarded.torque_may_be_live:
+            # 0xFC left and the engage then refused what came back. The scheduler's cached hold
+            # is still the pose read at assembly — where the arm is — so re-sending it keeps the
+            # arm up, and the alternative is the RID-9 timeout and a fall. The release step is
+            # what puts it down, with the operator holding the weight.
+            maintainer.start()
+        else:
+            _LIVE_SESSION = None
+            rig_session.close()
+        raise
+    maintainer.start()
+    frame = _engaged_frame_for_arm(rig_session, config.arm, fitted_motor_names(profile))
+    return Measurement(
+        source=SOURCE_MEASURED,
+        name=ENGAGE_CAPTURE_NAME,
+        payload=_engage_payload(config, rig_session, result, frame),
     )
 
 
@@ -794,13 +1338,19 @@ def _admit_torque_write_path(result: AdmissionResult, _config: SessionConfig) ->
 
     This is the gate that stops the session before anybody puts a hand on a brakeless arm. The
     other four say the rig is ready; this one says whether the software can do anything with it.
+
+    Both halves of the path are asked, because either one alone is not a write path: the rig
+    binding turns a decision into an engage, and the single writer is what puts the frame on a
+    channel. A gate that reported the binding's presence as the path would admit a session whose
+    every torque step refuses, and the operator would already be holding the arm by then.
     """
-    try:
-        _require_torque_write_path("session")
-    except SessionRefusedError as refusal:
-        result.record(False, "토크 쓰기 경로", str(refusal))
-        return
-    result.record(True, "토크 쓰기 경로", f"{TORQUE_RIG_MODULE}.{TORQUE_RIG_FACTORY} 확인")
+    for require in (_require_torque_write_path, _require_bimanual_writer):
+        try:
+            require("session")
+        except SessionRefusedError as refusal:
+            result.record(False, "토크 쓰기 경로", str(refusal))
+            return
+    result.record(True, "토크 쓰기 경로", f"{TORQUE_RIG_MODULE}.{TORQUE_RIG_FACTORY} + 단일 작성자")
 
 
 ADMISSION_GATES: tuple[Callable[[AdmissionResult, SessionConfig], None], ...] = (
@@ -1049,6 +1599,8 @@ def spawn_worker(steps: tuple[Step, ...], config: SessionConfig, start_epoch: fl
     ]
     if config.candump_path is not None:
         argv += ["--candump", str(config.candump_path)]
+    if config.manifest_path is not None:
+        argv += ["--manifest", str(config.manifest_path)]
     with log_path.open("a", encoding="utf-8") as log:
         subprocess.Popen(  # noqa: S603 — fixed argv, no shell, no user-supplied executable
             argv,
@@ -1217,12 +1769,16 @@ def _check_refusals(report: list[tuple[bool, str]]) -> None:
         else:
             report.append((False, "gate/torque-write-path: 승인 게이트 목록에서 빠졌다"))
 
+        # The gate's verdict has to be the conjunction of both halves of the path, not either
+        # one. Comparing it against the rig binding alone is what let a gate pass while every
+        # torque step refused for want of the single writer.
+        assembled = torque_rig_factory() is not None and BIMANUAL_CAN_WRITER is not None
         verdict = AdmissionResult()
         _admit_torque_write_path(verdict, _selfcheck_config(scratch))
-        if verdict.ok is (torque_rig_factory() is not None):
+        if verdict.ok is assembled:
             state = "조립됨" if verdict.ok else "미조립"
             report.append(
-                (True, f"refuse/torque-write-path: 게이트 판정이 리그 상태와 같다 ({state})")
+                (True, f"refuse/torque-write-path: 게이트 판정이 쓰기 경로 상태와 같다 ({state})")
             )
         else:
             report.append(
@@ -1231,7 +1787,8 @@ def _check_refusals(report: list[tuple[bool, str]]) -> None:
                     "refuse/torque-write-path: 게이트가 "
                     f"{'통과' if verdict.ok else '거부'} 라고 했지만 "
                     f"{TORQUE_RIG_MODULE}.{TORQUE_RIG_FACTORY} 는 "
-                    f"{'있다' if torque_rig_factory() is not None else '없다'}",
+                    f"{'있다' if torque_rig_factory() is not None else '없다'}, "
+                    f"단일 작성자는 {'있다' if BIMANUAL_CAN_WRITER is not None else '없다'}",
                 )
             )
 
@@ -1288,6 +1845,7 @@ def _config_from_args(args: argparse.Namespace) -> SessionConfig:
         rid_capture_dir=rid_capture,
         operator=args.operator,
         candump_path=Path(args.candump) if args.candump else None,
+        manifest_path=Path(args.manifest) if args.manifest else None,
     )
 
 
@@ -1315,6 +1873,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--rid-capture", default=None, help="실측 RID 덤프 디렉터리")
     parser.add_argument("--operator", default=platform.node() or "operator")
     parser.add_argument("--candump", default=None, help="실측 candump 캡처 파일")
+    parser.add_argument("--manifest", default=None, help="기동 매니페스트 JSON (PG-SAFE-001 해시)")
     parser.add_argument("--step", type=int, default=None, help="이 단계 하나만")
     parser.add_argument("--steps", default=None, help="쉼표로 나눈 단계 번호들")
     parser.add_argument("--plan", action="store_true", help="계획만 찍고 아무것도 하지 않는다")

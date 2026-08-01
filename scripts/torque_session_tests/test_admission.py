@@ -97,6 +97,11 @@ def test_torque_write_path_gate_is_installed() -> None:
     assert session._admit_torque_write_path in session.ADMISSION_GATES
 
 
+def _a_writer_factory(_slots: object) -> object:
+    """Stand in for the single writer's factory; the gate reads its presence, never calls it."""
+    return object()
+
+
 def test_torque_write_path_gate_refuses_while_the_rig_binding_is_absent(tmp_path: Path) -> None:
     if _rig_binding_exists():
         pytest.skip(f"{session.TORQUE_RIG_MODULE}.{session.TORQUE_RIG_FACTORY} now exists")
@@ -106,9 +111,28 @@ def test_torque_write_path_gate_refuses_while_the_rig_binding_is_absent(tmp_path
     assert session.TORQUE_RIG_FACTORY in result.render()
 
 
-def test_torque_write_path_gate_admits_once_the_rig_binding_exists(tmp_path: Path) -> None:
+def test_torque_write_path_gate_refuses_while_the_single_writer_is_absent(tmp_path: Path) -> None:
+    """The rig binding alone is half a write path, and half a write path engages nothing.
+
+    A gate that read the binding's presence as the path would admit a session whose every
+    torque step then refuses — and the operator is holding a brakeless arm by then, because the
+    timetable put the engage thirty seconds after the admission printed.
+    """
     if not _rig_binding_exists():
         pytest.skip(f"{session.TORQUE_RIG_MODULE}.{session.TORQUE_RIG_FACTORY} does not exist yet")
+    assert session.BIMANUAL_CAN_WRITER is None
+    result = session.AdmissionResult()
+    session._admit_torque_write_path(result, _config(tmp_path))
+    assert result.ok is False
+    assert "단일 작성자" in result.render()
+
+
+def test_torque_write_path_gate_admits_once_both_halves_exist(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    if not _rig_binding_exists():
+        pytest.skip(f"{session.TORQUE_RIG_MODULE}.{session.TORQUE_RIG_FACTORY} does not exist yet")
+    monkeypatch.setattr(session, "BIMANUAL_CAN_WRITER", _a_writer_factory)
     result = session.AdmissionResult()
     session._admit_torque_write_path(result, _config(tmp_path))
     assert result.ok is True
@@ -151,6 +175,7 @@ def test_a_name_bound_to_a_callable_is_a_torque_write_path(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     _point_the_rig_at(monkeypatch, "json", "loads")
+    monkeypatch.setattr(session, "BIMANUAL_CAN_WRITER", _a_writer_factory)
     assert callable(session.torque_rig_factory())
     result = session.AdmissionResult()
     session._admit_torque_write_path(result, _config(tmp_path))

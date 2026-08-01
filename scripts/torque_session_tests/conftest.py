@@ -23,6 +23,42 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from backend.actuation.config import RID9_NO_SEND_MARGIN_SEC, TICK_INTERVAL_SEC  # noqa: E402
+from backend.preflight import PreflightReport  # noqa: E402
+from backend.torque_bringup import (  # noqa: E402
+    GatePass,
+    GatewayBypassPrecondition,
+    TorqueOnManifest,
+    ZeroResidualPrecondition,
+)
+from backend.torque_bringup.constants import PG_RID_001, PG_SAFE_001  # noqa: E402
+from tests.wp105.conftest import passing_check_results  # noqa: E402
+
+# Evidence hashes for the two gate verdicts the engage is authorized against. Any non-empty
+# string satisfies `is_pass_with_hash`; what these stand for is that the hash was declared
+# somewhere other than in the code that reads it.
+SAFE_HASH = "sha256:pg-safe-001-pass"
+RID_HASH = "sha256:pg-rid-001-pass"
+
+
+@pytest.fixture
+def passing_preflight() -> PreflightReport:
+    """A preflight report with all five torque-ON preconditions passed."""
+    return PreflightReport(results=passing_check_results())
+
+
+@pytest.fixture
+def passing_manifest() -> TorqueOnManifest:
+    """A startup manifest with all four torque-ON gate preconditions cleared."""
+    return TorqueOnManifest(
+        safe_gate=GatePass(gate_id=PG_SAFE_001, status="PASS", artifact_hash=SAFE_HASH),
+        rid_gate=GatePass(gate_id=PG_RID_001, status="PASS", artifact_hash=RID_HASH),
+        zero_residual=ZeroResidualPrecondition(within_tolerance=True),
+        gateway_bypass=GatewayBypassPrecondition(bypass_count=0),
+        rid9_send_period_sec=TICK_INTERVAL_SEC,
+        rid9_no_send_margin_sec=RID9_NO_SEND_MARGIN_SEC,
+    )
+
 
 @pytest.fixture
 def no_process_execution(monkeypatch: pytest.MonkeyPatch) -> None:
