@@ -19,7 +19,24 @@ from backend.freedrive.staticcheck import (
     scan_freedrive_single_gateway,
 )
 
-_FREEDRIVE_TREE = Path("backend/freedrive")
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
+# The scanned tree, anchored to the repo instead of to the process working directory. Every scan
+# below walks its root with `rglob` and reports an empty violation list when the root does not
+# exist, which is exactly what a clean tree reports, so a relative root turns all three absence
+# checks green the moment pytest is invoked from anywhere but here.
+_FREEDRIVE_TREE = _REPO_ROOT / "backend" / "freedrive"
+
+# What the tree must hold for an empty violation list to say anything. The scans report what they
+# found and never how much they read, so the coverage is checked apart from the verdict.
+_MINIMUM_SCANNED_FILES = 1
+
+
+def test_the_scanned_root_is_the_tree_the_freedrive_path_lives_in() -> None:
+    # A scan that parsed nothing has not passed, it has not run — and its result is the same empty
+    # list a clean tree gives, so nothing below would notice a root that stopped resolving.
+    assert _FREEDRIVE_TREE.is_dir()
+    assert len(list(_FREEDRIVE_TREE.rglob("*.py"))) >= _MINIMUM_SCANNED_FILES
 
 
 def test_no_reach_for_the_can_handle() -> None:

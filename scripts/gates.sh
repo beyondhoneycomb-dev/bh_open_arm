@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Every gate, in one run. This replaced the GitHub Actions pipeline: the pipeline was removed
-# because a research-stage project pays its cost on every push and reads its result never.
+# Every gate, in one run. This script is the whole gate story for this repository: there is no
+# hosted pipeline, because a research-stage project pays a pipeline's cost on every push and
+# reads its result never.
 #
-# The list is the whole contract — a gate that is not here is a gate nobody runs. Two of these
-# were missing from the habit that preceded this script and went unnoticed for days:
-# `registry.env.cli --verify-issued` and `registry.generate.cli --check`.
+# The list below is the contract — a gate that is not on it is a gate nobody runs. Anything that
+# has to hold before a commit belongs here and nowhere else.
 #
-# Exit code is what to trust. Reading the tail of the output is how green was reported over a
-# red tree before.
+# Exit code is the verdict, and the only verdict. The output ends with a green banner even when a
+# gate above it failed, so a reader who checks the tail instead of the code reports green over a
+# red tree.
 set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 1

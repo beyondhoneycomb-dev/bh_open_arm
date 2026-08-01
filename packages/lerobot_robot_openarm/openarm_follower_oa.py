@@ -42,6 +42,7 @@ from lerobot.robots.openarm_follower.config_openarm_follower import (
 from lerobot.robots.robot import RobotAction, RobotObservation
 
 from backend.actuation import (
+    AcceptedTargetPublisher,
     ActionStreamWatchdog,
     ActuationGateway,
     Clock,
@@ -265,6 +266,10 @@ class OaOpenArmFollower(OpenArmFollower):
     lazily, injectable for fixtures), and a `DropCounter` surfacing the CAN packet-drop
     count. Torque state is tracked in `_torque_enabled`; this class never sets it True
     — guarded torque-ON is WP-1-05, after `PG-SAFE-001`.
+
+    The `AcceptedTargetPublisher` is borrowed, not owned: the scheduler's mailbox and clock
+    belong to the torque-ON session that stood the spine up, and both arms of a pair offer
+    into the same publisher so one bimanual target is assembled from two decisions.
     """
 
     name = OA_FOLLOWER_TYPE
@@ -278,6 +283,7 @@ class OaOpenArmFollower(OpenArmFollower):
         drop_counter: DropCounter | None = None,
         end_effector: EndEffectorProfile | None = None,
         clock: Clock | None = None,
+        publisher: AcceptedTargetPublisher | None = None,
     ) -> None:
         """Construct the follower without opening any bus.
 
@@ -295,6 +301,11 @@ class OaOpenArmFollower(OpenArmFollower):
             clock: The monotonic source the action-stream watchdog and the collision guard
                 read; the live wall clock otherwise. A fixture passes a `ManualClock` so an
                 elapsed interval is a stated fact rather than a race against the test runner.
+            publisher: The publisher carrying each accepted decision onto the scheduler's
+                mailbox, shared with the other arm of the pair. Omitted, `send_action` still
+                filters and still returns the accepted action, but nothing reaches the single
+                writer and no joint is commanded — which is what an arm built outside a
+                torque-ON session is.
         """
         self._end_effector = end_effector if end_effector is not None else default_profile()
         self._clock = clock if clock is not None else WallClock()
@@ -311,6 +322,7 @@ class OaOpenArmFollower(OpenArmFollower):
         self._last_gate_result: GateResult | None = None
         self._last_latch_reason: LatchReason | None = None
         self._watchdog = ActionStreamWatchdog(self._clock)
+        self._publisher = publisher
 
     def _build_hardware_config(self, config: OaOpenArmFollowerConfig) -> OpenArmFollowerConfig:
         """Build the full LeRobot hardware config from the minimal plugin config.
@@ -571,16 +583,17 @@ class OaOpenArmFollower(OpenArmFollower):
         Enabling torque is not done here and is not implied by commanding one — engaging
         is WP-1-05's, after PG-SAFE-001.
 
-        Integration boundary (honest scope): the accepted output is not yet published
-        onto the `ActuationScheduler` mailbox. The gateway, the filter, and the
-        scheduler/single-writer exist as verified components, but the runtime assembly
-        that joins them into one running robot is not built here — so the full 8-check
-        filter is enforced on this ABC path, while the scheduler still emits the
-        position-clamped mailbox target. Wiring the accepted output onto the mailbox
-        (so the single writer enforces the full filter, un-bypassably) is done at
-        WP-1-05, when torque-ON activates and the gap becomes load-bearing. Until then
-        no motor moves and the gap is inert; `tests/wp103/test_gateway_write_path_assembly.py`
-        marks it as the pending integration.
+        The decision is what leaves for the single writer, never the request: the accepted
+        vector is offered to the `AcceptedTargetPublisher`, which puts it on the scheduler's
+        mailbox once the other arm has offered too. A refusal travels the same way, because
+        its accepted channel is the present pose — so the frame the scheduler emits is one
+        the filter passed, and an unsafe-rate request reaches the bus as a hold rather than
+        as a position clamp of itself.
+
+        A slot the caller leaves out holds at its present angle, so the difference between
+        "not commanded" and "commanded by a key nothing reads" is invisible in the returned
+        action. A key naming a motor outside the frozen layout is therefore refused rather
+        than dropped, the same rule the gain and torque channels already apply.
 
         Args:
             action: Position action, keys `{motor}.pos` in degrees.
@@ -596,12 +609,14 @@ class OaOpenArmFollower(OpenArmFollower):
             (RobotAction) The accepted position action, keys `{motor}.pos` in degrees.
 
         Raises:
+            ValueError: If a position key names a motor outside the frozen layout.
             TorqueRefusedError: If a commanded torque names an unknown motor or leaves its
                 joint's effort band.
             GainRefusedError: If a commanded gain names an unknown motor.
             EndEffectorError: If a non-zero torque lands on the gripper slot of an arm whose
                 tool has no motor 0x08.
         """
+        _refuse_unknown_position_keys(action)
         present = tuple(Deg(angle) for angle in self._read_joint_deg())
         request = tuple(
             Deg(float(action.get(f"{motor}.pos", present[index].value)))
@@ -618,6 +633,8 @@ class OaOpenArmFollower(OpenArmFollower):
             kd=kd,
         )
         self._last_gate_result = result
+        if self._publisher is not None:
+            self._publisher.offer(self.side, result)
         return {
             f"{motor}.pos": result.accepted[index].value for index, motor in enumerate(MOTOR_ORDER)
         }
@@ -878,6 +895,34 @@ class OaOpenArmFollower(OpenArmFollower):
         return [float(states.get(motor, {}).get("position", 0.0)) for motor in MOTOR_ORDER]
 
 
+def _refuse_unknown_position_keys(action: RobotAction) -> None:
+    """Refuse a position key whose motor is outside the frozen layout.
+
+    The request vector is built by looking `{motor}.pos` up for each slot of `MOTOR_ORDER`, so a
+    key naming anything else contributes nothing and its joint holds at its present angle while
+    every other joint obeys — an arm that partly did what it was told, with a returned action that
+    looks like a complete answer. The gain and torque channels refuse an unknown motor name for
+    exactly this reason; position is the channel a caller types most often.
+
+    What is checked is the motor name, not the channel suffix: `use_velocity_and_torque` puts
+    `{motor}.vel` and `{motor}.torque` in the same feature space, and those are channels this
+    override does not read rather than motors the arm does not have.
+
+    Args:
+        action: The position action, keys `{motor}.pos` in degrees.
+
+    Raises:
+        ValueError: When a key names a motor no arm carries.
+    """
+    unknown = sorted(key for key in action if key.partition(".")[0] not in MOTOR_ORDER)
+    if unknown:
+        raise ValueError(
+            f"action keys {unknown} name motors that are not in the frozen layout "
+            f"{list(MOTOR_ORDER)}; refused rather than dropped, because a dropped key leaves the "
+            "joint the caller meant to move holding at present while the rest of the arm obeys"
+        )
+
+
 def _refuse_unsided(mapping: dict[str, float] | None, field: str, error: type[ValueError]) -> None:
     """Refuse a bimanual per-motor argument whose key names neither arm.
 
@@ -949,6 +994,7 @@ class BiOaOpenArmFollower(OpenArmRobot):
         config: BiOaOpenArmFollowerConfig,
         left: OaOpenArmFollower | None = None,
         right: OaOpenArmFollower | None = None,
+        publisher: AcceptedTargetPublisher | None = None,
     ) -> None:
         """Construct the bimanual follower and its two arms without opening any bus.
 
@@ -956,13 +1002,23 @@ class BiOaOpenArmFollower(OpenArmRobot):
             config: The bimanual plugin config.
             left: An optional pre-built left arm (fixtures inject a fixture-bus arm).
             right: An optional pre-built right arm.
+            publisher: The shared publisher onto the scheduler's mailbox, given to the arms
+                this constructor builds. An injected arm arrives with its own, the way it
+                arrives with its own bus and clock.
         """
         super().__init__(config)
-        self.left_arm = left if left is not None else self._build_arm(config, Side.LEFT)
-        self.right_arm = right if right is not None else self._build_arm(config, Side.RIGHT)
+        self.left_arm = left if left is not None else self._build_arm(config, Side.LEFT, publisher)
+        self.right_arm = (
+            right if right is not None else self._build_arm(config, Side.RIGHT, publisher)
+        )
         self._connected = False
 
-    def _build_arm(self, config: BiOaOpenArmFollowerConfig, side: Side) -> OaOpenArmFollower:
+    def _build_arm(
+        self,
+        config: BiOaOpenArmFollowerConfig,
+        side: Side,
+        publisher: AcceptedTargetPublisher | None,
+    ) -> OaOpenArmFollower:
         """Build one arm's follower from the bimanual config, namespaced by side."""
         arm_config = OaOpenArmFollowerConfig(
             id=f"{config.id}_{side.value}",
@@ -970,7 +1026,7 @@ class BiOaOpenArmFollower(OpenArmRobot):
             side=side,
             use_velocity_and_torque=config.use_velocity_and_torque,
         )
-        return OaOpenArmFollower(arm_config)
+        return OaOpenArmFollower(arm_config, publisher=publisher)
 
     @property
     def is_connected(self) -> bool:
@@ -1072,8 +1128,14 @@ class BiOaOpenArmFollower(OpenArmRobot):
         refusal raised halfway through the split leaves the first arm already commanded and
         the second untouched, with the caller holding an exception and no way to tell which
         half landed — the same one-arm-commanded state reaching past the pair produces, and
-        the reason this class exists. Every refusal a per-arm command can raise comes from
-        `resolve_command`, which is run for both sides up front and commands nothing.
+        the reason this class exists. So the split runs in two passes: the first narrows each
+        side's arguments and asks every refusal a per-arm command can raise — the position
+        keys here, the gains and the torque through `resolve_command` — and commands nothing;
+        the second commands both arms from what the first pass already accepted.
+
+        The two accepted decisions become one mailbox target. Each arm offers its own to the
+        shared publisher and the slot swaps only on the second offer, so the single writer
+        never reads a bimanual frame whose halves came from different commands.
 
         Args:
             action: Bimanual position action, keys `{side}_{motor}.pos` in degrees.
@@ -1086,7 +1148,7 @@ class BiOaOpenArmFollower(OpenArmRobot):
             (RobotAction) The accepted bimanual position action.
 
         Raises:
-            ValueError: If a position key names no arm.
+            ValueError: If a position key names no arm, or names a motor no arm carries.
             TorqueRefusedError: If a torque key names no arm, or an arm refuses it.
             GainRefusedError: If a gain key names no arm, or an arm refuses it.
         """
@@ -1094,19 +1156,22 @@ class BiOaOpenArmFollower(OpenArmRobot):
         _refuse_unsided(feedforward_torque_nm, "feedforward_torque_nm", TorqueRefusedError)
         _refuse_unsided(custom_kp, "custom_kp", GainRefusedError)
         _refuse_unsided(custom_kd, "custom_kd", GainRefusedError)
-        for prefix, arm in self._sided_arms:
-            arm.resolve_command(
-                _for_side(custom_kp, prefix),
-                _for_side(custom_kd, prefix),
-                _for_side(feedforward_torque_nm, prefix),
-            )
-        applied: dict[str, float] = {}
+        judged: list[tuple[str, OaOpenArmFollower, RobotAction]] = []
         for prefix, arm in self._sided_arms:
             arm_action = {
                 key[len(prefix) + 1 :]: value
                 for key, value in action.items()
                 if key.startswith(f"{prefix}_")
             }
+            _refuse_unknown_position_keys(arm_action)
+            arm.resolve_command(
+                _for_side(custom_kp, prefix),
+                _for_side(custom_kd, prefix),
+                _for_side(feedforward_torque_nm, prefix),
+            )
+            judged.append((prefix, arm, arm_action))
+        applied: dict[str, float] = {}
+        for prefix, arm, arm_action in judged:
             accepted = arm.send_action(
                 arm_action,
                 custom_kp=_for_side(custom_kp, prefix),

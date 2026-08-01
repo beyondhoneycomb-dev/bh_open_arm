@@ -9,7 +9,11 @@
 #   ./scripts/torque_session.sh --plan          what every step asks of you, runs nothing
 #   ./scripts/torque_session.sh --run           schedule the session; prints the wall-clock
 #                                               timetable and returns at once
-#   ./scripts/torque_session.sh --run --step 3  schedule one step; earlier captures survive
+#   ./scripts/torque_session.sh --run --steps 2
+#                                               schedule part of the session; earlier captures
+#                                               survive. Every selection has to reach step 2,
+#                                               the one step that puts the torque back down —
+#                                               a selection that ends energized is refused.
 #   ./scripts/torque_session.sh --status        what the detached worker has recorded
 #   ./scripts/torque_session.sh --check         self-check: the capture layouts and the refusals
 #

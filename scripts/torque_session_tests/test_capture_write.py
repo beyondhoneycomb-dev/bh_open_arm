@@ -7,6 +7,7 @@ one nobody would actually write.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -64,3 +65,39 @@ def test_a_refused_payload_leaves_no_file_behind(tmp_path: Path) -> None:
     with pytest.raises(session.SessionRefusedError):
         session.write_capture(_engage_step(), _measured(payload), tmp_path)
     assert not list(tmp_path.rglob("*.json"))
+
+
+def test_a_payload_the_hook_refuses_never_reaches_the_capture_tree(tmp_path: Path) -> None:
+    """The hook judges before the write, not after it.
+
+    Judged with a payload the writer's own two refusals let through — it is marked measured and
+    carries no out-of-scope key — so the only thing that can stop it is the WP-1-05 hook loading
+    it and objecting. A file written first and judged second leaves a capture in the operator's
+    tree that fails months later inside a pytest run, which is the arrangement this ordering
+    exists to prevent.
+    """
+    wider = session._synthetic_torque_bringup(extra_motor=True)
+    measured = session.Measurement(
+        source=session.SOURCE_MEASURED, name=wider.name, payload=wider.payload
+    )
+    with pytest.raises(session.SessionRefusedError):
+        session.write_capture(_engage_step(), measured, tmp_path)
+    assert not list(tmp_path.rglob("*.json"))
+
+
+def test_a_state_file_survives_a_write_that_failed_halfway(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """`--status` reads this file, so a half-written one reports a session that never happened."""
+    path = tmp_path / session.STATE_FILENAME
+    session._atomic_write_json(path, {"steps": {"engage": {"passed": True}}})
+    recorded = path.read_text(encoding="utf-8")
+
+    def _explode(_descriptor: int) -> None:
+        raise OSError("the disk went away mid-write")
+
+    monkeypatch.setattr(os, "fsync", _explode)
+    with pytest.raises(OSError, match="mid-write"):
+        session._atomic_write_json(path, {"steps": {"engage": {"passed": False}}})
+    assert path.read_text(encoding="utf-8") == recorded
+    assert list(tmp_path.iterdir()) == [path]

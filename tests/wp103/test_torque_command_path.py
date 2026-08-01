@@ -87,6 +87,13 @@ ZERO_KD = 0.0
 # same command with the hold stiffness instead is the refused pair.
 ZERO_KP = 0.0
 
+# Gains below the floor of their band, which a caller can name as readily as an over-range one.
+# A negative kp reverses the position term of `tau = kp*(q_cmd - q) + kd*(dq_cmd - dq) + tau_ff`,
+# so the joint is driven away from its target and harder the further it goes; a negative kd feeds
+# velocity back instead of damping it. On a brakeless arm both are a runaway rather than a pose.
+NEGATIVE_KP = -100.0
+NEGATIVE_KD = -1.0
+
 # A motor name outside the frozen eight-slot layout.
 UNKNOWN_MOTOR = "joint_9"
 
@@ -617,6 +624,73 @@ def test_a_gain_naming_an_unknown_motor_is_refused(
     assert UNKNOWN_MOTOR in str(refusal.value)
 
 
+def test_a_position_key_naming_an_unknown_motor_is_refused(
+    make_follower: Callable[..., OaOpenArmFollower],
+    calibrated: None,
+) -> None:
+    """A mistyped position key is refused, not swallowed — the arm must not partly obey.
+
+    The request is assembled by looking each `MOTOR_ORDER` slot up in the action, so a key nothing
+    reads leaves its joint holding at present while the rest of the arm moves, and the returned
+    action reports a full eight-slot answer with no sign that anything was dropped. The gain and
+    torque channels already refuse this; position is the channel a caller types most often.
+    """
+    follower = make_follower()
+    mistyped = f"{UNKNOWN_MOTOR}.pos"
+
+    with pytest.raises(ValueError) as refusal:
+        follower.send_action({**small_move(), mistyped: SMALL_MOVE_DEG})
+
+    assert mistyped in str(refusal.value)
+    assert follower.gateway.frames == ()
+    assert follower.last_gate_result is None
+
+
+def test_a_negative_stiffness_from_a_caller_never_reaches_the_joint(
+    make_follower: Callable[..., OaOpenArmFollower],
+    calibrated: None,
+) -> None:
+    """A caller may hand this path any float, so the sign has to be stopped on the way through.
+
+    `custom_kp` is forwarded to the gateway as given — the resolve step checks the motor name, not
+    the value — and a negative stiffness reverses the sign of the position term the motor executes:
+    the joint is driven away from the commanded angle, harder the further it travels. The command
+    is refused and the arm holds where it is.
+    """
+    follower = make_follower()
+
+    follower.send_action(small_move(), custom_kp={WRIST_MOTOR: NEGATIVE_KP})
+
+    result = follower.last_gate_result
+    assert result is not None
+    assert result.rejected
+    assert result.reason is SafetyReason.KP_OUT_OF_RANGE
+
+
+def test_a_negative_damping_from_a_caller_never_reaches_the_joint(
+    make_follower: Callable[..., OaOpenArmFollower],
+    calibrated: None,
+) -> None:
+    """The same for the damping term, judged with no stiffness so only the band can refuse it.
+
+    Every joint is given kp=0, the pure feed-forward frame, because under a driving stiffness the
+    damping floor would refuse this command for a different reason and the band check would go
+    unexercised. What is left is a joint whose damping term adds energy to its own motion.
+    """
+    follower = make_follower()
+
+    follower.send_action(
+        small_move(),
+        custom_kp=dict.fromkeys(MOTOR_ORDER, ZERO_KP),
+        custom_kd={WRIST_MOTOR: NEGATIVE_KD},
+    )
+
+    result = follower.last_gate_result
+    assert result is not None
+    assert result.rejected
+    assert result.reason is SafetyReason.KD_OUT_OF_RANGE
+
+
 def bimanual_move() -> dict[str, float]:
     """The small move, addressed to both arms under their channel prefixes."""
     return {
@@ -729,6 +803,41 @@ def test_the_bimanual_refuses_a_position_key_that_names_no_arm(
         pair.send_action({**bimanual_move(), unsided: SMALL_MOVE_DEG})
 
     assert unsided in str(refusal.value)
+
+
+def test_the_bimanual_refuses_a_position_key_naming_an_unknown_motor(
+    make_bimanual: Callable[..., BiOaOpenArmFollower],
+    calibrated: None,
+) -> None:
+    """A sided key with a bad motor passes the side check, so the per-arm rule has to catch it."""
+    pair = make_bimanual()
+    mistyped = f"left_{UNKNOWN_MOTOR}.pos"
+
+    with pytest.raises(ValueError) as refusal:
+        pair.send_action({**bimanual_move(), mistyped: SMALL_MOVE_DEG})
+
+    assert UNKNOWN_MOTOR in str(refusal.value)
+
+
+def test_a_refused_position_key_leaves_neither_arm_commanded(
+    make_bimanual: Callable[..., BiOaOpenArmFollower],
+    calibrated: None,
+) -> None:
+    """The position channel is judged in the same up-front pass as the gains and the torque.
+
+    Refused inside the command pass instead, a bad key on the right arm raises only after the left
+    arm's frame has landed — the caller holds an exception and one arm is already holding a newly
+    commanded pose.
+    """
+    pair = make_bimanual()
+
+    with pytest.raises(ValueError):
+        pair.send_action({**bimanual_move(), f"right_{UNKNOWN_MOTOR}.pos": SMALL_MOVE_DEG})
+
+    assert pair.left_arm.gateway.frames == ()
+    assert pair.right_arm.gateway.frames == ()
+    assert pair.left_arm.last_gate_result is None
+    assert pair.right_arm.last_gate_result is None
 
 
 def test_a_refused_torque_leaves_neither_arm_commanded(

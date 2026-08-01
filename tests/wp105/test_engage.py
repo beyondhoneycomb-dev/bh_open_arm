@@ -20,6 +20,7 @@ from backend.torque_bringup import (
     TORQUE_BRINGUP_ROOT,
     FittedMotorMismatchError,
     GuardedTorqueOn,
+    StopPathRootMissingError,
     StopPathScanEmptyError,
     TorqueCutOnStopPathError,
     TorqueDisengageRefusedError,
@@ -237,6 +238,28 @@ def test_a_scan_that_parsed_nothing_is_refused(tmp_path: Path) -> None:
     assert stop_path_files(tmp_path) == ()
     with pytest.raises(StopPathScanEmptyError, match="parsed no file"):
         assert_stop_path_cuts_no_torque(tmp_path)
+
+
+def test_a_root_that_is_not_a_directory_is_refused(tmp_path: Path) -> None:
+    """The missing root is refused where it is read, not through the file list.
+
+    An empty-directory root and an absent root reach the same refusal today, which reads as
+    coverage of both. It is not: the absent case arrives via `stop_path_files` returning empty,
+    so any enumeration that returns something non-empty for a path that does not exist turns
+    the whole precondition into a clean pass on a tree nobody opened.
+    """
+    absent = tmp_path / "no-such-tree"
+    with pytest.raises(StopPathRootMissingError, match="not a directory"):
+        assert_stop_path_cuts_no_torque(absent)
+
+    # A file is not a tree either, and `rglob` on one yields nothing rather than refusing.
+    with pytest.raises(StopPathRootMissingError, match="not a directory"):
+        assert_stop_path_cuts_no_torque(Path(__file__))
+
+    # The enumeration reports nothing for a root it cannot open, so a caller recording what an
+    # absence was established over cannot be handed a path that was never read.
+    assert stop_path_files(absent) == ()
+    assert stop_path_files(Path(__file__)) == ()
 
 
 def test_stop_path_scan_catches_a_planted_torque_cut(tmp_path) -> None:  # noqa: ANN001

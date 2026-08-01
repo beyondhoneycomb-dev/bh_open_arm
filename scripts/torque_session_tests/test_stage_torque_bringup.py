@@ -73,6 +73,37 @@ def test_a_capture_missing_a_fitted_motor_is_refused(
         session._stage_torque_bringup(tmp_path)
 
 
+def test_a_capture_swapping_a_fitted_motor_for_an_absent_one_is_refused(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The id is the whole failure, and the count is not the id.
+
+    `0x08` answered 0 of 20 polls on both arms of this bench. An engage that addressed it in place
+    of `0x07` sent exactly as many frames as a correct engage and got no answer to one of them,
+    and sixteen unanswered frames walked both channels to ERROR-PASSIVE — which degrades the seven
+    joints that are present. A comparison of set sizes reads this capture as correct.
+    """
+    swapped = (*FITTED[:-1], GRIPPER_SEND_ID)
+    _stub_hook(monkeypatch, [StubVerification(swapped, HELD_IN_PLACE, True)])
+    with pytest.raises(session.SessionRefusedError, match="ERROR-PASSIVE"):
+        session._stage_torque_bringup(tmp_path)
+
+
+def test_a_capture_addressing_the_fitted_motors_out_of_order_is_refused(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Send-id order is what pairs a held angle with a joint.
+
+    The pose is positional: `present_pose_rad[i]` is the angle held on `send_ids[i]`. A permuted
+    id list is the same set of motors commanded to each other's angles, which on a brakeless arm
+    is a commanded move rather than a hold.
+    """
+    reordered = (FITTED[1], FITTED[0], *FITTED[2:])
+    _stub_hook(monkeypatch, [StubVerification(reordered, HELD_IN_PLACE, True)])
+    with pytest.raises(session.SessionRefusedError, match="ERROR-PASSIVE"):
+        session._stage_torque_bringup(tmp_path)
+
+
 def test_an_engage_that_moved_the_arm_is_refused(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

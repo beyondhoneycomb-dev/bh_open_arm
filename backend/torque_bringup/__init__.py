@@ -10,8 +10,10 @@ a gravity-comp hold (kp > 0), not torque 0, because a QDD joint has no brake (`0
 
 This package owns the offline half of that: the guarded engage and its reversal, the
 precondition manifest gate, the SAFE_HOLD impl check, the refusal that the stop path cuts no
-torque, and the lease-expiry-forces-a-hold and hold-maintenance demonstrations over the
-actuation spine. The hardware half — the real 0xFC on real motors, the power-cycle zero
+torque, the lease-expiry-forces-a-hold and hold-maintenance demonstrations over the actuation
+spine, and the rig binding (`rig.build_engage_bus`) that drives the engage over the assembled
+write path — the gateway's decision, the publisher, and the scheduler tick that is the one CAN
+write. The hardware half — the real 0xFC on real motors, the power-cycle zero
 re-verify, and the hard-E-Stop drop — is deferred to a real fixture and re-run by
 `reverify.reverify_from_fixture` (`02a` §4.1); it is never asserted green here, because a
 human trusts these gates before powering a 40 Nm brakeless arm.
@@ -52,6 +54,18 @@ from backend.torque_bringup.reverify import (
     fixture_dir_from_env,
     reverify_from_fixture,
 )
+from backend.torque_bringup.rig import (
+    MOTOR_BY_SEND_ID,
+    SEND_ID_BY_MOTOR,
+    AssembledEngageBus,
+    AssembledRig,
+    CommandedPair,
+    EngageBusUnassembledError,
+    EngageSpine,
+    FittedArmBus,
+    build_engage_bus,
+    fitted_motor_names,
+)
 from backend.torque_bringup.sequence import (
     EngageResult,
     FittedMotorMismatchError,
@@ -70,6 +84,7 @@ from backend.torque_bringup.stop_latency import (
 )
 from backend.torque_bringup.stop_path import (
     TORQUE_BRINGUP_ROOT,
+    StopPathRootMissingError,
     StopPathScanEmptyError,
     TorqueCutOnStopPathError,
     assert_stop_path_cuts_no_torque,
@@ -78,9 +93,17 @@ from backend.torque_bringup.stop_path import (
 )
 
 __all__ = [
+    "MOTOR_BY_SEND_ID",
+    "SEND_ID_BY_MOTOR",
     "TORQUE_BRINGUP_ROOT",
+    "AssembledEngageBus",
+    "AssembledRig",
     "ClockProvenance",
+    "CommandedPair",
+    "EngageBusUnassembledError",
     "EngageResult",
+    "EngageSpine",
+    "FittedArmBus",
     "FittedMotorMismatchError",
     "GatePass",
     "GatewayBypassPrecondition",
@@ -91,6 +114,7 @@ __all__ = [
     "RealVerification",
     "SafeHoldViolationError",
     "StopLatencyArtifactRefusedError",
+    "StopPathRootMissingError",
     "StopPathScanEmptyError",
     "TorqueCutOnStopPathError",
     "TorqueDisengageRefusedError",
@@ -104,10 +128,12 @@ __all__ = [
     "assert_stop_path_cuts_no_torque",
     "assert_targets_are_present_pose",
     "assert_torque_on_allowed",
+    "build_engage_bus",
     "build_present_pose_hold",
     "build_stop_latency_artifact",
     "find_post_estop_recovery",
     "find_torque_cut_on_stop_path",
+    "fitted_motor_names",
     "fixture_dir_from_env",
     "observe_hard_estop",
     "reverify_from_fixture",

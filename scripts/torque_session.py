@@ -66,6 +66,12 @@ STEP_GAP_SECONDS = 15.0
 # is worse than not running it.
 SCHEDULE_SLIP_TOLERANCE_SECONDS = 120.0
 
+# What the worker records for a step whose instant it overslept. One name because the worker
+# writes it and the release-is-never-skipped check reads it. The skip verb in this sentence also
+# occurs inside the torque-write-path refusal, so a check matching that one word reads a step
+# that refused for an entirely unrelated reason as a step that was skipped.
+SCHEDULE_SLIP_SKIP_DETAIL = "예정 시각 {instant} 을 {late:.0f}초 넘겼다; 건너뛴다"
+
 # Argument tokens that would raise this process's privileges. The runner never escalates; a
 # command needing root is printed for the operator to run in their own shell.
 PRIVILEGE_TOKENS = ("sudo", "pkexec", "doas", "su")
@@ -102,11 +108,11 @@ CANDUMP_INSTALL_COMMAND = "sudo apt install can-utils"
 SOURCE_MEASURED = "measured"
 SOURCE_SYNTHETIC = "synthetic"
 
-# `PG-STOP-001` stop-latency measurement is out of scope for this session and was descoped from
-# WP-1-05 itself. Named so the writer refuses the key rather than letting another session's
-# artifact settle into this tree unnoticed. The search is over the whole payload, not its top
-# level: every hook here nests its numbers one or two objects deep, so a top-level-only scan
-# refuses the one shape nobody would actually write.
+# `PG-STOP-001` stop-latency measurement belongs to neither this session nor WP-1-05. Named so the
+# writer refuses the key rather than letting another session's artifact settle into this tree
+# unnoticed. The search is over the whole payload, not its top level: every hook here nests its
+# numbers one or two objects deep, so a top-level-only scan refuses the one shape nobody would
+# actually write.
 STOP_LATENCY_KEY = "stop_latency"
 
 # State-file key under which a session that ended with torque possibly still on records that
@@ -126,6 +132,7 @@ TORQUE_LEFT_LIVE_DETAIL = (
 # meaning beyond being non-zero, which is what makes a hold-at-present displacement of 0 mean
 # something.
 SYNTHETIC_POSE_STEP_RAD = 0.05
+
 
 ARM_LEFT = "left"
 ARM_RIGHT = "right"
@@ -178,29 +185,46 @@ class Step:
         number: Position in the session, and the value `--step` selects.
         key: Stable identifier used in the state file.
         title: One-line operator-facing name.
-        capture_dirname: Subdirectory of the capture root this step's hook reads.
+        capture_dirname: Subdirectory of the capture root this step's hook reads, or None
+            for a step that measures nothing.
         operator_action: What the human physically does, in their language.
         software_action: What this runner does while they do it.
         torque: The torque transition, announced before the step runs.
         duration_seconds: How long the step occupies the operator, for the timetable.
-        hook_env_var: The environment variable that points the hook at this capture.
-        hook_test_path: The pytest path that re-verifies this capture.
+        hook_env_var: The environment variable that points the hook at this capture, or None.
+        hook_test_path: The pytest path that re-verifies this capture, or None.
         produce: Returns the measurement, or raises `SessionRefusedError` naming what is missing.
-        stage: Writes the payload into a directory and re-runs the hook's own loader over it.
+            None for a step whose whole content is a torque transition the operator performs:
+            the release takes the arm's weight, and there is no number in that.
+        stage: Writes the payload into a directory and re-runs the hook's own loader over it,
+            or None alongside a None `produce`.
+        perform: Carries out a step whose content is an action rather than a measurement, and
+            returns the line recorded for it. Exactly one of `produce` and `perform` is set.
     """
 
     number: int
     key: str
     title: str
-    capture_dirname: str
+    capture_dirname: str | None
     operator_action: str
     software_action: str
     torque: Torque
     duration_seconds: float
-    hook_env_var: str
-    hook_test_path: str
-    produce: Callable[[SessionConfig], Measurement]
-    stage: Callable[[Path], None]
+    hook_env_var: str | None
+    hook_test_path: str | None
+    produce: Callable[[SessionConfig], Measurement] | None
+    stage: Callable[[Path], None] | None
+    perform: Callable[[SessionConfig], str] | None
+
+    @property
+    def measures(self) -> bool:
+        """Whether this step produces a capture a hook judges.
+
+        A step that measures nothing still occupies the operator and still announces its torque
+        transition; it simply has no payload, so the write-and-judge path is skipped rather than
+        handed a None to walk into.
+        """
+        return self.produce is not None
 
 
 @dataclass(frozen=True)
@@ -211,7 +235,9 @@ class SessionConfig:
         arm: Which arm the session operates on.
         captures_root: The operator's capture tree.
         rid_capture_dir: Directory of real RID dumps the torque preflight is confirmed against.
-        operator: The name recorded on the attestation a threshold calibration needs.
+        operator: The name this session runs under, carried through to the detached worker's
+            argv. No capture payload records it: the attestation on a threshold calibration is
+            where it belongs, and that producer refuses before it builds one.
         candump_path: A real capture of bus traffic, or None when the operator supplied none.
     """
 
@@ -360,90 +386,6 @@ def _stage_torque_bringup(directory: Path) -> None:
             )
 
 
-def _stage_safety_bringup(directory: Path) -> None:
-    """Re-run the WP-1-06 publication gate over the sweep capture.
-
-    Raises:
-        SessionRefusedError: If the gate refused the sweep (multi-joint, unconstrained, or a
-            command over the bootstrap limiter).
-    """
-    from backend.safety_bringup import reverify_from_fixture
-
-    for verification in reverify_from_fixture(directory):
-        if verification.publication is None:
-            raise SessionRefusedError(f"스윕 게이트 거부: {verification.refusal}")
-
-
-def _stage_threshold_calib(directory: Path) -> None:
-    """Re-run the WP-2C-03 collector/proposer pipeline over the residual capture.
-
-    Raises:
-        SessionRefusedError: If the pipeline refused the capture, or the operator did not attest a
-            collision-free run — an unattested run is recorded but never canon.
-    """
-    from backend.threshold_calib import reverify_from_fixture
-
-    for verification in reverify_from_fixture(directory):
-        if verification.calibration is None:
-            raise SessionRefusedError(f"임계값 보정 거부: {verification.refusal}")
-        if not verification.calibration.canonical:
-            raise SessionRefusedError(
-                "운영자가 무충돌을 증언하지 않아 정본이 되지 않았다; 기록만 남는다"
-            )
-
-
-def _stage_excitation(directory: Path) -> None:
-    """Re-run the WP-2B-06 injection invariants over the session capture.
-
-    Raises:
-        SessionRefusedError: If any recorded invariant failed — the gates, the contiguity, the abort
-            stopping the stream, or the resume index.
-    """
-    from backend.excitation.reverify import reverify_injection_sessions
-
-    failed = [result for result in reverify_injection_sessions(directory) if not result.passed]
-    if failed:
-        detail = "; ".join(f"{result.check}: {result.detail}" for result in failed)
-        raise SessionRefusedError(f"인젝션 불변식 실패: {detail}")
-
-
-def _stage_friction(directory: Path) -> None:
-    """Re-run the WP-2B-07 fit and separation over the excitation log.
-
-    Raises:
-        SessionRefusedError: If a joint's fit did not converge, or its residual did not separate.
-    """
-    from backend.friction import reverify_from_fixture
-
-    for verification in reverify_from_fixture(directory):
-        if not verification.all_converged:
-            raise SessionRefusedError(f"{verification.capture_id}: 관절 적합이 수렴하지 않았다")
-        if not verification.all_separated:
-            raise SessionRefusedError(
-                f"{verification.capture_id}: 분리 실패 {verification.per_joint_separated}"
-            )
-
-
-def _stage_rtbench(directory: Path) -> None:
-    """Re-run the WP-1-04 judges over the real-CAN capture.
-
-    Raises:
-        SessionRefusedError: If the frame count was not judged from a real `candump`, or no real CAN
-            bound reached `f_max`.
-    """
-    from backend.rtbench.frame_count import FrameCountSource
-    from backend.rtbench.reverify import reverify_from_fixture
-
-    for verification in reverify_from_fixture(directory):
-        # Inert while `backend.rtbench.reverify._verify_one` labels every capture REAL_CANDUMP
-        # by construction. What holds the line today is the producer refusing without `candump`
-        # on PATH and a supplied capture; this fires the day the hook carries real provenance.
-        if verification.pg_can_001.source is not FrameCountSource.REAL_CANDUMP:
-            raise SessionRefusedError("프레임 수가 실측 candump 출처가 아니다")
-        if verification.fmax.f_max_can_hz is None:
-            raise SessionRefusedError("f_max_can 이 없다 (WP-0B-06 실측 필요)")
-
-
 def stage_capture(step: Step, measurement: Measurement) -> None:
     """Judge a payload with its own hook in a throwaway directory.
 
@@ -452,8 +394,14 @@ def stage_capture(step: Step, measurement: Measurement) -> None:
     cannot accumulate files that only fail months later inside a pytest run.
 
     Raises:
-        SessionRefusedError: If the hook refused the payload.
+        SessionRefusedError: If the step declares no hook to judge the payload with, or if the
+            hook refused the payload.
     """
+    if step.stage is None:
+        raise SessionRefusedError(
+            f"{step.key}: 이 단계에는 캡처를 판정할 훅이 없다. 판정자 없이 쓰인 캡처는 아무도 "
+            "읽지 않는 파일로 캡처 트리에 남는다."
+        )
     scratch = Path(tempfile.mkdtemp(prefix=f"oa-stage-{step.key}-"))
     try:
         _write_payload(scratch, measurement.name, measurement.payload)
@@ -501,9 +449,15 @@ def write_capture(step: Step, measurement: Measurement, captures_root: Path) -> 
         (Path) The written capture file.
 
     Raises:
-        SessionRefusedError: If the payload was not measured on the rig, if it carries the descoped
-            stop-latency measurement, or if its own hook refused it.
+        SessionRefusedError: If the step has no capture directory of its own, if the payload was
+            not measured on the rig, if it carries the descoped stop-latency measurement, or if
+            its own hook refused it.
     """
+    if step.capture_dirname is None:
+        raise SessionRefusedError(
+            f"{step.key}: 이 단계는 캡처 디렉터리가 없다 — 측정하지 않는 단계다. "
+            "동작만 하는 단계에 페이로드가 생겼다면 그 값은 어느 훅도 기다리지 않은 값이다."
+        )
     if measurement.source != SOURCE_MEASURED:
         raise SessionRefusedError(
             f"{step.key}: 출처가 '{measurement.source}' 인 캡처는 캡처 트리에 쓰지 않는다. "
@@ -573,6 +527,35 @@ def _require_torque_write_path(step_key: str) -> None:
     )
 
 
+def _release_torque(_config: SessionConfig) -> str:
+    """Drop torque on the fitted motors, ending the session.
+
+    Not the stop path. `04` NFR-MAN-002 makes a stop a Cat-2 hold frame; this is the operator
+    deliberately ending the session with the arm's weight already in their hands, which is the
+    one condition under which removing torque from a brakeless arm is correct.
+
+    `GuardedTorqueOn.disengage` takes that condition as an argument and refuses without it. The
+    declaration comes from the timetable rather than from a prompt: the operator was shown this
+    step's wall-clock instant and its instruction before anything engaged, and this process is
+    detached from the terminal that would have carried a question. Asking here would be a
+    question nobody can answer.
+
+    Returns:
+        (str) The recorded line naming the ids the drop addressed.
+
+    Raises:
+        SessionRefusedError: While the torque write path is unassembled, since there is then
+            nothing energized to release and claiming otherwise would record a drop that never
+            reached a motor.
+    """
+    _require_torque_write_path("release")
+    raise SessionRefusedError(
+        "release: 토크 쓰기 경로는 있으나 이 단계의 해제 코드가 아직 이 러너에 없다. "
+        "해제했다고 기록하고 실제로는 프레임이 나가지 않으면, 브레이크 없는 팔이 켜진 채로 "
+        "세션이 통과로 끝난다."
+    )
+
+
 def _produce_engage(_config: SessionConfig) -> Measurement:
     """Guarded torque-ON: read the present pose, hold it, record the engage."""
     _require_torque_write_path("engage")
@@ -580,71 +563,6 @@ def _produce_engage(_config: SessionConfig) -> Measurement:
         "engage: 토크 쓰기 경로는 있으나 이 단계의 측정 코드가 아직 이 러너에 없다. "
         "합성값을 대신 넣지 않는다 — 훅은 그것을 실측으로 읽는다."
     )
-
-
-def _produce_sweep(_config: SessionConfig) -> Measurement:
-    """Single-joint command-following sweep under the bootstrap limiter."""
-    _require_torque_write_path("sweep")
-    raise SessionRefusedError(
-        "sweep: 토크 쓰기 경로는 있으나 이 단계의 측정 코드가 아직 이 러너에 없다. "
-        "합성값을 대신 넣지 않는다 — 훅은 그것을 실측으로 읽는다."
-    )
-
-
-def _produce_residual(_config: SessionConfig) -> Measurement:
-    """Collision-threshold residual runs over a representative trajectory."""
-    _require_torque_write_path("residual")
-    raise SessionRefusedError(
-        "residual: 토크 쓰기 경로는 있으나 이 단계의 측정 코드가 아직 이 러너에 없다. "
-        "합성값을 대신 넣지 않는다 — 훅은 그것을 실측으로 읽는다."
-    )
-
-
-def _produce_excite(_config: SessionConfig) -> Measurement:
-    """Exciting-trajectory injection with abort and resume-by-index."""
-    _require_torque_write_path("excite")
-    raise SessionRefusedError(
-        "excite: 토크 쓰기 경로는 있으나 이 단계의 측정 코드가 아직 이 러너에 없다. "
-        "합성값을 대신 넣지 않는다 — 훅은 그것을 실측으로 읽는다."
-    )
-
-
-def _produce_friction(_config: SessionConfig) -> Measurement:
-    """Friction identification over the excitation logs step 4 recorded."""
-    _require_torque_write_path("friction")
-    raise SessionRefusedError(
-        "friction: 토크 쓰기 경로는 있으나 이 단계의 측정 코드가 아직 이 러너에 없다. "
-        "합성값을 대신 넣지 않는다 — 훅은 그것을 실측으로 읽는다."
-    )
-
-
-def _produce_rtbench(config: SessionConfig) -> Measurement:
-    """Real-CAN frames-per-cycle and the band sweep, torque OFF.
-
-    Raises:
-        SessionRefusedError: When `candump` is absent from PATH or the operator supplied no capture.
-            The frame count is `PG-CAN-001` pattern B and must come off the bus; a modelled
-            count is the one number the gate exists to reject.
-    """
-    if shutil.which(CANDUMP_BINARY) is None:
-        raise SessionRefusedError(
-            f"rtbench: {CANDUMP_BINARY} 이 이 호스트의 PATH 에 없다 (can-utils 미설치).\n"
-            f"  운영자가 자기 셸에서 실행할 명령: {CANDUMP_INSTALL_COMMAND}\n"
-            "  이 러너는 sudo 를 쓰지 않는다. frames_per_cycle 은 실측 candump 에서만 나오고,\n"
-            "  모델로 대신하면 PG-CAN-001 이 거르려고 존재하는 바로 그 숫자가 된다."
-        )
-    if config.candump_path is None:
-        raise SessionRefusedError(
-            "rtbench: candump 캡처가 없다. --candump 로 경로를 주거나 먼저 캡처한다:\n"
-            f"  {CANDUMP_BINARY} -ta -x any > {config.captures_root}/rtbench/candump.txt"
-        )
-    raise SessionRefusedError(
-        "rtbench: f_max_can (WP-0B-06) 실측이 없다. 밴드 스윕과 f_max_python 은 이 호스트에서 "
-        "나오지만, f_max_can 은 실제 버스 대역 측정이고 그것 없이 캡처를 쓰면 훅이 거부한다."
-    )
-
-
-# --- The step table ---
 
 
 STEPS: tuple[Step, ...] = (
@@ -668,104 +586,28 @@ STEPS: tuple[Step, ...] = (
         hook_test_path="tests/wp105",
         produce=_produce_engage,
         stage=_stage_torque_bringup,
+        perform=None,
     ),
     Step(
         number=2,
-        key="sweep",
-        title="단일 관절 명령추종 스윕 (PG-VEL-001 ⑨-a/⑨-b)",
-        capture_dirname="safety_bringup",
-        operator_action=(
-            "스윕할 관절 하나만 남기고 나머지는 기계적으로 구속한다. 팔에서 손을 떼지 않는다. "
-            "토크는 1단계에서 켜진 채로 유지된다."
-        ),
-        software_action=(
-            "부트스트랩 리미터 아래에서만 속도를 명령하고 실측 속도를 같이 기록한다. "
-            "리미터는 도출식에서 읽는다 — 캡처가 자기 천장을 올릴 수 없다."
-        ),
-        torque=Torque.HOLD,
-        duration_seconds=180.0,
-        hook_env_var="OPENARM_SAFETY_BRINGUP_REAL_FIXTURE",
-        hook_test_path="tests/wp106",
-        produce=_produce_sweep,
-        stage=_stage_safety_bringup,
-    ),
-    Step(
-        number=3,
-        key="residual",
-        title="충돌 임계값 보정 — 무충돌 잔차 수집",
-        capture_dirname="threshold",
-        operator_action=(
-            "대표 궤적을 최소 두 번 돌리는 동안 접촉이 있었는지 눈으로 본다. 접촉이 한 번이라도 "
-            "있었으면 그 캡처는 버리고 이 단계를 다시 잡는다 — 세션은 도중에 아무것도 묻지 "
-            "않는다. 측정은 떨어져 나간 워커에서 돌고, 당신의 셸은 이미 돌아가 있다."
-        ),
-        software_action=(
-            "실 잔차를 모아 관절별 임계값을 제안한다. 하한은 물리에서 오고 캡처에서 오지 않으며, "
-            "정본 도장은 운영자 증언에서만 나온다."
-        ),
-        torque=Torque.HOLD,
-        duration_seconds=300.0,
-        hook_env_var="OPENARM_THRESHOLD_CALIB_REAL_FIXTURE",
-        hook_test_path="tests/wp2c03",
-        produce=_produce_residual,
-        stage=_stage_threshold_calib,
-    ),
-    Step(
-        number=4,
-        key="excite",
-        title="여기 궤적 주입 (WP-2B-06)",
-        capture_dirname="excitation",
-        operator_action=(
-            "중단 버튼에 손을 올린 채 팔의 궤적 전체를 지켜본다. 이 단계는 팔이 스스로 크게 "
-            "움직이는 유일한 단계다."
-        ),
-        software_action=(
-            "세 하드 게이트를 확인한 뒤 궤적을 인덱스 순서대로 주입한다. 중단이 걸리면 그 인덱스를 "
-            "명령하기 전에 멈추고, 재개는 정확히 그 인덱스에서 시작한다."
-        ),
-        torque=Torque.HOLD,
-        duration_seconds=240.0,
-        hook_env_var="OPENARM_EXCITATION_REAL_FIXTURE",
-        hook_test_path="tests/wp2b06",
-        produce=_produce_excite,
-        stage=_stage_excitation,
-    ),
-    Step(
-        number=5,
-        key="friction",
-        title="마찰 식별 (PG-FRIC-001 증거)",
-        capture_dirname="friction",
-        operator_action="지켜보기만 한다. 4단계가 남긴 로그로 계산만 돈다.",
-        software_action=(
-            "4단계 로그로 관절별 마찰을 적합하고 잔차가 모델 신호에서 분리되는지 본다. "
-            "PG-J7-001 은 이 훅이 판정하지 않는다 — 증거만 내고 판정은 인수 러너가 한다."
-        ),
-        torque=Torque.HOLD,
-        duration_seconds=60.0,
-        hook_env_var="OPENARM_FRICTION_REAL_FIXTURE",
-        hook_test_path="tests/wp2b07",
-        produce=_produce_friction,
-        stage=_stage_friction,
-    ),
-    Step(
-        number=6,
-        key="rtbench",
-        title="실시간성·CAN 측정 (PG-RT-001a / PG-CAN-001)",
-        capture_dirname="rtbench",
+        key="release",
+        title="토크 OFF — 팔을 받쳐 내려놓는다",
+        capture_dirname=None,
         operator_action=(
             "토크가 꺼진다. 팔을 받쳐 든 상태에서 천천히 내려놓는다 — 브레이크가 없다. "
             "그 다음은 손댈 것이 없다."
         ),
         software_action=(
-            "토크 OFF 를 확인한 읽기 전용 세션에서 밴드 오버런을 재고, 실측 candump 로 "
-            "주기당 프레임 수를 센다. 프레임 수는 모델이 아니라 버스에서만 나온다."
+            "장착 도구가 정하는 모터 id 에만 토크 해제를 보낸다. 측정하지 않는다 — 이 단계의 "
+            "내용은 사람이 팔의 무게를 받는 것이고, 거기에 수치는 없다."
         ),
         torque=Torque.RELEASE,
-        duration_seconds=180.0,
-        hook_env_var="OPENARM_RTBENCH_REAL_FIXTURE",
-        hook_test_path="tests/wp104",
-        produce=_produce_rtbench,
-        stage=_stage_rtbench,
+        duration_seconds=60.0,
+        hook_env_var=None,
+        hook_test_path=None,
+        produce=None,
+        stage=None,
+        perform=_release_torque,
     ),
 )
 
@@ -918,18 +760,33 @@ def _admit_preflight(result: AdmissionResult, config: SessionConfig) -> None:
     manager = LockManager()
     try:
         manager.acquire_all([iface])
-        report = JogSessionPreflight().run(
-            PreflightInputs(
-                rid=RidCrosscheck.confirmed(evaluations[0]),
-                side=Side.LEFT if config.arm == ARM_LEFT else Side.RIGHT,
-                link=link,
-                lock_state=manager.lock_state([iface])[0],
-                clamp_canon=build_safety_limits(config.arm),
+        # Every dump of this channel is judged, not whichever one the glob returned first. The
+        # hook produces one evaluation per capture file ordered by filename, so a directory
+        # holding two dumps of can0 carries two verdicts, and choosing between them by filename
+        # lets a passing dump stand in for a failing one taken on the same channel.
+        reports = [
+            JogSessionPreflight().run(
+                PreflightInputs(
+                    rid=RidCrosscheck.confirmed(evaluation),
+                    side=Side.LEFT if config.arm == ARM_LEFT else Side.RIGHT,
+                    link=link,
+                    lock_state=manager.lock_state([iface])[0],
+                    clamp_canon=build_safety_limits(config.arm),
+                )
             )
-        )
+            for evaluation in evaluations
+        ]
     finally:
         manager.release_all()
-    result.record(report.may_enable_torque, "토크-ON 선행조건 5건", report.blocking_summary())
+    blocking = [report for report in reports if not report.may_enable_torque]
+    if blocking:
+        result.record(
+            False,
+            "토크-ON 선행조건 5건",
+            "\n".join(report.blocking_summary() for report in blocking),
+        )
+        return
+    result.record(True, "토크-ON 선행조건 5건", reports[0].blocking_summary())
 
 
 def _admit_torque_write_path(result: AdmissionResult, _config: SessionConfig) -> None:
@@ -1077,6 +934,10 @@ def run_step(step: Step, config: SessionConfig) -> tuple[bool, str]:
         captures the earlier steps already wrote.
     """
     try:
+        if step.perform is not None:
+            return True, step.perform(config)
+        if step.produce is None:
+            raise SessionRefusedError(f"{step.key}: 이 단계는 측정도 동작도 선언하지 않았다")
         measurement = step.produce(config)
         path = write_capture(step, measurement, config.captures_root)
     except SessionRefusedError as refusal:
@@ -1119,7 +980,7 @@ def run_worker(steps: tuple[Step, ...], config: SessionConfig, start_epoch: floa
             # it. Skipping any other step costs a capture; skipping this one leaves the arm
             # energized with the operator no longer expecting it.
             if delay < -SCHEDULE_SLIP_TOLERANCE_SECONDS and step.torque is not Torque.RELEASE:
-                detail = f"예정 시각 {_wall_clock(epoch)} 을 {-delay:.0f}초 넘겼다; 건너뛴다"
+                detail = SCHEDULE_SLIP_SKIP_DETAIL.format(instant=_wall_clock(epoch), late=-delay)
                 print(f"[{_wall_clock(time.time())}] [{step.number}] {detail}", flush=True)
                 _record_step(config.captures_root, step.key, {"passed": False, "detail": detail})
                 failures += 1
@@ -1260,111 +1121,20 @@ def _synthetic_torque_bringup(extra_motor: bool = False) -> Measurement:
     )
 
 
-def _synthetic_safety_bringup(over_limiter: bool = False) -> Measurement:
-    from backend.safety_bringup import bootstrap_limiter_rad_s
-
-    joint_index = 2
-    limiter = bootstrap_limiter_rad_s()[joint_index]
-    factor = 1.1 if over_limiter else 0.5
-    return Measurement(
-        source=SOURCE_SYNTHETIC,
-        name=f"joint{joint_index}",
-        payload={
-            "joint_index": joint_index,
-            "single_joint": True,
-            "mechanically_constrained": True,
-            "samples": [
-                {"commanded_rad_s": limiter * factor, "measured_rad_s": limiter * factor - 0.01}
-            ],
-        },
-    )
-
-
-def _synthetic_threshold_calib() -> Measurement:
-    from backend.threshold_calib import METHOD_MAX_PLUS_SIGMA, synthetic_residual_run
-
-    return Measurement(
-        source=SOURCE_SYNTHETIC,
-        name="layout-check",
-        payload={
-            "trajectory_id": "layout-check",
-            "operator": "layout-check",
-            "attested": True,
-            "note": "",
-            "method": METHOD_MAX_PLUS_SIGMA,
-            "runs": [synthetic_residual_run(index).tolist() for index in range(3)],
-        },
-    )
-
-
-def _synthetic_excitation() -> Measurement:
-    return Measurement(
-        source=SOURCE_SYNTHETIC,
-        name="layout-check",
-        payload={
-            "torque_path_present": True,
-            "dry_run_armed": True,
-            "safe_state_confirmed": True,
-            "segments": [
-                {
-                    "start_index": 0,
-                    "commanded_indices": [0, 1, 2],
-                    "abort": {"index": 3, "cause": "human_abort"},
-                },
-                {"start_index": 3, "commanded_indices": [3, 4, 5], "abort": None},
-            ],
-        },
-    )
-
-
-def _synthetic_friction() -> Measurement:
-    from backend.friction import InverseDynamicsBasis, generate_synthetic_log
-    from backend.gravity import Arm
-
-    log = generate_synthetic_log(InverseDynamicsBasis(Arm.RIGHT)).log
-    return Measurement(
-        source=SOURCE_SYNTHETIC,
-        name="layout-check",
-        payload={
-            "log_freq_hz": log.log_freq_hz,
-            "q": log.q.tolist(),
-            "qd": log.qd.tolist(),
-            "qdd": log.qdd.tolist(),
-            "tau": log.tau.tolist(),
-        },
-    )
-
-
-def _synthetic_rtbench() -> Measurement:
-    return Measurement(
-        source=SOURCE_SYNTHETIC,
-        name="layout-check",
-        payload={
-            "host_id": "layout-check",
-            "band_overrun": [
-                {"target_hz": 60.0, "overrun_rate": 0.0},
-                {"target_hz": 250.0, "overrun_rate": 0.0},
-            ],
-            "frames_per_cycle": 32,
-            "f_max_can_hz": 625.0,
-            "f_max_python_hz": 500.0,
-        },
-    )
-
-
 SYNTHETIC_BY_KEY: dict[str, Callable[[], Measurement]] = {
     "engage": _synthetic_torque_bringup,
-    "sweep": _synthetic_safety_bringup,
-    "residual": _synthetic_threshold_calib,
-    "excite": _synthetic_excitation,
-    "friction": _synthetic_friction,
-    "rtbench": _synthetic_rtbench,
 }
 
 
 def _check_layouts(report: list[tuple[bool, str]]) -> None:
-    """Every capture layout this runner writes must load through the hook that reads it."""
+    """Every capture layout this runner writes must load through the hook that reads it.
+
+    A step that measures nothing writes no layout. It is skipped rather than reported, because
+    a "layout OK" line for a step with no payload is a pass nobody earned.
+    """
     for step in STEPS:
+        if not step.measures:
+            continue
         try:
             stage_capture(step, SYNTHETIC_BY_KEY[step.key]())
         except Exception as failure:  # noqa: BLE001 — the failure is the reported verdict
@@ -1412,13 +1182,6 @@ def _check_refusals(report: list[tuple[bool, str]]) -> None:
             report.append((True, "refuse/stop-latency-key: 범위 밖 측정이 거부됨"))
         else:
             report.append((False, "refuse/stop-latency-key: 정지 지연 캡처가 그냥 쓰였다"))
-
-        try:
-            stage_capture(STEP_BY_NUMBER[2], _synthetic_safety_bringup(over_limiter=True))
-        except SessionRefusedError:
-            report.append((True, "refuse/over-limiter-sweep: 훅이 거부한 캡처는 쓰이지 않는다"))
-        else:
-            report.append((False, "refuse/over-limiter-sweep: 리미터 초과 스윕이 통과했다"))
 
         # A pose wider than the fitted ids is a bus that polled a motor nobody answers on.
         # Sixteen unanswered frames took both channels to ERROR-PASSIVE on this bench.
@@ -1535,8 +1298,12 @@ def _print_plan(steps: tuple[Step, ...]) -> None:
         print(f"     토크 : {step.torque.value}")
         print(f"     당신 : {step.operator_action}")
         print(f"     SW   : {step.software_action}")
-        print(f"     캡처 : <captures>/{step.capture_dirname}/")
-        print(f"     훅   : {step.hook_env_var}=<dir> pytest {step.hook_test_path} -q")
+        if step.capture_dirname is None:
+            print("     캡처 : 없음 — 이 단계는 측정하지 않는다")
+        else:
+            print(f"     캡처 : <captures>/{step.capture_dirname}/")
+        if step.hook_env_var is not None:
+            print(f"     훅   : {step.hook_env_var}=<dir> pytest {step.hook_test_path} -q")
         print()
 
 

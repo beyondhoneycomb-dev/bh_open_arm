@@ -51,6 +51,15 @@ class StopPathScanEmptyError(Exception):
     """
 
 
+class StopPathRootMissingError(Exception):
+    """The root the scan was aimed at is not a directory.
+
+    Separate from the empty-scan refusal rather than folded into it, because the empty case is
+    reached through the file list and a caller that returns something non-empty for a path that
+    does not exist would satisfy it. A root that is not there is refused where it is read.
+    """
+
+
 def _resolved_root(root: Path | None) -> Path:
     """Resolve the root a scan runs over.
 
@@ -115,10 +124,17 @@ def assert_stop_path_cuts_no_torque(root: Path | None = None) -> tuple[StaticVio
         was scanned rather than only that nothing was found.
 
     Raises:
+        StopPathRootMissingError: If the root is not a directory.
         StopPathScanEmptyError: If the scan parsed no file.
         TorqueCutOnStopPathError: If any torque cut is reachable.
     """
     scanned = _resolved_root(root)
+    if not scanned.is_dir():
+        raise StopPathRootMissingError(
+            f"the torque-cut scan was aimed at {scanned}, which is not a directory: a scan that "
+            "opened nothing establishes nothing, and this precondition is what stands between a "
+            "stop path that can cut torque and 0xFC (04 NFR-MAN-002, 12 NFR-SAF-009)"
+        )
     if not stop_path_files(scanned):
         raise StopPathScanEmptyError(
             f"the torque-cut scan parsed no file under {scanned}: an empty result from an "

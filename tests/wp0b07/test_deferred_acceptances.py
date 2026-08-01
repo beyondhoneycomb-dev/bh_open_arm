@@ -123,8 +123,14 @@ def test_deferred_fitted_motors_rid9_read() -> None:
 def test_deferred_rid9_branch_judgment() -> None:
     assert _REAL_FIXTURE is not None
     for evaluation in reverify_from_fixture(_REAL_FIXTURE, _MARGIN_LSB, _FITTED_SEND_IDS):
-        # Each motor lands in exactly one branch — the judgment is total.
-        assert all(m.branch is not None for m in evaluation.rid9.per_motor)
+        # The verdict, not the shape. `branch` is typed non-optional and every code path fills
+        # it, so asking whether it is set asks nothing — and an empty `per_motor` satisfies it
+        # by vacuum. The read this acceptance is about is the one that reports every fitted
+        # motor in the same timeout band, which is what `status` carries.
+        assert evaluation.rid9.per_motor, "no per-motor RID 9 judgment in the capture"
+        assert len(evaluation.rid9.per_motor) == len(_FITTED_SEND_IDS)
+        assert evaluation.rid9.status is PgStatus.PASS
+        assert not evaluation.rid9.heterogeneous
 
 
 @pytest.mark.skipif(_REAL_FIXTURE is None, reason="④ " + _SKIP_REASON)
@@ -133,18 +139,38 @@ def test_deferred_j7_tmax_judgment() -> None:
     evaluations = reverify_from_fixture(_REAL_FIXTURE, _MARGIN_LSB, _FITTED_SEND_IDS)
     j7_seen = [evaluation.j7 for evaluation in evaluations if evaluation.j7]
     assert j7_seen, f"no J7 (motor 0x{J7_MOTOR_ID:02X}) RID 23 in the capture"
+    for judgment in j7_seen:
+        # The verdict, not its presence. A wrist reporting a DM8009's T_MAX is exactly what this
+        # acceptance exists to catch, and the judge already calls that FAIL_BLOCKING — so reading
+        # only whether a judgment object came back accepts the failure it was written for.
+        assert judgment.classified_type == judgment.expected_type
+        assert judgment.status is PgStatus.PASS
+        assert not judgment.triggers_wp0c03
 
 
 @pytest.mark.skipif(_REAL_FIXTURE is None, reason="⑤ " + _SKIP_REASON)
 def test_deferred_dm4340_vmax_judgment() -> None:
     assert _REAL_FIXTURE is not None
     for evaluation in reverify_from_fixture(_REAL_FIXTURE, _MARGIN_LSB, _FITTED_SEND_IDS):
-        assert evaluation.vmax, "no DM4340 VMAX read in the capture"
+        # Both DM4340 joints, judged — not merely a non-empty mapping. The variant decides the
+        # velocity ceiling the limiter enforces, so a J3 read standing in for J4 would set one
+        # joint's ceiling from the other's supply rail.
+        assert set(evaluation.vmax) == set(DM4340_MOTOR_IDS)
+        for motor_id, judgment in evaluation.vmax.items():
+            assert judgment.classified_variant, (
+                f"motor 0x{motor_id:02X} VMAX {judgment.measured_vmax} matched no DM4340 variant"
+            )
 
 
 @pytest.mark.skipif(_REAL_FIXTURE is None, reason="⑥ " + _SKIP_REASON)
 def test_deferred_protection_thresholds_recorded() -> None:
     assert _REAL_FIXTURE is not None
+    expected = {RID_UV, RID_OT, RID_OC, RID_OV}
     for evaluation in reverify_from_fixture(_REAL_FIXTURE, _MARGIN_LSB, _FITTED_SEND_IDS):
+        assert len(evaluation.per_motor) == len(_FITTED_SEND_IDS)
         for motor in evaluation.per_motor:
-            assert motor.protection, f"no UV/OT/OC/OV recorded for motor 0x{motor.motor_id:02X}"
+            # All four registers, named. A truthiness check passes on a capture that read one of
+            # them, and the missing three are the ones that would have reported the fault.
+            assert set(motor.protection) == expected, (
+                f"motor 0x{motor.motor_id:02X} recorded {sorted(motor.protection)}"
+            )

@@ -28,6 +28,20 @@ ZERO_KD = 0.0
 # A damping that is small but non-zero — the Freedrive band's default (`04` FR-MAN-030).
 SMALL_KD = 0.2
 
+# Gains below the floor of their band. The band has two ends and the lower one is the worse
+# failure: the MIT law is `tau = kp*(q_cmd - q) + kd*(dq_cmd - dq) + tau_ff`, so a negative kp
+# pushes the joint away from the angle it was told to hold, and harder the further it gets, while
+# a negative kd adds energy to whatever the joint is already doing instead of taking it out. On an
+# arm with no mechanical brake neither is a wrong pose, both are a runaway, and Damiao's note
+# about kd=0 is the milder end of the same behaviour.
+NEGATIVE_KP = -100.0
+NEGATIVE_KD = -1.0
+
+# The stiffness that makes zero-or-below damping legal: at kp=0 the MIT law carries no position
+# term, so the negative-damping case is judged by the encoder band alone and nothing else can
+# stand in for it (`04` §2.8).
+NO_KP = 0.0
+
 
 def test_kp_above_500_is_rejected() -> None:
     """A stiffness above 500 is rejected, not wrapped (⑦)."""
@@ -41,6 +55,36 @@ def test_kd_above_5_is_rejected() -> None:
     """A damping above 5 is rejected, not wrapped (⑦)."""
     gateway, _guard = make_gateway(make_limits())
     result = gateway.submit(degs(1.0, 1.0), degs(0.0, 0.0), kd=(6.0, 1.0))
+    assert result.rejected
+    assert result.reason is SafetyReason.KD_OUT_OF_RANGE
+
+
+def test_a_negative_stiffness_is_rejected() -> None:
+    """A stiffness below the band inverts the position loop and is refused before the wire.
+
+    The other joint carries a driving stiffness with real damping, so the only thing wrong with
+    this command is the sign on joint 0 — a case that refused it for the pair instead would pass
+    with the sign check gone.
+    """
+    gateway, _guard = make_gateway(make_limits())
+    result = gateway.submit(
+        degs(1.0, 1.0), degs(0.0, 0.0), kp=(NEGATIVE_KP, DRIVING_KP), kd=(SMALL_KD, SMALL_KD)
+    )
+    assert result.rejected
+    assert result.reason is SafetyReason.KP_OUT_OF_RANGE
+
+
+def test_a_negative_damping_is_rejected() -> None:
+    """A damping below the band drives the joint with positive velocity feedback, so it is refused.
+
+    The stiffness is zero here on purpose. Under a driving stiffness the FR-MOT-021 damping floor
+    would refuse this command anyway and stand in for the band check; at kp=0 there is no position
+    term and the encoder band is the only thing between a negative kd and the motor.
+    """
+    gateway, _guard = make_gateway(make_limits())
+    result = gateway.submit(
+        degs(1.0, 1.0), degs(0.0, 0.0), kp=(NO_KP, NO_KP), kd=(NEGATIVE_KD, NEGATIVE_KD)
+    )
     assert result.rejected
     assert result.reason is SafetyReason.KD_OUT_OF_RANGE
 

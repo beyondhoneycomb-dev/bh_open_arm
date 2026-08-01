@@ -92,6 +92,42 @@ def test_an_over_range_damping_is_not_recorded_as_a_joint_limit() -> None:
     assert result.override.clamp_reason is ClampReason.TORQUE_LIMIT
 
 
+def test_a_clean_pass_records_no_intervention() -> None:
+    """A command nothing touched says so, or every accepted command reads as one safety stopped.
+
+    `override_active` is the field an incident reader counts. Recorded True on a clean pass, the
+    whole episode reads as a run the safety layer was fighting, and the commands it genuinely
+    altered become indistinguishable from the ones it passed through untouched. The reason field
+    cannot substitute: NONE with the flag set is a contradiction nobody reads twice.
+    """
+    gateway, _guard = make_gateway(make_limits())
+
+    result = gateway.submit(degs(1.0, 1.0), degs(0.0, 0.0))
+
+    assert not result.rejected
+    assert result.override.override_active is False
+    assert result.override.clamp_reason is ClampReason.NONE
+    assert not result.override.stale
+    assert not result.override.latched
+
+
+def test_a_clip_and_proceed_clamp_records_an_intervention() -> None:
+    """The other direction of the same field: a command that was altered must not read as clean.
+
+    A clip-and-proceed clamp is admitted, so the flag is the only thing separating it from a
+    command that passed as written — the accepted vector alone cannot say whether the caller asked
+    for that value or the limit stage supplied it.
+    """
+    gateway, _guard = make_gateway(make_limits())
+
+    result = gateway.submit(
+        degs(PAST_OPERATIONAL_LIMIT_DEG, 0.0), degs(AT_OPERATIONAL_LIMIT_DEG, 0.0)
+    )
+
+    assert not result.rejected
+    assert result.override.override_active is True
+
+
 def test_a_genuine_joint_limit_clamp_is_still_recorded_as_one() -> None:
     """The one cause that may claim `JOINT_LIMIT` still does — the taxonomy signal depends on it.
 

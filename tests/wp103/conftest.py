@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from backend.actuation import (
+    AcceptedTargetPublisher,
     ActuationGateway,
     Clock,
     CollisionGuard,
@@ -173,6 +174,7 @@ def make_follower(tmp_path: Path) -> Callable[..., OaOpenArmFollower]:
         position_deg: float = 0.0,
         end_effector: EndEffectorProfile | None = None,
         clock: Clock | None = None,
+        publisher: AcceptedTargetPublisher | None = None,
     ) -> OaOpenArmFollower:
         bus = FakeArmBus(position_deg=position_deg)
         config = OaOpenArmFollowerConfig(side=side, id=robot_id, calibration_dir=tmp_path)
@@ -181,6 +183,7 @@ def make_follower(tmp_path: Path) -> Callable[..., OaOpenArmFollower]:
             bus=bus,
             end_effector=end_effector,
             clock=clock if clock is not None else ManualClock(),
+            publisher=publisher,
         )
 
     return _make
@@ -190,17 +193,39 @@ def make_follower(tmp_path: Path) -> Callable[..., OaOpenArmFollower]:
 def make_bimanual(
     make_follower: Callable[..., OaOpenArmFollower],
 ) -> Callable[..., BiOaOpenArmFollower]:
-    """Return a factory building a `BiOaOpenArmFollower` over two fixture-bus arms."""
+    """Return a factory building a `BiOaOpenArmFollower` over two fixture-bus arms.
 
-    def _make(position_deg: float = 0.0) -> BiOaOpenArmFollower:
+    A clock passed here is given to both arms, which is the arrangement a bimanual loop runs in:
+    one process issues one command to the pair, so a test that advances time advances it for both
+    halves rather than for whichever arm it happened to hold. The publisher is shared for the same
+    reason: one bimanual mailbox target is assembled from both arms' decisions.
+
+    `right_position_deg` puts the two arms at different present angles. With both halves at one
+    angle, a bimanual vector assembled in the wrong arm order reads exactly like a correct one.
+    """
+
+    def _make(
+        position_deg: float = 0.0,
+        clock: Clock | None = None,
+        publisher: AcceptedTargetPublisher | None = None,
+        right_position_deg: float | None = None,
+    ) -> BiOaOpenArmFollower:
         config = BiOaOpenArmFollowerConfig(id="wp103_pair")
         return BiOaOpenArmFollower(
             config,
             left=make_follower(
-                side=Side.LEFT, robot_id="wp103_pair_left", position_deg=position_deg
+                side=Side.LEFT,
+                robot_id="wp103_pair_left",
+                position_deg=position_deg,
+                clock=clock,
+                publisher=publisher,
             ),
             right=make_follower(
-                side=Side.RIGHT, robot_id="wp103_pair_right", position_deg=position_deg
+                side=Side.RIGHT,
+                robot_id="wp103_pair_right",
+                position_deg=(position_deg if right_position_deg is None else right_position_deg),
+                clock=clock,
+                publisher=publisher,
             ),
         )
 

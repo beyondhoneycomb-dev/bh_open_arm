@@ -10,10 +10,13 @@ Public surface: consumers import the scheduler and its collaborators from here.
 Producers are given a `TargetMailbox` and never anything from `can_writer` — the
 single-CAN-writer invariant (`02a` §3.1 ①) is enforced both structurally (no path
 from a mailbox to a CAN handle) and statically (`staticcheck.find_producer_can_access`).
+What fills that mailbox is `AcceptedTargetPublisher`, which takes a gateway decision and
+nothing else, so the frame the single writer emits is one the eight-check filter passed.
 """
 
 from __future__ import annotations
 
+from backend.actuation.assembly import AcceptedTargetPublisher
 from backend.actuation.bus_writer import (
     BIMANUAL_BATCH_WIDTH,
     BusCanWriter,
@@ -89,6 +92,7 @@ __all__ = [
     "FIRST_COMMAND_GAP_SEC",
     "HOLD_LABELS",
     "MIT_BATCH_WIDTH",
+    "AcceptedTargetPublisher",
     "ActionStreamWatchdog",
     "ActuationGateway",
     "ActuationScheduler",

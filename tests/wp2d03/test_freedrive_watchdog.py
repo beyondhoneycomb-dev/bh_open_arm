@@ -9,9 +9,16 @@ judges. Passing a constant zero there leaves the stage running on every frame an
 
 The exit is a powered hold, never a torque cut. `04` §2 states this arm carries no mechanical
 brake, so cutting torque is dropping it onto whoever is holding it. A lapsed frame therefore
-leaves Freedrive to the Cat-2 position hold, and the case below proves that through a real bus
-double: one MIT batch with the hold stiffness, the restored damping and zero tau, and the bus's
-disable counter still at zero.
+leaves Freedrive to the Cat-2 position hold, and what that hold carries is read off the writer
+that emits it: one MIT batch with the hold stiffness, the restored damping and zero tau.
+
+That the other outcome is unreachable is a second claim, and no bus double can carry it here.
+Neither the session nor the producer holds a bus handle — the frame they yield is a value object
+the caller hands to the single writer — so there is nothing a test can hand them and afterwards ask
+whether it was disabled. The tree-wide half of that claim is `test_single_gateway.py`, which scans
+this tree for the symbol; what is left for this file is the one object on the path that does touch a
+bus, the writer the hold frame is emitted through, and it offers no way to reach the torque cut a
+real bus has.
 """
 
 from __future__ import annotations
@@ -26,6 +33,7 @@ from backend.actuation.config import MIT_HOLD_KD, MIT_HOLD_KP
 from backend.actuation.enforcement import ActuationGateway
 from backend.actuation.guard import CollisionGuard
 from backend.actuation.safety import SafetyFilter, SafetyReason
+from backend.deadman.constants import DEADMAN_LEASE_DURATION_SEC
 from backend.freedrive import (
     FRICTION_PASSED_STATUS,
     FreedriveSession,
@@ -53,8 +61,12 @@ from tests.wp2d03._support import (
 LAST_LIVE_GAP_SEC = 0.050
 FIRST_STALE_GAP_SEC = 0.051
 
-# A silence no plausible window admits — fifty control periods — and still well inside the
-# deadman lease, so what the tick exits on is the stale producer and not a lapsed lease.
+# The silence every stall case below advances by. It has to be the producer's and nothing else's:
+# past FREEDRIVE_FRESHNESS_WINDOW_SEC, so the gateway calls the source stale, and not past
+# DEADMAN_LEASE_DURATION_SEC, or the tick exits on a lapsed lease and the hold it produces says
+# nothing about a producer at all. The band those two leave is narrow and this value sits near its
+# top, so it is the lease bound a change to either constant breaks first. The relation is held by
+# a case below rather than stated here, because a relation stated in a comment is one nobody checks.
 LONG_STALL_SEC = 0.09
 
 # One MIT batch is what a Cat-2 hold is (`04` NFR-MAN-002): the stop path sends a hold frame,
@@ -65,17 +77,17 @@ NO_FEEDFORWARD_TORQUE_NM = 0.0
 
 
 class RecordingMitBus:
-    """A CAN-free MIT bus double that counts batches and torque disables separately.
+    """A CAN-free MIT bus double that records batches and refuses to be disabled.
 
-    The two counters are the point. A returned frame cannot tell a powered hold from a dropped
-    arm — both stop the motion — so the only witness is what reached the bus: a hold frame, or
-    a `disable_torque` that on a brakeless arm is the arm falling onto the operator's hands.
+    It offers `disable_torque` on purpose. A real `DamiaoMotorsBus` has it, so a double without it
+    would make the writer's inability to cut torque a property of the fixture instead of a property
+    of the writer; the case that checks the writer needs the capability to actually be there behind
+    it. Reaching it is the failure itself, not something to tally afterwards.
     """
 
     def __init__(self) -> None:
-        """Start with nothing sent and nothing disabled."""
+        """Start with nothing sent."""
         self.batches: list[dict[str, tuple[float, float, float, float, float]]] = []
-        self.disable_calls = 0
 
     def _mit_control_batch(
         self, commands: dict[str, tuple[float, float, float, float, float]]
@@ -84,8 +96,15 @@ class RecordingMitBus:
         self.batches.append(commands)
 
     def disable_torque(self) -> None:
-        """Count a torque drop, so a test can assert none happened."""
-        self.disable_calls += 1
+        """Fail the case outright: on a brakeless arm this is the arm falling onto the operator.
+
+        Raises:
+            AssertionError: Always. Nothing on the Freedrive exit path may reach this.
+        """
+        raise AssertionError(
+            "the Freedrive exit cut torque instead of holding; this arm has no mechanical brake, "
+            "so that is the arm dropping onto the hands guiding it (04 NFR-MAN-002)"
+        )
 
 
 def _producer(clock: ManualClock) -> FreedriveProducer:
@@ -121,6 +140,11 @@ def _ignore_latch(reason) -> None:  # noqa: ANN001
 def _frame(producer: FreedriveProducer):  # noqa: ANN202
     """Produce one frame at the entry pose."""
     return producer.produce_frame(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
+
+
+def _motor_names() -> tuple[str, ...]:
+    """The arm's motor names in batch-index order, the width the writer checks a batch against."""
+    return tuple(f"joint_{index + 1}" for index in range(len(ENTRY_POSE_RAD)))
 
 
 def test_the_first_frame_of_a_session_is_not_stale() -> None:
@@ -203,13 +227,24 @@ def test_the_producer_is_live_again_on_the_frame_after_the_stall() -> None:
     assert _frame(producer).engaged is True
 
 
+def test_the_stall_the_exit_cases_use_isolates_the_producer_from_the_lease() -> None:
+    """The stall must clear the freshness window and stay inside the lease, or it tests the lease.
+
+    Both bounds are owned elsewhere — the window by the actuation spine, the lease by the deadman —
+    and either can move without this file noticing. Under the window the producer is still live and
+    no case exits at all; past the lease every exit case below becomes a deadman timeout that would
+    pass its `TickMode.HOLD` assertion while proving nothing about a stalled producer.
+    """
+    assert LONG_STALL_SEC > FREEDRIVE_FRESHNESS_WINDOW_SEC
+    assert LONG_STALL_SEC <= DEADMAN_LEASE_DURATION_SEC
+
+
 def test_a_stalled_session_exits_to_a_powered_hold_rather_than_dropping_torque() -> None:
-    """The stall exits Freedrive through the Cat-2 hold, and the bus double proves it was powered.
+    """The stall exits Freedrive through the Cat-2 hold, and the emitted frame is a powered one.
 
     On an arm with no mechanical brake a disable and a hold both stop the motion, and the session
-    return value alone cannot separate them. What separates them is what reached the bus: one MIT
-    frame carrying the hold stiffness, the restored damping and zero tau, with the disable counter
-    untouched.
+    return value alone cannot separate them. What separates them is the frame that reaches the bus:
+    one MIT batch carrying the hold stiffness, the restored damping and zero tau.
     """
     clock = ManualClock()
     session = _engaged_session(clock)
@@ -224,12 +259,27 @@ def test_a_stalled_session_exits_to_a_powered_hold_rather_than_dropping_torque()
     assert tick.frame.hold_reason is SafetyReason.STALE_SOURCE
 
     bus = RecordingMitBus()
-    motors = tuple(f"joint_{index + 1}" for index in range(len(ENTRY_POSE_RAD)))
-    BusCanWriter(bus, motors).mit_control_batch(tick.exit.hold_commands)
+    BusCanWriter(bus, _motor_names()).mit_control_batch(tick.exit.hold_commands)
 
     assert len(bus.batches) == CAT2_HOLD_BATCH_COUNT
-    assert bus.disable_calls == 0
     for kp, kd, _position, _velocity, tau in bus.batches[0].values():
         assert kp == MIT_HOLD_KP
         assert kd == MIT_HOLD_KD
         assert tau == NO_FEEDFORWARD_TORQUE_NM
+
+
+def test_the_writer_the_hold_frame_is_emitted_through_cannot_cut_torque() -> None:
+    """The bus behind the writer can drop torque and the writer gives no way to ask for it.
+
+    The session and the producer hold no bus handle, so the only object on the Freedrive exit path
+    that touches a bus at all is this writer, and what makes the exit a hold rather than a fall is
+    that its surface carries no torque cut (`backend/actuation/bus_writer.py` says so deliberately).
+    The double is checked for the capability first, so the writer's lack of it is the writer's and
+    not the fixture's.
+    """
+    bus = RecordingMitBus()
+
+    writer = BusCanWriter(bus, _motor_names())
+
+    assert hasattr(bus, "disable_torque")
+    assert not hasattr(writer, "disable_torque")

@@ -29,6 +29,8 @@ from packages.lerobot_robot_openarm.openarm_follower_oa import (
     CONTROL_PERIOD_SEC,
     GATEWAY_FRESHNESS_WINDOW_SEC,
     NO_FEEDFORWARD_TORQUE_NM,
+    SIDE_PREFIXES,
+    BiOaOpenArmFollower,
     OaOpenArmFollower,
 )
 
@@ -71,6 +73,16 @@ def small_move() -> dict[str, float]:
 def torque_command() -> dict[str, float]:
     """A feed-forward torque on the shoulder, inside its band."""
     return {SHOULDER_MOTOR: ROUTED_SHOULDER_TORQUE_NM}
+
+
+def bimanual_move() -> dict[str, float]:
+    """The same small move, addressed to both arms under their channel prefixes."""
+    return {f"{side}_{key}": value for side in SIDE_PREFIXES for key, value in small_move().items()}
+
+
+def bimanual_torque_command() -> dict[str, float]:
+    """The shoulder torque on both arms, keyed the way the pair splits."""
+    return {f"{side}_{SHOULDER_MOTOR}": ROUTED_SHOULDER_TORQUE_NM for side in SIDE_PREFIXES}
 
 
 def test_the_watchdog_window_is_the_spine_freshness_window() -> None:
@@ -232,6 +244,60 @@ def test_the_lapsed_command_holds_the_present_pose_rather_than_dropping_torque(
     assert applied == {f"{motor}.pos": 0.0 for motor in MOTOR_ORDER}
     assert follower.bus.disable_calls == 0
     assert follower.is_torque_enabled is False
+
+
+def test_a_stalled_bimanual_stream_is_stale_on_both_arms(
+    make_bimanual: Callable[..., BiOaOpenArmFollower],
+    calibrated: None,
+) -> None:
+    """The pair is the registered type this rig runs, so the watchdog has to survive the split.
+
+    Every case above holds one arm directly. `bi_oa_openarm_follower` is what the operator drives,
+    and it reaches the per-arm enforcement point through a loop — a loop that hands each arm a
+    fresh-looking command would leave the FRESHNESS stage running on every frame and unable to
+    fire, on both arms at once, while each arm's own watchdog still passes its own cases.
+    """
+    clock = ManualClock()
+    pair = make_bimanual(clock=clock)
+
+    pair.send_action(bimanual_move(), feedforward_torque_nm=bimanual_torque_command())
+    clock.advance(LONG_SILENCE_SEC)
+    applied = pair.send_action(bimanual_move(), feedforward_torque_nm=bimanual_torque_command())
+
+    for arm in (pair.left_arm, pair.right_arm):
+        result = arm.last_gate_result
+        assert result is not None
+        assert result.rejected
+        assert result.reason is SafetyReason.STALE_SOURCE
+        assert all(
+            torque.value == NO_FEEDFORWARD_TORQUE_NM for torque in result.feedforward_torque_nm
+        )
+    assert applied == {
+        f"{side}_{motor}.pos": 0.0 for side in SIDE_PREFIXES for motor in MOTOR_ORDER
+    }
+
+
+def test_a_bimanual_stream_keeping_its_period_stays_live_on_both_arms(
+    make_bimanual: Callable[..., BiOaOpenArmFollower],
+    calibrated: None,
+) -> None:
+    """The pair at its declared period is never stale, so the case above is not refusing everything.
+
+    Without this one, a split that reported an enormous gap on every frame would satisfy the stall
+    case while holding the arm on every command an operator ever sent.
+    """
+    clock = ManualClock()
+    pair = make_bimanual(clock=clock)
+
+    pair.send_action(bimanual_move(), feedforward_torque_nm=bimanual_torque_command())
+    clock.advance(CONTROL_PERIOD_SEC)
+    pair.send_action(bimanual_move(), feedforward_torque_nm=bimanual_torque_command())
+
+    for arm in (pair.left_arm, pair.right_arm):
+        result = arm.last_gate_result
+        assert result is not None
+        assert not result.rejected
+        assert result.feedforward_torque_nm[SHOULDER_INDEX].value == ROUTED_SHOULDER_TORQUE_NM
 
 
 def test_the_stream_is_live_again_on_the_command_after_the_hold(
