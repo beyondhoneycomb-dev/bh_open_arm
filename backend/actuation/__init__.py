@@ -71,6 +71,7 @@ from backend.actuation.safety import (
     SafetyFilter,
     SafetyLimits,
     SafetyReason,
+    clamp_reason_for,
 )
 from backend.actuation.scheduler import ActuationScheduler, EmissionInvariantError
 from backend.actuation.staticcheck import (
@@ -80,12 +81,15 @@ from backend.actuation.staticcheck import (
 )
 from backend.actuation.trace import TallyTrace, TickRecord, TickTrace, TraceSink
 from backend.actuation.transition import ModeTransition
+from backend.actuation.watchdog import FIRST_COMMAND_GAP_SEC, ActionStreamWatchdog
 
 __all__ = [
     "BIMANUAL_BATCH_WIDTH",
     "CHECK_ORDER",
+    "FIRST_COMMAND_GAP_SEC",
     "HOLD_LABELS",
     "MIT_BATCH_WIDTH",
+    "ActionStreamWatchdog",
     "ActuationGateway",
     "ActuationScheduler",
     "BusCanWriter",
@@ -133,6 +137,7 @@ __all__ = [
     "UnknownErrNibbleError",
     "WallClock",
     "accepted_to_rad",
+    "clamp_reason_for",
     "clamp_request",
     "decide",
     "decode_motor_err",

@@ -42,6 +42,7 @@ from lerobot.robots.openarm_follower.config_openarm_follower import (
 from lerobot.robots.robot import RobotAction, RobotObservation
 
 from backend.actuation import (
+    ActionStreamWatchdog,
     ActuationGateway,
     Clock,
     CollisionGuard,
@@ -156,9 +157,10 @@ CONTROL_PERIOD_SEC = 0.02
 # Age past which a source is stale — and so the interval of silence past which the action
 # stream counts as interrupted (`03` FR-MOT-058 ②). Bound to the actuation spine's own window
 # rather than restated as a number, so the age this path judges and the age the scheduler tick
-# calls a STALE_SOURCE_HOLD (`backend.actuation.decider.decide`) cannot drift apart. It is two
-# and a half CONTROL_PERIOD_SEC, so a stream that keeps its own declared period is never stale
-# and one that misses three consecutive periods always is.
+# calls a STALE_SOURCE_HOLD (`backend.actuation.decider.decide`) cannot drift apart. The two
+# constants meet a relation neither of them states alone — a stream keeping its declared period
+# is never stale, one missing three consecutive periods always is — and
+# `tests/wp103/test_torque_watchdog.py` is where that relation is held rather than asserted.
 GATEWAY_FRESHNESS_WINDOW_SEC = FRESHNESS_WINDOW_SEC
 
 # The side prefixes the bimanual splits every per-motor argument on. A key carrying neither
@@ -308,10 +310,7 @@ class OaOpenArmFollower(OpenArmFollower):
         self._drop_counter = drop_counter if drop_counter is not None else DropCounter()
         self._last_gate_result: GateResult | None = None
         self._last_latch_reason: LatchReason | None = None
-        # When the last command the gateway judged arrived. None until the first one, which
-        # is why a stream's opening command is fresh: there is no earlier action for it to be
-        # late against, and refusing it would make torque-ON unreachable.
-        self._last_action_at: float | None = None
+        self._watchdog = ActionStreamWatchdog(self._clock)
 
     def _build_hardware_config(self, config: OaOpenArmFollowerConfig) -> OpenArmFollowerConfig:
         """Build the full LeRobot hardware config from the minimal plugin config.
@@ -608,43 +607,52 @@ class OaOpenArmFollower(OpenArmFollower):
             Deg(float(action.get(f"{motor}.pos", present[index].value)))
             for index, motor in enumerate(MOTOR_ORDER)
         )
-        torque = self._resolve_feedforward_torque(feedforward_torque_nm)
-        kp = self._resolve_gains(custom_kp, MIT_HOLD_KP, "custom_kp")
-        kd = self._resolve_gains(custom_kd, MIT_HOLD_KD, "custom_kd")
-        now = self._clock.now()
+        torque, kp, kd = self.resolve_command(custom_kp, custom_kd, feedforward_torque_nm)
         result = self._ensure_gateway().submit(
             request,
             present,
             calibrated=self.is_calibrated,
-            source_age_sec=self._action_gap_sec(now),
+            source_age_sec=self._watchdog.gap_sec(),
             feedforward_torque_nm=torque,
             kp=kp,
             kd=kd,
         )
         self._last_gate_result = result
-        self._last_action_at = now
         return {
             f"{motor}.pos": result.accepted[index].value for index, motor in enumerate(MOTOR_ORDER)
         }
 
-    def _action_gap_sec(self, now: float) -> float:
-        """Return how long the action stream was silent before the command arriving now.
+    def resolve_command(
+        self,
+        custom_kp: dict[str, float] | None,
+        custom_kd: dict[str, float] | None,
+        feedforward_torque_nm: dict[str, float] | None,
+    ) -> tuple[tuple[Nm, ...] | None, tuple[float, ...] | None, tuple[float, ...] | None]:
+        """Resolve the torque and gain arguments into gateway vectors, raising every refusal.
 
-        The FRESHNESS stage compares this against `GATEWAY_FRESHNESS_WINDOW_SEC`, so a gap
-        wider than the window is what makes the arriving command a stale one: the producer
-        missed its deadline, and whatever torque it now asks for was computed against a pose
-        the arm has since left. The first command of a session reports no gap — nothing
-        preceded it to be late against.
+        Every way this arm can refuse a command outright lives here rather than beside the
+        gateway call, so a caller holding two arms can find out whether both would accept
+        before either is commanded. Calling it commands nothing and records nothing: no gate
+        frame, no history advance, no watchdog mark.
 
         Args:
-            now: This command's reading of the follower's clock, seconds.
+            custom_kp: Per-motor stiffness, or None.
+            custom_kd: Per-motor damping, or None.
+            feedforward_torque_nm: Per-motor feed-forward torque, newton-metres, or None.
 
         Returns:
-            (float) Seconds since the previous judged command, or zero for the first.
+            (tuple) The torque vector, the kp vector, and the kd vector, each in MOTOR_ORDER
+            or None where the caller supplied nothing.
+
+        Raises:
+            TorqueRefusedError: On an unknown motor name or an out-of-band torque.
+            GainRefusedError: On a gain naming a motor outside the frozen layout.
+            EndEffectorError: On a non-zero gripper-slot torque this arm's tool has no motor for.
         """
-        if self._last_action_at is None:
-            return 0.0
-        return now - self._last_action_at
+        torque = self._resolve_feedforward_torque(feedforward_torque_nm)
+        kp = self._resolve_gains(custom_kp, MIT_HOLD_KP, "custom_kp")
+        kd = self._resolve_gains(custom_kd, MIT_HOLD_KD, "custom_kd")
+        return torque, kp, kd
 
     def _resolve_gains(
         self, custom: dict[str, float] | None, hold_gain: float, field: str
@@ -901,9 +909,11 @@ def _refuse_unsided(mapping: dict[str, float] | None, field: str, error: type[Va
 def _for_side(mapping: dict[str, float] | None, prefix: str) -> dict[str, float] | None:
     """Narrow a bimanual per-motor argument to one arm, stripping the side prefix.
 
-    None stays None: the per-arm gateway reads an absent torque as position-only and an
-    all-zero one as a commanded zero, and collapsing the two would change what an arm the
-    caller never mentioned is asked to do.
+    An arm the caller named nothing for gets None, not an empty mapping. The two are
+    different inputs one level down: `_resolve_feedforward_torque({})` fills an eight-slot
+    all-zero Nm vector, which is a commanded zero torque on every joint, while None is the
+    position-only case the gateway takes. Naming one arm is not a statement about the other,
+    so the unnamed arm must be indistinguishable from a caller who passed no torque at all.
 
     Args:
         mapping: The per-motor argument keyed `{side}_{motor}`, or None.
@@ -911,15 +921,16 @@ def _for_side(mapping: dict[str, float] | None, prefix: str) -> dict[str, float]
 
     Returns:
         (dict[str, float] | None) The entries for this side keyed by bare motor name, or
-        None when the caller supplied no such argument.
+        None when the caller named nothing for this side.
     """
     if mapping is None:
         return None
-    return {
+    narrowed = {
         key[len(prefix) + 1 :]: value
         for key, value in mapping.items()
         if key.startswith(f"{prefix}_")
     }
+    return narrowed or None
 
 
 class BiOaOpenArmFollower(OpenArmRobot):
@@ -1031,7 +1042,7 @@ class BiOaOpenArmFollower(OpenArmRobot):
         """
         observation: dict[str, float | int] = {}
         dropped = 0
-        for prefix, arm in (("left", self.left_arm), ("right", self.right_arm)):
+        for prefix, arm in self._sided_arms:
             for channel, value in arm.get_observation().items():
                 if channel == DROP_COUNTER_META:
                     dropped += int(value)
@@ -1057,6 +1068,13 @@ class BiOaOpenArmFollower(OpenArmRobot):
         caller having to hold `.left_arm` / `.right_arm` — reaching past the pair is how a
         command gets sent to one arm with the other still commanded by whoever held it last.
 
+        Both arms are judged before either is commanded, so the pair is refused whole. A
+        refusal raised halfway through the split leaves the first arm already commanded and
+        the second untouched, with the caller holding an exception and no way to tell which
+        half landed — the same one-arm-commanded state reaching past the pair produces, and
+        the reason this class exists. Every refusal a per-arm command can raise comes from
+        `resolve_command`, which is run for both sides up front and commands nothing.
+
         Args:
             action: Bimanual position action, keys `{side}_{motor}.pos` in degrees.
             custom_kp: Optional per-motor stiffness, keys `{side}_{motor}`.
@@ -1068,14 +1086,22 @@ class BiOaOpenArmFollower(OpenArmRobot):
             (RobotAction) The accepted bimanual position action.
 
         Raises:
+            ValueError: If a position key names no arm.
             TorqueRefusedError: If a torque key names no arm, or an arm refuses it.
             GainRefusedError: If a gain key names no arm, or an arm refuses it.
         """
+        _refuse_unsided(action, "action", ValueError)
         _refuse_unsided(feedforward_torque_nm, "feedforward_torque_nm", TorqueRefusedError)
         _refuse_unsided(custom_kp, "custom_kp", GainRefusedError)
         _refuse_unsided(custom_kd, "custom_kd", GainRefusedError)
+        for prefix, arm in self._sided_arms:
+            arm.resolve_command(
+                _for_side(custom_kp, prefix),
+                _for_side(custom_kd, prefix),
+                _for_side(feedforward_torque_nm, prefix),
+            )
         applied: dict[str, float] = {}
-        for prefix, arm in (("left", self.left_arm), ("right", self.right_arm)):
+        for prefix, arm in self._sided_arms:
             arm_action = {
                 key[len(prefix) + 1 :]: value
                 for key, value in action.items()
@@ -1090,3 +1116,12 @@ class BiOaOpenArmFollower(OpenArmRobot):
             for key, value in accepted.items():
                 applied[f"{prefix}_{key}"] = value
         return applied
+
+    @property
+    def _sided_arms(self) -> tuple[tuple[str, OaOpenArmFollower], ...]:
+        """The two arms paired with the prefix their channels carry, in `SIDE_PREFIXES` order.
+
+        The prefixes the split refuses an unsided key against and the prefixes it then splits
+        on are one tuple, so a third side could not be accepted by one and dropped by the other.
+        """
+        return tuple(zip(SIDE_PREFIXES, (self.left_arm, self.right_arm), strict=True))

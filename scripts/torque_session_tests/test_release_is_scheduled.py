@@ -10,6 +10,8 @@ the operator's command, and the detached worker that is spawned with whatever it
 from __future__ import annotations
 
 import json
+import time
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -24,7 +26,7 @@ RAN_LATE_SECONDS = 100.0
 GAVE_UP_SECONDS = 400.0
 
 
-def _config(tmp_path: Path) -> object:
+def _config(tmp_path: Path) -> session.SessionConfig:
     """A session config confined to a temporary tree."""
     return session.SessionConfig(
         arm=session.ARM_LEFT,
@@ -54,9 +56,19 @@ def _recorded(tmp_path: Path) -> dict[str, dict[str, object]]:
     return steps
 
 
-def _steps(*numbers: int) -> tuple[object, ...]:
+def _steps(*numbers: int) -> tuple[session.Step, ...]:
     """The steps those numbers select, in session order."""
     return tuple(step for step in session.STEPS if step.number in set(numbers))
+
+
+def _inert_tail() -> session.Step:
+    """A step that commands no torque transition, appended after a real one.
+
+    No step in the table carries `Torque.NONE` today, which is exactly why the refusal has to
+    be judged over the whole selection: a tail that changes nothing would otherwise be read as
+    a selection that ends with the torque down.
+    """
+    return replace(session.STEP_BY_NUMBER[5], number=99, key="inert", torque=session.Torque.NONE)
 
 
 def test_a_selection_ending_on_an_engage_is_refused() -> None:
@@ -81,6 +93,27 @@ def test_the_release_step_alone_is_admitted() -> None:
     session.assert_session_releases_torque(_steps(6))
 
 
+def test_an_inert_step_after_an_engage_does_not_count_as_a_release() -> None:
+    with pytest.raises(session.SessionRefusedError, match="토크가 켜진 채로 끝난다"):
+        session.assert_session_releases_torque((*_steps(1), _inert_tail()))
+
+
+def test_an_inert_step_after_the_release_is_admitted() -> None:
+    session.assert_session_releases_torque((*_steps(1, 6), _inert_tail()))
+
+
+def test_an_engage_after_the_release_is_refused() -> None:
+    reengaged = (*_steps(1, 6), session.STEP_BY_NUMBER[1])
+    with pytest.raises(session.SessionRefusedError, match="토크가 켜진 채로 끝난다"):
+        session.assert_session_releases_torque(reengaged)
+
+
+def test_the_refusal_names_the_step_that_left_the_torque_up() -> None:
+    with pytest.raises(session.SessionRefusedError) as refusal:
+        session.assert_session_releases_torque((*_steps(1), _inert_tail()))
+    assert session.STEP_BY_NUMBER[1].title in str(refusal.value)
+
+
 def test_the_command_refuses_to_print_a_timetable_that_leaves_torque_on(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -102,14 +135,14 @@ def test_the_worker_refuses_a_selection_that_leaves_torque_on(
 ) -> None:
     _admit_everything(monkeypatch)
     with pytest.raises(session.SessionRefusedError, match="토크가 켜진 채로 끝난다"):
-        session.run_worker(_steps(1), _config(tmp_path), session.time.time())
+        session.run_worker(_steps(1), _config(tmp_path), time.time())
 
 
 def test_a_session_that_engaged_and_never_released_records_that_torque_may_be_live(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     _admit_everything(monkeypatch)
-    start = session.time.time() - RAN_LATE_SECONDS
+    start = time.time() - RAN_LATE_SECONDS
     session.run_worker(_steps(1, 6), _config(tmp_path), start)
     recorded = _recorded(tmp_path)
     assert session.TORQUE_STATE_KEY in recorded
@@ -120,7 +153,7 @@ def test_a_session_that_never_engaged_records_no_live_torque(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     _admit_everything(monkeypatch)
-    start = session.time.time() - RAN_LATE_SECONDS
+    start = time.time() - RAN_LATE_SECONDS
     session.run_worker(_steps(6), _config(tmp_path), start)
     assert session.TORQUE_STATE_KEY not in _recorded(tmp_path)
 
@@ -129,7 +162,7 @@ def test_schedule_slip_never_skips_the_release_step(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     _admit_everything(monkeypatch)
-    start = session.time.time() - GAVE_UP_SECONDS
+    start = time.time() - GAVE_UP_SECONDS
     session.run_worker(_steps(1, 6), _config(tmp_path), start)
     recorded = _recorded(tmp_path)
     assert "건너뛴다" in str(recorded[session.STEP_BY_NUMBER[1].key]["detail"])
@@ -140,7 +173,7 @@ def test_status_shows_the_operator_that_torque_may_still_be_live(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     _admit_everything(monkeypatch)
-    start = session.time.time() - RAN_LATE_SECONDS
+    start = time.time() - RAN_LATE_SECONDS
     session.run_worker(_steps(1, 6), _config(tmp_path), start)
     capsys.readouterr()
     assert session.report_status(_config(tmp_path)) == session.EXIT_REFUSED
@@ -158,7 +191,7 @@ def test_a_session_whose_producer_raised_still_records_the_live_torque(
         raise KeyboardInterrupt
 
     monkeypatch.setattr(session, "run_step", _explode)
-    start = session.time.time() - RAN_LATE_SECONDS
+    start = time.time() - RAN_LATE_SECONDS
     with pytest.raises(KeyboardInterrupt):
         session.run_worker(_steps(1, 6), _config(tmp_path), start)
     assert session.TORQUE_STATE_KEY in _recorded(tmp_path)

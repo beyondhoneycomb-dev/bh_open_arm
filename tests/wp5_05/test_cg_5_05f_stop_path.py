@@ -9,6 +9,8 @@ than inventing one.
 
 from __future__ import annotations
 
+import importlib
+
 import pytest
 
 from backend.loadtest import LoadRun, measure_soft_estop_path
@@ -63,6 +65,15 @@ def test_authoritative_pg_stop_001_is_deferred() -> None:
     assert deferred["status"] == "deferred"
     assert deferred["fixture_env_var"]
     assert "forge" in deferred["reason"]
+
+
+def test_the_deferred_hook_resolves_to_the_builder_it_names() -> None:
+    # The hook is a dotted string, so nothing but this resolves it: renaming or moving the
+    # builder would otherwise leave the deferred gate pointing at a symbol that is gone, and
+    # the gate's whole claim is that a real measurement has somewhere to arrive.
+    module_path, _, attribute = deferred_real_stop_latency()["reverification_hook"].rpartition(".")
+    resolved = getattr(importlib.import_module(module_path), attribute)
+    assert resolved is build_stop_latency_artifact
 
 
 def test_real_stop_latency_refuses_without_clock_provenance() -> None:

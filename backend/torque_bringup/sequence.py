@@ -292,6 +292,8 @@ class GuardedTorqueOn:
                 message names each one and its evidence.
             TorqueOnRefusedError: If any mandatory manifest precondition is missing or not
                 PASS.
+            StopPathScanEmptyError: If the stop-path scan parsed no file, so its empty
+                result is silence rather than an absence.
             TorqueCutOnStopPathError: If a torque cut is reachable from the stop path.
             FittedMotorMismatchError: If no motor is fitted, or the present-pose read is not
                 the fitted motor count wide.

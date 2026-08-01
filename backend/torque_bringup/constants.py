@@ -3,20 +3,20 @@
 Every value here is a spec-given identifier, gate name, or provenance label — never a
 measured pass line.
 
-The stop-latency block below is not WP-1-05's measurement. It is the single definition of the
-gate id, the trusted clock methods and the `[unconfirmed]` target; `stop_latency` builds the
-artifact from it, and the reader outside this package is `backend.loadtest.stop_path`, which
-imports `PG_STOP_001`, `STOP_LATENCY_PERCENTILE` and `STOP_LATENCY_TARGET_MS`. Stranded here,
-not owned here.
+The stop-latency block below is the single definition of PG-STOP-001's gate id, its two
+trusted clock methods and its `[unconfirmed]` target. It lives here because PG-STOP-001 is
+this WP's gate (`03` §5.7 WP binding); `stop_latency` builds the artifact from it, and the
+reader outside this package is `backend.loadtest.stop_path`, which imports `PG_STOP_001`,
+`STOP_LATENCY_PERCENTILE` and `STOP_LATENCY_TARGET_MS`.
 """
 
 from __future__ import annotations
 
 # The gates this WP gates on (`03` gate table, `02a` §8): PG-SAFE-001 and PG-RID-001 are the
-# torque-ON preconditions. PG-STOP-001 is no longer produced here — it is defined for the
-# benches that re-measure it under their own configurations. The provisional-f_max lineage
-# (PG-RT-001a/b) is WP-1-04's, so its re-derivation trigger is imported from that producer at
-# its point of use (see stop_latency), not restated here.
+# torque-ON preconditions, PG-STOP-001 is this WP's own exit gate (`03` §5.7), and no rig run
+# here can open it — the clock `03` §5.7.0 requires does not exist on this adapter. The
+# provisional-f_max lineage (PG-RT-001a/b) is WP-1-04's, so its re-derivation trigger is
+# imported from that producer at its point of use (see stop_latency), not restated here.
 PG_SAFE_001 = "PG-SAFE-001"
 PG_RID_001 = "PG-RID-001"
 PG_STOP_001 = "PG-STOP-001"

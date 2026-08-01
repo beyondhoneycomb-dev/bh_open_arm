@@ -89,6 +89,7 @@ def test_torque_is_clamped_to_peak_by_the_gateway() -> None:
         friction_seed(),
         _gateway_from_limits(limits),
         tuple(DEFAULT_KD_FREEDRIVE for _ in ENTRY_POSE_RAD),
+        ManualClock(),
     )
     frame = producer.produce_frame(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
     peak = [value.value for value in limits.peak_torque_nm]
@@ -102,6 +103,7 @@ def test_producer_is_a_scheduler_producer() -> None:
         friction_seed(),
         _gateway_from_limits(arm_safety_limits()),
         tuple(DEFAULT_KD_FREEDRIVE for _ in ENTRY_POSE_RAD),
+        ManualClock(),
     )
     typed: Producer = producer  # static conformance to the scheduler Producer surface
     assert typed.producer_id == "freedrive"

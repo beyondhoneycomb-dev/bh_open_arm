@@ -8,7 +8,9 @@ is not the only tree that reaches the bus any more. This package now engages tor
 is a stop path too, and it gets the same scan over itself.
 
 The scan runs as a precondition of engaging rather than as a report: a build whose stop path
-can cut torque never reaches 0xFC.
+can cut torque never reaches 0xFC. An absence is evidence only when something was read, and
+the reused scan reports what it found and never how much it parsed, so the coverage is
+enumerated here and a scan that read no file is refused rather than passed.
 
 The torque drop this package does own — the operator's disengage — lives on the bus protocol
 as `drop_torque` and is implemented by the bus, not here. The naming is load-bearing rather
@@ -16,9 +18,9 @@ than cosmetic. An operator ending a session and taking the arm's weight is not t
 and keeping the banned symbol out of this tree is what lets the scan stay absolute instead of
 carrying a per-file exemption list that the next edit widens.
 
-`backend.stopbench` wraps the same scan for the actuation spine. This does not import that
-wrapper: `backend.stopbench` imports this package, and consuming it back would close the
-cycle. Both consume `backend.actuation` directly, which is the single definition.
+`backend.stopbench` runs the same scan over the actuation spine. Neither package consumes the
+other; both take the scan from `backend.actuation`, which is its single definition. There is
+one scanner and two roots, not a wrapper chain.
 """
 
 from __future__ import annotations
@@ -41,6 +43,55 @@ class TorqueCutOnStopPathError(Exception):
     """
 
 
+class StopPathScanEmptyError(Exception):
+    """The scan parsed no file, so it found nothing by not looking.
+
+    Raised instead of admitting the engage: a root holding no Python file yields the same
+    empty violation list a clean stop path yields, and only one of the two is evidence.
+    """
+
+
+def _resolved_root(root: Path | None) -> Path:
+    """Resolve the root a scan runs over.
+
+    The default is this package's directory, not the process working directory: the engage
+    calls the refusal with no argument, so a default pointing anywhere else would scan a
+    tree nobody engages from and report it clean.
+
+    Args:
+        root: Caller-supplied root, or None for this package.
+
+    Returns:
+        (Path) The directory the scan and its coverage enumeration both use.
+    """
+    return root if root is not None else TORQUE_BRINGUP_ROOT
+
+
+def stop_path_files(root: Path | None = None) -> tuple[Path, ...]:
+    """Enumerate the files the scan parses under a root.
+
+    Mirrors the reused scan's traversal — recursive `*.py`, hidden directories skipped —
+    because the scan returns findings and never its coverage. Callers use this to state
+    which files an absence was established over.
+
+    Args:
+        root: Directory to enumerate; defaults to this package.
+
+    Returns:
+        (tuple[Path, ...]) The parsed files, resolved and ordered.
+    """
+    scanned = _resolved_root(root)
+    if not scanned.is_dir():
+        return ()
+    return tuple(
+        sorted(
+            path.resolve()
+            for path in scanned.rglob("*.py")
+            if not any(part.startswith(".") for part in path.relative_to(scanned).parts[:-1])
+        )
+    )
+
+
 def find_torque_cut_on_stop_path(root: Path | None = None) -> tuple[StaticViolation, ...]:
     """Scan a tree for a torque cut reachable from the stop path.
 
@@ -50,8 +101,7 @@ def find_torque_cut_on_stop_path(root: Path | None = None) -> tuple[StaticViolat
     Returns:
         (tuple[StaticViolation, ...]) Offending references; empty when the premise holds.
     """
-    scanned = root if root is not None else TORQUE_BRINGUP_ROOT
-    return tuple(find_disable_torque(scanned))
+    return tuple(find_disable_torque(_resolved_root(root)))
 
 
 def assert_stop_path_cuts_no_torque(root: Path | None = None) -> tuple[StaticViolation, ...]:
@@ -65,9 +115,17 @@ def assert_stop_path_cuts_no_torque(root: Path | None = None) -> tuple[StaticVio
         was scanned rather than only that nothing was found.
 
     Raises:
+        StopPathScanEmptyError: If the scan parsed no file.
         TorqueCutOnStopPathError: If any torque cut is reachable.
     """
-    violations = find_torque_cut_on_stop_path(root)
+    scanned = _resolved_root(root)
+    if not stop_path_files(scanned):
+        raise StopPathScanEmptyError(
+            f"the torque-cut scan parsed no file under {scanned}: an empty result from an "
+            "empty scan is not an absence, and this precondition is what stands between a "
+            "stop path that can cut torque and 0xFC (04 NFR-MAN-002, 12 NFR-SAF-009)"
+        )
+    violations = find_torque_cut_on_stop_path(scanned)
     if violations:
         found = "; ".join(str(violation) for violation in violations)
         raise TorqueCutOnStopPathError(

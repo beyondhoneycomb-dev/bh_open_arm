@@ -5,13 +5,14 @@ check that composition: it publishes when both hold, it refuses a stop path that
 torque, and it publishes no latency while saying in the artifact itself why there is none
 — an absent number that explains itself cannot be mistaken for a number nobody produced.
 
-The key set is checked as an allowlist rather than as the absence of the names the
-measurement used to publish. A denylist of retired names lets any new name through, and the
-new name this rig must never carry is a stop latency: `ethtool -T` reports no transmit
-hardware timestamping and no PTP clock, so a millisecond figure here would be a rig fact
-that was never observed. `no_latency_reason` is checked for the claims it has to carry for
-the same reason — a field compared only against its own constant says whatever the constant
-was last edited to say.
+The key set is checked as an allowlist, not as a denylist of names that must be absent: a
+denylist lets any new name through, and the name this rig must never carry is a stop
+latency. `ethtool -T` reports no transmit hardware timestamping and no PTP clock, so any
+figure in a time or rate unit here would be a rig fact nobody observed — which is why the
+figure sweep covers every unit rather than milliseconds alone, and covers every field
+including `no_latency_reason`. That field is checked for the claims it has to carry, too;
+a field compared only against its own constant says whatever the constant was last edited
+to say.
 """
 
 from __future__ import annotations
@@ -45,11 +46,24 @@ PRECONDITION_KEYS = {
 PATH_SHAPE_KEYS = {"stage_count", "stages", "ends_at", "durations"}
 STAGE_KEYS = {"segment", "opens_at", "anchor", "owner_wp"}
 
-# A figure in milliseconds, in the shapes a latency claim would be written in.
-MILLISECOND_FIGURE = re.compile(r"\d+(?:\.\d+)?\s*ms")
+# Every way a duration or a rate gets written, abbreviated or spelled out. An abbreviation-only
+# pattern leaves `840 microseconds` and `480 frames per second` publishing cleanly, which is the
+# same fabricated rig fact wearing a longer word. The trailing lookahead is what keeps `4 stages`
+# from reading as four seconds. Spelled forms come first so they win over the shorter alternatives.
+_DURATION_OR_RATE_UNIT = (
+    r"(?:nano|micro|milli)?seconds?"
+    r"|minutes?"
+    r"|(?:kilo|mega)?hertz"
+    r"|frames?\s+per\s+second"
+    r"|fps"
+    r"|ns|µs|μs|us|ms|min|s"
+    r"|kHz|MHz|Hz"
+)
+TIME_OR_RATE_FIGURE = re.compile(rf"\d+(?:\.\d+)?\s*(?:{_DURATION_OR_RATE_UNIT})(?![A-Za-z])")
 
-# The one millisecond figure the reason is allowed to name, in the words that mark it as a
-# target nobody has confirmed rather than as something this rig produced.
+# The one figure the reason is allowed to name, in the words that mark it as a target nobody
+# has confirmed rather than as something this rig produced.
+UNCONFIRMED_TARGET_FIGURE = "20 ms"
 UNCONFIRMED_TARGET_PHRASE = "20 ms is an [unconfirmed] target"
 
 # The only fields of the artifact that may hold a number. This package judges no quantity,
@@ -113,15 +127,17 @@ def test_artifact_holds_no_number_but_the_declared_counts() -> None:
     assert {key for key, _ in _numeric_fields(artifact)} == COUNT_FIELDS
 
 
-def test_artifact_publishes_no_millisecond_figure_anywhere() -> None:
-    # A stop latency cannot be measured on this rig at all, so the only place a millisecond
-    # figure may appear is inside the reason that says so, naming the target it refuses to
-    # be judged against.
+def test_artifact_publishes_no_time_or_rate_figure_anywhere() -> None:
+    # A stop latency cannot be measured on this rig at all, so the only figure the artifact
+    # may carry is the unconfirmed target, inside the reason that names it as one. The field
+    # whose whole job is to say there is no number is swept like every other field: exempting
+    # it would leave the likeliest place for a fabricated figure unread.
     artifact = build_stop_path_artifact()
     for key, value in artifact.items():
-        if key == "no_latency_reason":
-            continue
-        assert not MILLISECOND_FIGURE.search(repr(value)), key
+        found = TIME_OR_RATE_FIGURE.findall(repr(value))
+        expected = [UNCONFIRMED_TARGET_FIGURE] if key == "no_latency_reason" else []
+        assert found == expected, key
+    assert UNCONFIRMED_TARGET_PHRASE in artifact["no_latency_reason"]
     assert artifact["path_shape"]["durations"] is None
 
 
@@ -146,12 +162,5 @@ def test_reason_names_the_instrumentation_the_rig_lacks_and_cites_the_rule() -> 
 def test_reason_claims_no_measured_latency() -> None:
     # The only figure permitted is the unconfirmed target, and it has to appear marked as
     # one; any second figure is a rig measurement this rig cannot take.
-    assert MILLISECOND_FIGURE.findall(NO_LATENCY_REASON) == ["20 ms"]
+    assert TIME_OR_RATE_FIGURE.findall(NO_LATENCY_REASON) == [UNCONFIRMED_TARGET_FIGURE]
     assert UNCONFIRMED_TARGET_PHRASE in NO_LATENCY_REASON
-
-
-def test_artifact_declares_no_deferred_rig_capture() -> None:
-    artifact = build_stop_path_artifact()
-    # No awaited-capture manifest and no re-verification hook: nothing here is waiting on a
-    # measurement the rig cannot take, which is the difference between descoped and stalled.
-    assert "deferred" not in artifact

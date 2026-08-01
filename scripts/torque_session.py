@@ -30,6 +30,7 @@ import importlib.util
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -45,6 +46,11 @@ from typing import Any
 EXIT_OK = 0
 EXIT_REFUSED = 1
 EXIT_RUNNING = 2
+
+# No session has been scheduled in this capture tree at all. Distinct from EXIT_RUNNING because
+# a caller reading only the exit code cannot otherwise tell "not finished yet" from "never
+# started", and those two want opposite responses: wait, or schedule.
+EXIT_NO_SESSION = 3
 
 # Seconds between the timetable reaching the operator and the first torque transition. The
 # operator has to read the timetable, put both hands on the arm, and settle before anything
@@ -63,6 +69,12 @@ SCHEDULE_SLIP_TOLERANCE_SECONDS = 120.0
 # Argument tokens that would raise this process's privileges. The runner never escalates; a
 # command needing root is printed for the operator to run in their own shell.
 PRIVILEGE_TOKENS = ("sudo", "pkexec", "doas", "su")
+
+# What separates one command word from the next inside a single argv element. Whitespace alone
+# is not it: `sh -c "true;sudo ip link set can0 up"` puts the escalation right against a `;`,
+# and every shell operator — `;` `&` `|` `(` `$` backtick — begins a command with no space in
+# front of it. Path characters are kept so `/usr/bin/sudo` still reduces to its basename.
+COMMAND_WORD_SEPARATOR = re.compile(r"[^\w./-]+")
 
 # Where the operator's captures live, and the per-hook subdirectory each one expects. The
 # threshold directory keeps the name the operator guide already uses.
@@ -251,9 +263,12 @@ def run_command(argv: list[str]) -> subprocess.CompletedProcess[str]:
             run themselves; a runner that can `sudo` can also `sudo` something nobody read.
     """
     for token in argv:
-        # Each token is split on whitespace before it is judged: `bash -c "sudo ..."` carries the
-        # escalation inside one argv element, and a whole-token match walks straight past it.
-        if any(Path(word).name in PRIVILEGE_TOKENS for word in token.split()):
+        # Each token is broken into command words before it is judged: `bash -c "sudo ..."`
+        # carries the escalation inside one argv element, and a whole-token match walks straight
+        # past it. Splitting fail-closed is deliberate — a refused command the operator can run
+        # themselves costs a minute, and the other direction costs an unread root command.
+        words = COMMAND_WORD_SEPARATOR.split(token)
+        if any(Path(word).name in PRIVILEGE_TOKENS for word in words if word):
             raise SessionRefusedError(
                 f"권한 상승 거부: {' '.join(argv)}\n"
                 "  이 러너는 sudo 를 쓰지 않는다. 루트가 필요한 명령은 화면에 찍고 "
@@ -299,14 +314,16 @@ def _write_payload(directory: Path, name: str, payload: dict[str, Any]) -> None:
 
 
 def _stage_torque_bringup(directory: Path) -> None:
-    """Re-run the WP-1-05 hook, then judge the capture against this rig's fitted motor set.
+    """Re-run the WP-1-05 hook, then judge the verdicts it returns without acting on.
 
-    The hook's own width check compares the capture's pose against the capture's own id list,
-    so a capture that consistently names an id this arm does not carry passes it. That id is
-    the whole failure: motor `0x08` answered 0 of 20 polls on this bench, and sixteen
-    unanswered frames walked both channels to ERROR-PASSIVE, which degrades the seven joints
-    that are present. So the fitted set is compared here as well, against `default_profile()`
-    rather than against anything the capture supplied.
+    The zero residual is a field of the hook's result that the hook itself refuses on nowhere,
+    so an unzeroed arm's capture loads through it without complaint. That one is decided here.
+
+    The fitted-motor comparison is decided in both places on purpose. `default_profile()` is
+    the only external truth about which ids this bench carries — a capture's own id list is
+    consistent with itself whatever it polled — and the id is the whole failure: motor `0x08`
+    answered 0 of 20 polls here, and sixteen unanswered frames walk both channels to
+    ERROR-PASSIVE, degrading the seven joints that are present.
 
     Raises:
         SessionRefusedError: If the hook refuses the capture, if the engage addressed a motor
@@ -327,6 +344,11 @@ def _stage_torque_bringup(directory: Path) -> None:
                 "없는 모터에 프레임을 보내면 아무도 ACK 하지 않고 컨트롤러가 ERROR-PASSIVE 로 "
                 "떨어져, 실제로 있는 관절들까지 함께 열화된다."
             )
+        # Inert while `backend.torque_bringup.reverify._verify_engage` derives the displacement
+        # by rebuilding the hold from the same `present_pose_rad` the capture supplied — every
+        # entry is 0.0 for any capture, so this cannot refuse one. The capture format records
+        # no commanded target to compare against. Kept because it is the acceptance the runner
+        # would be checked on, and it fires the day the capture carries what was really sent.
         if set(verification.engage_displacement_rad) != {0.0}:
             raise SessionRefusedError(
                 f"인게이지가 현재 자세를 벗어났다: {verification.engage_displacement_rad}"
@@ -449,6 +471,10 @@ def stage_capture(step: Step, measurement: Measurement) -> None:
 def _payload_carries_key(node: Any, key: str) -> bool:
     """Whether a key appears anywhere in a capture payload, at any nesting depth.
 
+    A payload is a live Python object on its way to `json.dumps`, so a tuple is a list by the
+    time anybody reads the file; both sequence shapes are walked or the scan is blind to
+    whichever one the producer happened to build.
+
     Args:
         node: A payload or any fragment of one.
         key: The key being searched for.
@@ -458,7 +484,7 @@ def _payload_carries_key(node: Any, key: str) -> bool:
     """
     if isinstance(node, dict):
         return key in node or any(_payload_carries_key(value, key) for value in node.values())
-    if isinstance(node, list):
+    if isinstance(node, (list, tuple)):
         return any(_payload_carries_key(item, key) for item in node)
     return False
 
@@ -503,14 +529,21 @@ def torque_rig_factory() -> Callable[..., Any] | None:
     The one fact every torque-bearing refusal in this runner is derived from, kept in one
     place so the refusal and the self-check that proves the refusal cannot drift apart.
 
+    The name has to be bound to something callable, not merely present. A module landing with
+    `build_engage_bus = None` or a placeholder string would otherwise satisfy the admission
+    gate on the strength of the name alone, and that gate is what decides whether a person is
+    asked to put both hands on a brakeless arm.
+
     Returns:
-        (Callable[..., Any] | None) `build_engage_bus`, or None when the module or the factory
-        is absent.
+        (Callable[..., Any] | None) `build_engage_bus`, or None when the module is absent or
+        the name is not bound to a callable.
     """
     if importlib.util.find_spec(TORQUE_RIG_MODULE) is None:
         return None
     module = importlib.import_module(TORQUE_RIG_MODULE)
-    factory: Callable[..., Any] | None = getattr(module, TORQUE_RIG_FACTORY, None)
+    factory: object = getattr(module, TORQUE_RIG_FACTORY, None)
+    if not callable(factory):
+        return None
     return factory
 
 
@@ -662,8 +695,9 @@ STEPS: tuple[Step, ...] = (
         title="충돌 임계값 보정 — 무충돌 잔차 수집",
         capture_dirname="threshold",
         operator_action=(
-            "대표 궤적을 최소 두 번 돌리는 동안 접촉이 있었는지 눈으로 본다. "
-            "끝나면 접촉이 없었는지 세션이 묻는다 — 없었을 때만 '예'라고 답한다."
+            "대표 궤적을 최소 두 번 돌리는 동안 접촉이 있었는지 눈으로 본다. 접촉이 한 번이라도 "
+            "있었으면 그 캡처는 버리고 이 단계를 다시 잡는다 — 세션은 도중에 아무것도 묻지 "
+            "않는다. 측정은 떨어져 나간 워커에서 돌고, 당신의 셸은 이미 돌아가 있다."
         ),
         software_action=(
             "실 잔차를 모아 관절별 임계값을 제안한다. 하한은 물리에서 오고 캡처에서 오지 않으며, "
@@ -774,7 +808,14 @@ def _admit_binding(result: AdmissionResult, _config: SessionConfig) -> None:
 
 
 def _admit_calibration(result: AdmissionResult, _config: SessionConfig) -> None:
-    """Both arms must carry a loadable, checksum-verified zero that survived a power cycle."""
+    """Both arms must carry a loadable, checksum-verified zero that survived a power cycle.
+
+    `zero_power_cycle_verified` is required on its own terms, not only when the calibration
+    also asks for a re-zero every session. Those are two separate fields and a file that turns
+    the second one off does not make the first one true — reading it that way lets the
+    calibration decide whether it is allowed to be unverified. An arm whose 0xFE zero was never
+    watched across a power cycle engages at an angle nobody has measured.
+    """
     from backend.calibration.atomic_io import calibration_path_for, load_calibration
     from backend.calibration.schema import CalibrationError
     from backend.config.store import default_config_directory
@@ -788,11 +829,14 @@ def _admit_calibration(result: AdmissionResult, _config: SessionConfig) -> None:
         except (CalibrationError, OSError, ValueError) as refusal:
             result.record(False, "영점 캘리브레이션", f"{path}: {refusal}")
             return
-        if calibration.require_rezero_each_session and not calibration.zero_power_cycle_verified:
+        if not calibration.zero_power_cycle_verified:
             result.record(
                 False,
                 "영점 캘리브레이션",
-                f"{arm}: 세션마다 재영점이 필요하다고 기록돼 있다; 먼저 영점을 다시 잡는다",
+                f"{arm}: 전원을 껐다 켠 뒤 영점이 유지되는지 확인된 기록이 없다 "
+                f"(zero_power_cycle_verified=False, require_rezero_each_session="
+                f"{calibration.require_rezero_each_session}); 먼저 영점을 다시 잡고 "
+                "전원 재투입 후 잔차를 확인한다",
             )
             return
         details.append(f"{arm}={calibration.checksum[:12]}")
@@ -925,16 +969,40 @@ def admit(config: SessionConfig) -> AdmissionResult:
 # --- Timetable and the detached worker ---
 
 
-def assert_session_releases_torque(steps: tuple[Step, ...]) -> None:
-    """Refuse a step selection whose last step leaves torque on.
+def torque_is_live_after(steps: tuple[Step, ...]) -> bool:
+    """Whether the arm is still energized once this selection has run to its end.
 
-    `Torque.RELEASE` exists on one step. A selection that ends on `ENGAGE` or `HOLD` is a
-    timetable that energizes the arm and then stops talking, and there is no `finally` anywhere
-    that can put it right, because dropping torque on a brakeless arm is a fall rather than a
-    stop — `GuardedTorqueOn.disengage` refuses unless the operator has declared the arm
-    supported, and that declaration only exists as a scheduled instant the operator was shown.
-    So the release has to be *in the timetable*, and the only enforceable form of that is
-    refusing the selection before anything is scheduled.
+    Folded over the whole selection rather than read off its last step: a selection may end on
+    a step that changes nothing, and a tail of `Torque.NONE` after an engage is a timetable
+    that energizes the arm and then walks away. `HOLD` counts as energizing because a hold
+    presumes a torque-ON the operator was never shown, and an unshown presumption is treated
+    as live rather than as nothing.
+
+    Args:
+        steps: The steps the selection resolved to, in session order.
+
+    Returns:
+        (bool) True when nothing after the last energizing step puts the torque back down.
+    """
+    live = False
+    for step in steps:
+        if step.torque in (Torque.ENGAGE, Torque.HOLD):
+            live = True
+        elif step.torque is Torque.RELEASE:
+            live = False
+    return live
+
+
+def assert_session_releases_torque(steps: tuple[Step, ...]) -> None:
+    """Refuse a step selection that leaves torque on when it ends.
+
+    `Torque.RELEASE` exists on one step. A selection that finishes energized is a timetable
+    that engages the arm and then stops talking, and there is no `finally` anywhere that can
+    put it right, because dropping torque on a brakeless arm is a fall rather than a stop —
+    `GuardedTorqueOn.disengage` refuses unless the operator has declared the arm supported, and
+    that declaration only exists as a scheduled instant the operator was shown. So the release
+    has to be *in the timetable*, and the only enforceable form of that is refusing the
+    selection before anything is scheduled.
 
     Args:
         steps: The steps the selection resolved to, in session order.
@@ -942,13 +1010,14 @@ def assert_session_releases_torque(steps: tuple[Step, ...]) -> None:
     Raises:
         SessionRefusedError: If the selection ends with torque on.
     """
-    if not steps or steps[-1].torque not in (Torque.ENGAGE, Torque.HOLD):
+    if not torque_is_live_after(steps):
         return
+    energizing = [step for step in steps if step.torque in (Torque.ENGAGE, Torque.HOLD)][-1]
     release = [step.number for step in STEPS if step.torque is Torque.RELEASE]
     selected = ",".join(str(step.number) for step in steps)
     raise SessionRefusedError(
-        f"단계 선택 [{selected}] 은 토크가 켜진 채로 끝난다. 마지막 단계 "
-        f"[{steps[-1].number}] {steps[-1].title} 의 토크는 '{steps[-1].torque.name}' 이고, "
+        f"단계 선택 [{selected}] 은 토크가 켜진 채로 끝난다. 토크를 마지막으로 올린 단계는 "
+        f"[{energizing.number}] {energizing.title} ('{energizing.torque.name}') 이고, "
         f"이 세션에서 토크를 내리는 단계는 {release} 뿐이다.\n"
         "  브레이크가 없는 팔에서 토크를 내리는 것은 정지가 아니라 낙하다. 그래서 이 러너는 "
         "끝에 해제를 몰래 붙이지 않는다 — 운영자가 팔을 받치고 있어야 하는 시각이 시간표에 "
@@ -1089,6 +1158,12 @@ def spawn_worker(steps: tuple[Step, ...], config: SessionConfig, start_epoch: fl
     The fork is the point of the whole design. The operator's shell prints nothing until the
     command it ran has ended, so the command that schedules must end immediately and leave the
     measurement running behind it.
+
+    The worker's stdin is closed for the same reason the fork exists. It would otherwise
+    inherit the terminal the operator is about to type their next command into, and a detached
+    process reading that terminal is a question nobody can answer: the shell that would have
+    displayed it has already returned. Every instruction this session has for the operator is
+    in the timetable, printed before anything engages.
     """
     directory = session_dir(config.captures_root)
     directory.mkdir(parents=True, exist_ok=True)
@@ -1117,6 +1192,7 @@ def spawn_worker(steps: tuple[Step, ...], config: SessionConfig, start_epoch: fl
         subprocess.Popen(  # noqa: S603 — fixed argv, no shell, no user-supplied executable
             argv,
             cwd=str(Path(__file__).resolve().parents[1]),
+            stdin=subprocess.DEVNULL,
             stdout=log,
             stderr=subprocess.STDOUT,
             start_new_session=True,
@@ -1128,13 +1204,15 @@ def report_status(config: SessionConfig) -> int:
     """Print what the worker has recorded and exit with the session's verdict.
 
     Returns:
-        (int) 0 when every step of the session passed, 1 when any refused, 2 while the session
-        has steps it has not reached yet. Not-yet-green is not green.
+        (int) `EXIT_OK` when every step of the session passed, `EXIT_REFUSED` when any refused,
+        `EXIT_RUNNING` while the session has steps it has not reached yet, `EXIT_NO_SESSION`
+        when this capture tree holds no session at all. Not-yet-green is not green, and
+        never-started is not not-yet.
     """
     path = session_dir(config.captures_root) / STATE_FILENAME
     if not path.exists():
         print(f"세션 기록이 없다: {path}")
-        return EXIT_RUNNING
+        return EXIT_NO_SESSION
     document = json.loads(path.read_text(encoding="utf-8"))
     recorded = document.get("steps", {})
     for step in STEPS:
@@ -1155,7 +1233,9 @@ def report_status(config: SessionConfig) -> int:
         print(f"  [{mark}] {key}\n         {entry.get('detail', '')}")
     if any(not entry.get("passed") for entry in recorded.values()):
         return EXIT_REFUSED
-    return EXIT_OK if len(recorded) >= len(STEPS) else EXIT_RUNNING
+    # Completeness is counted over step keys alone. The non-step conditions are extra rows, and
+    # counting them would let a session report green with a step it never reached.
+    return EXIT_OK if step_keys <= recorded.keys() else EXIT_RUNNING
 
 
 # --- Self-check: the layouts this runner writes must load through the hooks that read them ---
@@ -1356,6 +1436,15 @@ def _check_refusals(report: list[tuple[bool, str]]) -> None:
         else:
             report.append((False, "refuse/privilege-escalation: sudo 가 실행됐다"))
 
+        # A shell operator is a word boundary the same way a space is. Judged separately from
+        # the bare case because a whitespace-only split passes the bare case and misses this.
+        try:
+            run_command(["sh", "-c", "ip link show can0;sudo ip link set can0 up"])
+        except SessionRefusedError:
+            report.append((True, "refuse/shell-wrapped-escalation: 셸 연산자 뒤 sudo 가 거부됨"))
+        else:
+            report.append((False, "refuse/shell-wrapped-escalation: 셸 안의 sudo 가 실행됐다"))
+
         # The gate has to be installed, and it has to reach the same verdict the rig binding
         # itself does. Both are checked, because either one alone passes while the other is
         # gone: a gate dropped from the tuple still refuses when called, and a neutered
@@ -1463,7 +1552,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--steps", default=None, help="쉼표로 나눈 단계 번호들")
     parser.add_argument("--plan", action="store_true", help="계획만 찍고 아무것도 하지 않는다")
     parser.add_argument("--check", action="store_true", help="캡처 레이아웃과 거부를 자체 검사")
-    parser.add_argument("--status", action="store_true", help="워커가 남긴 판정을 읽는다")
+    parser.add_argument(
+        "--status",
+        action="store_true",
+        help=(
+            f"워커가 남긴 판정을 읽는다 "
+            f"(종료코드 {EXIT_OK}=전부 통과, {EXIT_REFUSED}=거부, {EXIT_RUNNING}=아직 진행 중, "
+            f"{EXIT_NO_SESSION}=예약된 세션이 없다)"
+        ),
+    )
     parser.add_argument("--run", action="store_true", help="선행조건 통과 시 세션을 예약한다")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--start-epoch", type=float, default=None, help=argparse.SUPPRESS)

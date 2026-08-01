@@ -11,7 +11,9 @@ This hook is what the deferral ships. When a directory of real captured depth fr
 supplied via `OPENARM_DEPTH_REAL_FIXTURE`, `reverify_from_fixture` re-runs the identical
 fill-rate and round-trip calculators against the real bytes; until then the bound test
 skips with a reason. The round-trip error is measured over measured pixels only, since
-the 0 = no-measurement sentinel is not expected to survive the lossy grid.
+the 0 = no-measurement sentinel is not expected to survive the lossy grid — counting the
+sentinel would report the distance from 0 mm to `depth_min` on every frame that has a
+hole, which is the encoder working as specified rather than an error.
 
 The fixture directory holds:
 
@@ -30,7 +32,9 @@ straight to uint16 turns 1.5 m into 1 mm while the fill rate still reads ~100%.
 Layout and dtype are necessary and not sufficient. `assert_capture_is_plausible` judges
 the numbers themselves, because the two failures that survive every structural check —
 a camera that returned nothing, and frames stored in a unit the capture did not declare
-— both produce a perfectly well-formed file.
+— both produce a perfectly well-formed file. `reverify_from_fixture` is both halves, so
+a rig capture cannot come back as a report nobody judged; `read_capture` is the reading
+half alone, which is what lets a capture known to be broken still be measured.
 """
 
 from __future__ import annotations
@@ -282,11 +286,17 @@ def _round_trip_error_mm(params: DepthEncodingParams, frame: NDArray[np.uint16])
     return int(error[measured].max())
 
 
-def reverify_from_fixture(fixture_dir: Path) -> DepthReverifyReport:
+def read_capture(fixture_dir: Path) -> DepthReverifyReport:
     """Re-run the depth calculators against a directory of real captured frames.
 
     Every computation is the one the synthetic tests exercise, pointed at real bytes —
     the point of the hook is that no path is re-implemented for hardware.
+
+    Reading only: the frames are held to the transport's layout and dtype, and nothing
+    here asks whether the numbers can have come from the camera the capture declares.
+    A caller wanting that too wants `reverify_from_fixture`; this half exists so a
+    capture already known to be implausible can still be measured, which is how the
+    plausibility refusals are shown to bite rather than asserted to.
 
     Args:
         fixture_dir: Directory of captured depth frames (see the module docstring).
@@ -342,7 +352,7 @@ def assert_capture_is_plausible(report: DepthReverifyReport) -> None:
     stopped at capture time or not at all.
 
     Args:
-        report: A capture already read by `reverify_from_fixture`.
+        report: A capture already read by `read_capture`.
 
     Raises:
         DepthFixtureError: If the capture holds no frame, if a frame is almost entirely
@@ -371,3 +381,27 @@ def assert_capture_is_plausible(report: DepthReverifyReport) -> None:
                 "frames are not in millimetres, or the declared range does not cover the "
                 "scene the quantiser will be asked to encode"
             )
+
+
+def reverify_from_fixture(fixture_dir: Path) -> DepthReverifyReport:
+    """Read a real capture and judge it — the entry a rig capture arrives on.
+
+    Structure and then numbers, because either half alone accepts a capture the other
+    refuses. A report reaching a caller has passed both, so no reader downstream has to
+    know that a second judgment exists in order to get it.
+
+    Args:
+        fixture_dir: Directory of captured depth frames (see the module docstring).
+
+    Returns:
+        (DepthReverifyReport) Per-frame fill rate and round-trip error under the
+        capture's own parameters.
+
+    Raises:
+        FileNotFoundError: If `params.json` or the frames directory is absent.
+        DepthFixtureError: If the capture is not in the layout read here, or its numbers
+            cannot have come from what it declares.
+    """
+    report = read_capture(fixture_dir)
+    assert_capture_is_plausible(report)
+    return report

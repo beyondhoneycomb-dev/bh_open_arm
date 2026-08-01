@@ -6,13 +6,13 @@ torque, and it publishes no reaction time while saying in the artifact itself wh
 none — an absent number that explains itself cannot be mistaken for a number nobody
 produced.
 
-The key set is checked as an allowlist rather than as the absence of the names the
-measurement used to publish. A denylist of retired names lets any new name through, and the
-new name this rig must never carry is a reaction time: `ethtool -T` reports no transmit
-hardware timestamping and no PTP clock, so a millisecond figure here would be a rig fact
-that was never observed. `no_latency_reason` is checked for the claims it has to carry for
-the same reason — a field compared only against its own constant says whatever the constant
-was last edited to say.
+The key set is checked as an allowlist, not as a denylist of names that must be absent: a
+denylist lets any new name through, and the name this rig must never carry is a reaction
+time. `ethtool -T` reports no transmit hardware timestamping and no PTP clock, so any figure
+in a time or rate unit here would be a rig fact nobody observed — which is why the figure
+sweep covers every unit rather than milliseconds alone, and covers every field including
+`no_latency_reason`. That field is checked for the claims it has to carry, too; a field
+compared only against its own constant says whatever the constant was last edited to say.
 """
 
 from __future__ import annotations
@@ -46,8 +46,20 @@ PRECONDITION_KEYS = {
 PATH_SHAPE_KEYS = {"stage_count", "stages", "ends_at", "durations"}
 STAGE_KEYS = {"segment", "opens_at", "anchor", "owner_wp"}
 
-# A figure in milliseconds, in the shapes a reaction-time claim would be written in.
-MILLISECOND_FIGURE = re.compile(r"\d+(?:\.\d+)?\s*ms")
+# Every way a duration or a rate gets written, abbreviated or spelled out. An abbreviation-only
+# pattern leaves `12 milliseconds` and `480 frames per second` publishing cleanly, which is the
+# same fabricated rig fact wearing a longer word. The trailing lookahead is what keeps `4 stages`
+# from reading as four seconds. Spelled forms come first so they win over the shorter alternatives.
+_DURATION_OR_RATE_UNIT = (
+    r"(?:nano|micro|milli)?seconds?"
+    r"|minutes?"
+    r"|(?:kilo|mega)?hertz"
+    r"|frames?\s+per\s+second"
+    r"|fps"
+    r"|ns|µs|μs|us|ms|min|s"
+    r"|kHz|MHz|Hz"
+)
+TIME_OR_RATE_FIGURE = re.compile(rf"\d+(?:\.\d+)?\s*(?:{_DURATION_OR_RATE_UNIT})(?![A-Za-z])")
 
 # The only fields of the artifact that may hold a number. This package judges no quantity,
 # so it counts declared things and publishes nothing else numeric; a number under any other
@@ -109,12 +121,13 @@ def test_artifact_holds_no_number_but_the_declared_counts() -> None:
     assert {key for key, _ in _numeric_fields(artifact)} == COUNT_FIELDS
 
 
-def test_artifact_publishes_no_millisecond_figure_anywhere() -> None:
-    # No end of the interval can be timestamped on this rig, so no field of this artifact —
-    # the reason included — may carry a figure in milliseconds.
+def test_artifact_publishes_no_time_or_rate_figure_anywhere() -> None:
+    # No end of the interval can be timestamped on this rig and no line exists to judge a
+    # figure against, so no field of this artifact — the reason included — may carry one, in
+    # any unit.
     artifact = build_reaction_path_artifact()
     for key, value in artifact.items():
-        assert not MILLISECOND_FIGURE.search(repr(value)), key
+        assert not TIME_OR_RATE_FIGURE.search(repr(value)), key
     assert artifact["path_shape"]["durations"] is None
 
 
@@ -138,11 +151,4 @@ def test_reason_names_the_instrumentation_the_rig_lacks_and_cites_the_rule() -> 
 
 def test_reason_claims_no_measured_reaction_time() -> None:
     # Nothing here has a line to be judged against, so the reason names no figure at all.
-    assert MILLISECOND_FIGURE.findall(NO_LATENCY_REASON) == []
-
-
-def test_artifact_declares_no_deferred_rig_capture() -> None:
-    artifact = build_reaction_path_artifact()
-    # No awaited-capture manifest and no re-verification hook: nothing here is waiting on a
-    # measurement the rig cannot take, which is the difference between descoped and stalled.
-    assert "deferred" not in artifact
+    assert TIME_OR_RATE_FIGURE.findall(NO_LATENCY_REASON) == []

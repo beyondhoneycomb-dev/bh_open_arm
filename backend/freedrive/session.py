@@ -197,7 +197,8 @@ class FreedriveSession:
             safety_limits: The clamp envelope the gateway enforces and the effort check reads the
                 peak torque from — one source for both.
             gate: The PG-FRIC-001 gate deciding whether path (C) may start.
-            clock: The monotonic clock the lease, the guard, and heartbeats share.
+            clock: The monotonic clock the lease, the guard, heartbeats, and the producer's
+                action-stream watchdog share.
             kd_freedrive: Freedrive damping, scalar or per-joint (FR-MAN-030).
             effort_headroom: Peak-torque fraction the gravity term must stay under at entry.
             lease_duration_sec: The deadman lease horizon a hold heartbeat grants.
@@ -215,7 +216,7 @@ class FreedriveSession:
         )
         self._kd_freedrive = _normalize_kd(kd_freedrive, width)
         self._producer = FreedriveProducer(
-            gravity_backend, friction_params, gateway, self._kd_freedrive
+            gravity_backend, friction_params, gateway, self._kd_freedrive, clock
         )
         self._effort = EffortSaturationCheck(
             gravity_backend, safety_limits.peak_torque_nm, effort_headroom

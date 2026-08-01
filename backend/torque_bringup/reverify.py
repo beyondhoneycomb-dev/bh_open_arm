@@ -9,9 +9,15 @@ reason, never asserted green, never dropped.
 
 This is the hook the deferral is required to ship. The moment a directory of real captures is
 supplied via `OPENARM_TORQUE_BRINGUP_REAL_FIXTURE`, `reverify_from_fixture` re-runs the
-identical judgments — the fitted-motor width check, `build_present_pose_hold` and
-`assert_safe_hold` over the real engage frame, and the zero-residual tolerance check WP-1-02
-shares — against the real numbers.
+judgments this WP owns against the real numbers: the fitted-motor width check against the
+fitted profile, and `build_present_pose_hold` with `assert_safe_hold` over the real engage
+frame.
+
+Two facts travel differently. The zero-residual tolerance verdict is WP-1-02's own run and the
+E-Stop drop is a physical observation; neither is re-derivable from a capture, so both are
+transcribed rather than recomputed. Absence is carried as the un-verified side of each — a
+capture that never ran the stop reports the bus alive and no drop, which fails ⑨⑩ instead of
+satisfying it by silence.
 
 The release-to-CAN-stop latency is not among them. This WP produces no such measurement; the
 clock constraint that puts it out of reach is stated in `stop_latency`.

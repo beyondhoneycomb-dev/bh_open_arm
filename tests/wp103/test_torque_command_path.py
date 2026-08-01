@@ -39,6 +39,7 @@ from packages.lerobot_robot_openarm.openarm_follower_oa import (
     GRIPPER_MOTOR_NAME,
     NO_FEEDFORWARD_TORQUE_NM,
     PEAK_TORQUE_NM,
+    SIDE_PREFIXES,
     BiOaOpenArmFollower,
     GainRefusedError,
     OaOpenArmFollower,
@@ -80,6 +81,11 @@ RATE_GUARD_TRIPPING_MOVE_DEG = 30.0
 # A per-joint damping of zero — admissible to the encoder, refused under a driving stiffness
 # (`03` FR-MOT-021).
 ZERO_KD = 0.0
+
+# A per-joint stiffness of zero: the pure feed-forward frame `04` §2.8 admits, and the only
+# state in which zero damping is legal. It is what makes a dropped `custom_kp` visible — the
+# same command with the hold stiffness instead is the refused pair.
+ZERO_KP = 0.0
 
 # A motor name outside the frozen eight-slot layout.
 UNKNOWN_MOTOR = "joint_9"
@@ -133,11 +139,6 @@ def send_to_bus(follower: OaOpenArmFollower) -> RecordingMitBus:
     bus = RecordingMitBus()
     BusCanWriter(bus, MOTOR_ORDER[:fitted]).mit_control_batch(batch)
     return bus
-
-
-# ---------------------------------------------------------------------------
-# An action carrying no torque behaves exactly as it did
-# ---------------------------------------------------------------------------
 
 
 def test_no_torque_argument_hands_the_gateway_none_not_zeros(
@@ -207,11 +208,6 @@ def test_a_position_only_command_still_carries_zero_accepted_torque(
     result = follower.last_gate_result
     assert result is not None
     assert all(torque.value == NO_FEEDFORWARD_TORQUE_NM for torque in result.feedforward_torque_nm)
-
-
-# ---------------------------------------------------------------------------
-# An in-band torque reaches the fifth slot of the bus tuple
-# ---------------------------------------------------------------------------
 
 
 def test_in_band_torque_reaches_the_bus_tuple(
@@ -331,11 +327,6 @@ def test_the_refusal_band_is_contained_in_peak_torque() -> None:
             assert ceiling <= PEAK_TORQUE_NM[index]
 
 
-# ---------------------------------------------------------------------------
-# Out of band is refused, and the refusal says which joint and which bound
-# ---------------------------------------------------------------------------
-
-
 def test_a_torque_above_the_effort_limit_is_refused(
     make_follower: Callable[..., OaOpenArmFollower],
     calibrated: None,
@@ -447,11 +438,6 @@ def test_a_refused_torque_never_reaches_the_gateway(
     assert follower.last_gate_result is None
 
 
-# ---------------------------------------------------------------------------
-# The gripper slot: the frozen layout carries it, this arm does not
-# ---------------------------------------------------------------------------
-
-
 def test_a_nonzero_gripper_torque_is_refused_by_the_end_effector(
     make_follower: Callable[..., OaOpenArmFollower],
     calibrated: None,
@@ -503,11 +489,6 @@ def test_a_gripper_torque_is_refused_even_on_an_arm_that_has_one(
     assert GRIPPER_MOTOR_NAME in str(refusal.value)
 
 
-# ---------------------------------------------------------------------------
-# What commanding a torque must NOT do
-# ---------------------------------------------------------------------------
-
-
 def test_a_filter_rejection_strips_the_torque(
     make_follower: Callable[..., OaOpenArmFollower],
 ) -> None:
@@ -557,11 +538,6 @@ def test_commanding_a_torque_enables_no_torque(
     )
 
     assert follower.is_torque_enabled is False
-
-
-# ---------------------------------------------------------------------------
-# FR-MOT-058 ③ — a live torque may not ride a position command with kd=0
-# ---------------------------------------------------------------------------
 
 
 def test_zero_damping_with_a_live_torque_is_refused(
@@ -641,16 +617,11 @@ def test_a_gain_naming_an_unknown_motor_is_refused(
     assert UNKNOWN_MOTOR in str(refusal.value)
 
 
-# ---------------------------------------------------------------------------
-# The bimanual surface: the registered plugin type reaches the torque path
-# ---------------------------------------------------------------------------
-
-
 def bimanual_move() -> dict[str, float]:
     """The small move, addressed to both arms under their channel prefixes."""
     return {
         f"{side}_{motor}.pos": SMALL_MOVE_DEG
-        for side in ("left", "right")
+        for side in SIDE_PREFIXES
         for motor in MOTOR_ORDER[:-1]
     }
 
@@ -738,4 +709,118 @@ def test_the_bimanual_refuses_a_gain_key_that_names_no_arm(
     pair = make_bimanual()
 
     with pytest.raises(GainRefusedError):
-        pair.send_action(bimanual_move(), custom_kp={SHOULDER_MOTOR: 0.0})
+        pair.send_action(bimanual_move(), custom_kp={SHOULDER_MOTOR: ZERO_KP})
+
+
+def test_the_bimanual_refuses_a_position_key_that_names_no_arm(
+    make_bimanual: Callable[..., BiOaOpenArmFollower],
+    calibrated: None,
+) -> None:
+    """An unsided position key filters to nothing on both arms and the move vanishes silently.
+
+    The gains and the torque are already refused for this; the position keys are the channel a
+    caller actually types most often, and a dropped one leaves that joint holding at present
+    while every other joint moves — which reads as an arm that partly obeyed.
+    """
+    pair = make_bimanual()
+    unsided = f"{SHOULDER_MOTOR}.pos"
+
+    with pytest.raises(ValueError) as refusal:
+        pair.send_action({**bimanual_move(), unsided: SMALL_MOVE_DEG})
+
+    assert unsided in str(refusal.value)
+
+
+def test_a_refused_torque_leaves_neither_arm_commanded(
+    make_bimanual: Callable[..., BiOaOpenArmFollower],
+    calibrated: None,
+) -> None:
+    """The pair is judged whole: a refusal on the second arm must not land the first one's frame.
+
+    Refusing inside the split is refusing halfway through it. The caller gets an exception and no
+    way to learn that one arm is already holding a new commanded pose while the other is still on
+    whatever it had — the exact one-arm-commanded state this class exists to make impossible.
+    """
+    pair = make_bimanual()
+
+    with pytest.raises(TorqueRefusedError):
+        pair.send_action(
+            bimanual_move(),
+            feedforward_torque_nm={f"right_{WRIST_MOTOR}": WRIST_EFFORT_NM + BAND_OVERSHOOT_NM},
+        )
+
+    assert pair.left_arm.gateway.frames == ()
+    assert pair.right_arm.gateway.frames == ()
+    assert pair.left_arm.last_gate_result is None
+    assert pair.right_arm.last_gate_result is None
+
+
+def test_a_refused_gain_leaves_neither_arm_commanded(
+    make_bimanual: Callable[..., BiOaOpenArmFollower],
+    calibrated: None,
+) -> None:
+    """The same wholeness for gains: a mistyped motor on the right does not command the left."""
+    pair = make_bimanual()
+
+    with pytest.raises(GainRefusedError):
+        pair.send_action(bimanual_move(), custom_kp={f"right_{UNKNOWN_MOTOR}": MIT_HOLD_KP})
+
+    assert pair.left_arm.gateway.frames == ()
+    assert pair.right_arm.gateway.frames == ()
+
+
+def test_the_arm_the_caller_never_named_is_handed_nothing(
+    make_bimanual: Callable[..., BiOaOpenArmFollower],
+    calibrated: None,
+) -> None:
+    """Naming one arm says nothing about the other, so the other is handed None on every channel.
+
+    An empty narrowing is not the same as no argument: it resolves to an eight-slot all-zero Nm
+    vector, a commanded zero torque on every joint, where None is the position-only case the
+    gateway takes. Commanding an arm the caller never mentioned is what the split must not do.
+    """
+    pair = make_bimanual()
+    seen: list[tuple[object, object, object]] = []
+    submit = pair.right_arm.gateway.submit
+
+    def spy(*args: object, **kwargs: object) -> object:
+        seen.append((kwargs.get("feedforward_torque_nm"), kwargs.get("kp"), kwargs.get("kd")))
+        return submit(*args, **kwargs)
+
+    pair.right_arm.gateway.submit = spy  # type: ignore[method-assign]
+
+    pair.send_action(
+        bimanual_move(),
+        custom_kp={f"left_{SHOULDER_MOTOR}": MIT_HOLD_KP},
+        custom_kd={f"left_{SHOULDER_MOTOR}": MIT_HOLD_KD},
+        feedforward_torque_nm={f"left_{SHOULDER_MOTOR}": ROUTED_SHOULDER_TORQUE_NM},
+    )
+
+    assert seen == [(None, None, None)]
+
+
+def test_the_bimanual_forwards_the_stiffness_that_makes_zero_damping_legal(
+    make_bimanual: Callable[..., BiOaOpenArmFollower],
+    calibrated: None,
+) -> None:
+    """kp=0 with kd=0 is the pure-torque frame, and it is only legal if the kp actually arrived.
+
+    A stiffness dropped on the way to the arm leaves that joint on the hold stiffness, which
+    drives a position, and the identical command becomes the refused (kp>0, kd=0) pair. So the
+    arm's own verdict is what says whether the stiffness was forwarded — a gain the gateway never
+    receives leaves no other trace, and the accepted action looks the same either way.
+    """
+    pair = make_bimanual()
+
+    pair.send_action(
+        bimanual_move(),
+        custom_kp={f"left_{motor}": ZERO_KP for motor in MOTOR_ORDER},
+        custom_kd={f"left_{motor}": ZERO_KD for motor in MOTOR_ORDER},
+    )
+
+    left = pair.left_arm.last_gate_result
+    right = pair.right_arm.last_gate_result
+    assert left is not None
+    assert not left.rejected
+    assert right is not None
+    assert not right.rejected

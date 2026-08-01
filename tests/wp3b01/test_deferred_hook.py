@@ -2,15 +2,17 @@
 
 Real enumeration (real serials, real link speeds, a real first-frame grab) needs
 cameras this host lacks, so `real_connect_supported()` reports why it cannot run and a
-real test would SKIP on that reason (`02a` §4.1). The hook that the deferral must ship
-is `reconnect_from_fixture`: given a directory of real captured output it re-runs the
+real test SKIPs on that reason (`02a` §4.1). The hook the deferral must ship is
+`reconnect_from_fixture`: given a directory of real captured output it re-runs the
 identical tolerant connect over the real bytes, so no path is re-implemented for
-hardware. Here the "real" directory is written to `tmp_path` to exercise the hook.
+hardware. When `REAL_FIXTURE_ENV_VAR` names such a directory that run happens here and
+can fail; the rest of this module points the same hook at directories under `tmp_path`.
 """
 
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -23,6 +25,40 @@ from backend.sensing.connect import (
     real_connect_supported,
     reconnect_from_fixture,
 )
+
+# Read once, at collection: the operator names the directory on the pytest command line, so
+# the skip decision and the assertion below must see the same value. The skip turns on the raw
+# string rather than the resolved directory — a mistyped path is a typo to report, not a
+# deferral to honour, and resolving first would silently turn it back into a skip.
+_FIXTURE_ENV_RAW = os.environ.get(REAL_FIXTURE_ENV_VAR, "")
+
+
+@pytest.mark.skipif(
+    not _FIXTURE_ENV_RAW,
+    reason=(
+        "real camera enumeration needs cameras on the bus; set "
+        f"{REAL_FIXTURE_ENV_VAR} to a directory of captured enumeration output to re-run the "
+        "tolerant connect over it"
+    ),
+)
+def test_reconnect_from_the_real_fixture() -> None:
+    """The captured enumeration replays through the identical connect and yields a live camera.
+
+    A dead camera is a skipped slot rather than a stop (`FR-CAM-084`), so `arm_may_proceed`
+    alone would pass a capture in which nothing came up. The failable claim is that the
+    operator's capture contains at least one camera that enumerated and delivered a frame.
+    """
+    fixture_dir = fixture_dir_from_env()
+    assert fixture_dir is not None, (
+        f"{REAL_FIXTURE_ENV_VAR} names {_FIXTURE_ENV_RAW!r}, which is not a directory"
+    )
+    report = reconnect_from_fixture(fixture_dir)
+    assert report.outcomes, f"no camera slot bound in {fixture_dir}"
+    assert report.opened, (
+        "no camera in the capture opened with a live frame: "
+        f"{[(outcome.slot, outcome.reason) for outcome in report.skipped]}"
+    )
+    assert report.arm_may_proceed, f"camera connect blocked the arm: {report.blocking_failures}"
 
 
 def test_real_connect_reports_support_and_a_reason() -> None:

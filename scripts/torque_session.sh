@@ -13,6 +13,13 @@
 #   ./scripts/torque_session.sh --status        what the detached worker has recorded
 #   ./scripts/torque_session.sh --check         self-check: the capture layouts and the refusals
 #
+# Exit codes, which is what a caller should read rather than the text:
+#   0  everything asked for passed
+#   1  something refused
+#   2  --status only: the session is still running, steps remain unreached
+#   3  --status only: this capture tree holds no session. "Not finished" and "never started"
+#      are separate codes because they want opposite responses — wait, or schedule.
+#
 # The measurement runs detached on purpose. A shell shows a command's output only once the
 # command has ended, so anything printed *during* a run reaches the operator too late to act on
 # — which is how three E-Stop measurements were lost on this bench. The timetable is absolute

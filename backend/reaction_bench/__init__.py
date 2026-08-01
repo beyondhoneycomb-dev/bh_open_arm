@@ -1,12 +1,12 @@
 """WP-2C-06 — the reaction path's declared shape and its no-torque-cut static check.
 
-What this package holds is what survives without a clock. The reaction time is not
+Everything this package holds is checkable without a clock. The reaction time is not
 measured here and not measured anywhere in this tree: `03` §5.7.0 admits exactly two
 sources for correlating a software event to a bus frame and this rig can supply neither,
 so the number is out of scope rather than approximated
 (`constants.NO_LATENCY_REASON`).
 
-What remains is live:
+What this package does carry:
 
 - the absence of `disable_torque` on the reaction path, run as a publish-gating refusal
   over the WP-0A-01 scan (`backend.actuation.find_disable_torque`) rather than a second

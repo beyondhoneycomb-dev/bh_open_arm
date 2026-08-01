@@ -11,8 +11,14 @@ can enter the platform without a camera being involved, and because a stereo cam
 native measure is not this transport. Each refusal is driven through
 `reverify_from_fixture` and not only through the function that implements it, since the
 hook is the entry a rig capture actually arrives on and a refusal the hook does not
-reach protects nothing. `test_a_float_metres_capture_is_refused` also pins what the
-refusal is worth, by measuring what a bare cast would have produced from the same file.
+reach protects nothing. `test_a_float_metres_capture_is_refused` and
+`test_a_signed_millimetre_capture_is_refused` also pin what the refusals are worth, by
+measuring what a bare cast would have produced from the same files.
+
+`read_capture` appears where a capture's own numbers are the subject: it reads without
+judging, so a frame that is structurally perfect and numerically impossible can be
+measured before being refused. Everywhere else the entry is `reverify_from_fixture`,
+which reads and judges.
 
 The content refusals are the same ones the deferred rig acceptance leans on. That is
 what makes the acceptance non-vacuous while the hardware is absent: broken captures are
@@ -53,6 +59,7 @@ from backend.sensing.depth.reverify import (
     assert_capture_is_plausible,
     fixture_dir_from_env,
     load_frame,
+    read_capture,
     real_depth_supported,
     reverify_from_fixture,
 )
@@ -67,10 +74,27 @@ _WIDTH = 8
 _MID_BAND_MM = 1500
 _MAX_ABS_ERROR_MM = 2
 
+# A second depth, near the top of the default `[0.01, 10.0] m` range, where the 12-bit
+# log grid is coarser than it is at `_MID_BAND_MM`. A frame carrying both therefore has
+# a known non-zero max round-trip error and two different range ends, neither of which a
+# frame at one depth has — there, a constant and a measurement are the same number. Both
+# figures are grid properties: they move if `06` §2.4's encoder does, and not otherwise.
+_FAR_BAND_MM = 9900
+_TWO_BAND_ROUND_TRIP_ERROR_MM = 2
+
+# What the same frame's round-trip error would read as if the hole were counted: the
+# encoder maps the 0 sentinel to `depth_min`, and 0.01 m is 10 mm away from 0.
+_ROUND_TRIP_ERROR_MM_COUNTING_THE_HOLE = 10
+
 # A depth beyond the uint16 millimetre ceiling and a depth in metres: the two values
 # whose silent coercion `load_frame` exists to stop.
 _BEYOND_UINT16_MM = 70000.0
 _MID_BAND_METRES = 1.5
+
+# Millimetres in a signed 16-bit frame, which is what a capture tool that treats "no
+# return" as a negative writes. Same width as the transport, different meaning.
+_SIGNED_NO_RETURN_MM = -1
+_SIGNED_NO_RETURN_READ_AS_UNSIGNED_MM = 65535
 
 # 1.5 m written as though it were millimetres. A capture tool that skipped the unit
 # conversion but did cast to uint16 produces exactly this, and it is well-formed.
@@ -87,6 +111,15 @@ _ZED_SYSFS_NAME = "3-10.3.1.3.2"
 _FULL_SPEED_MBPS = 12
 _SUPERSPEED_MBPS = 5000
 _USB_HID_INTERFACE_CLASS = "03"
+
+# A Stereolabs product that is not the ZED Mini, for the case where the vendor matches
+# and the product does not.
+_OTHER_STEREOLABS_PRODUCT_ID = "0001"
+
+# The kernel's own USB device tree, spelled out here so the default the probe carries is
+# held against a value written down twice rather than against itself.
+_KERNEL_USB_DEVICES_PATH = "/sys/bus/usb/devices"
+_SYSFS_MOUNT = Path("/sys")
 
 # The descriptor strings the kernel reads out of the camera itself. They select the
 # device for the identity check below, so that the recorded vendor/product pair is the
@@ -125,6 +158,18 @@ def _write_frames(directory: Path, frames: dict[str, np.ndarray]) -> None:
 def _filled_frame(depth_mm: int) -> NDArray[np.uint16]:
     """A frame at one depth with a single hole, the shape a working capture has."""
     frame = np.full((_HEIGHT, _WIDTH, 1), depth_mm, dtype=np.uint16)
+    frame[0, 0, 0] = 0
+    return frame
+
+
+def _two_band_frame(near_mm: int, far_mm: int) -> NDArray[np.uint16]:
+    """A frame with a near half, a far half and one hole.
+
+    A scene, rather than a wall: with one depth everywhere, the nearest and farthest
+    measured depth are the same number and neither can be told from the other.
+    """
+    frame = np.full((_HEIGHT, _WIDTH, 1), near_mm, dtype=np.uint16)
+    frame[_HEIGHT // 2 :, :, 0] = far_mm
     frame[0, 0, 0] = 0
     return frame
 
@@ -178,9 +223,14 @@ def _zed_sysfs(tmp_path: Path, speed_mbps: int, interface_classes: tuple[str, ..
 
 
 def test_hook_reruns_over_a_real_format_capture(tmp_path: Path) -> None:
-    """The hook re-derives fill rate and round-trip error from a capture, not a stub."""
+    """The hook re-derives fill rate and round-trip error from a capture, not a stub.
+
+    Read without judging, because the all-holes frame this exercises is exactly what
+    `assert_capture_is_plausible` refuses; what is under test here is that the numbers
+    come back at all.
+    """
     _write_capture(tmp_path)
-    report = reverify_from_fixture(tmp_path)
+    report = read_capture(tmp_path)
 
     assert report.device is DepthDevice.STEREOLABS_ZED
     assert [frame.name for frame in report.frames] == ["0000", "0001"]
@@ -199,6 +249,37 @@ def test_hook_reruns_over_a_real_format_capture(tmp_path: Path) -> None:
     # An all-holes frame has no measured pixel, so its round-trip error is defined as 0.
     assert holes.round_trip_max_abs_error_mm == 0
     assert (holes.measured_depth_min_mm, holes.measured_depth_max_mm) == (0, 0)
+
+
+def test_the_round_trip_error_is_the_grids_own_and_excludes_the_hole(tmp_path: Path) -> None:
+    """The round-trip error is the loss the encoder actually inflicted on this frame.
+
+    A bound is not a measurement. `_MAX_ABS_ERROR_MM` is an upper limit, and every
+    constant a broken calculator could return sits under it — including the 0 an
+    all-holes frame legitimately reports. The exact value, taken over a scene the log
+    grid resolves unevenly, is what a constant cannot satisfy; keeping it under the
+    hole's own error is what shows the sentinel is excluded rather than merely small.
+    """
+    _write_frames(tmp_path, {"0000": _two_band_frame(_MID_BAND_MM, _FAR_BAND_MM)})
+    frame = reverify_from_fixture(tmp_path).frames[0]
+
+    assert frame.round_trip_max_abs_error_mm == _TWO_BAND_ROUND_TRIP_ERROR_MM
+    assert frame.round_trip_max_abs_error_mm < _ROUND_TRIP_ERROR_MM_COUNTING_THE_HOLE
+
+
+def test_the_depth_range_is_the_scenes_near_and_far_ends(tmp_path: Path) -> None:
+    """Nearest and farthest are two different measurements of a scene with depth in it.
+
+    A frame at a single depth reports the same number twice, so it cannot tell a nearest
+    that reads the far end — or a farthest that reads the near one — from a correct
+    answer. Both mistakes let a capture whose deepest pixel is past the declared range
+    through the plausibility judgment, which compares exactly these two numbers.
+    """
+    _write_frames(tmp_path, {"0000": _two_band_frame(_MID_BAND_MM, _FAR_BAND_MM)})
+    frame = reverify_from_fixture(tmp_path).frames[0]
+
+    assert frame.measured_depth_min_mm == _MID_BAND_MM
+    assert frame.measured_depth_max_mm == _FAR_BAND_MM
 
 
 def test_missing_params_file_is_an_error(tmp_path: Path) -> None:
@@ -275,6 +356,38 @@ def test_the_hook_itself_refuses_a_float_metres_frame(tmp_path: Path) -> None:
         reverify_from_fixture(tmp_path)
 
 
+def test_a_signed_millimetre_capture_is_refused(tmp_path: Path) -> None:
+    """A same-width signed frame is refused: the dtype is the transport, not its width.
+
+    `int16` is the trap a width comparison walks into, and it is what a capture tool
+    writing signed millimetres produces — negative where the camera reported no return.
+    The file is two bytes a pixel and `(H, W, 1)`, so only the dtype separates it from
+    the transport; read as the unsigned transport it declares itself to be, those
+    no-return pixels are depths near 65 m, which the fill rate counts as measurements.
+    """
+    frame_path = tmp_path / "0000.npy"
+    signed = np.full((_HEIGHT, _WIDTH, 1), _MID_BAND_MM, dtype=np.int16)
+    signed[0, 0, 0] = _SIGNED_NO_RETURN_MM
+    np.save(frame_path, signed)
+
+    with pytest.raises(DepthFixtureError, match="dtype"):
+        load_frame(frame_path)
+
+    coerced = np.load(frame_path).astype(np.uint16)
+    assert int(coerced[0, 0, 0]) == _SIGNED_NO_RETURN_READ_AS_UNSIGNED_MM
+    assert compute_fill_rate(coerced).fill_rate == 1.0  # the hole became the farthest pixel
+
+
+def test_the_hook_itself_refuses_a_signed_millimetre_frame(tmp_path: Path) -> None:
+    """The signed-dtype refusal holds on the entry a rig capture arrives on."""
+    signed = np.full((_HEIGHT, _WIDTH, 1), _MID_BAND_MM, dtype=np.int16)
+    signed[0, 0, 0] = _SIGNED_NO_RETURN_MM
+    _write_frames(tmp_path, {"0000": signed})
+
+    with pytest.raises(DepthFixtureError, match="dtype"):
+        reverify_from_fixture(tmp_path)
+
+
 def test_the_hook_itself_refuses_a_frame_of_the_wrong_shape(tmp_path: Path) -> None:
     """The shape refusal holds on `reverify_from_fixture` too, on the same reasoning."""
     _write_frames(tmp_path, {"0000": np.zeros((_HEIGHT, _WIDTH), dtype=np.uint16)})
@@ -328,7 +441,7 @@ def test_a_converted_stereo_frame_reads_the_same_as_a_projector_one(tmp_path: Pa
 def test_a_working_capture_is_plausible(tmp_path: Path) -> None:
     """The plausibility judgment accepts a capture with a scene in it."""
     _write_frames(tmp_path, {"0000": _filled_frame(_MID_BAND_MM)})
-    assert_capture_is_plausible(reverify_from_fixture(tmp_path))
+    assert_capture_is_plausible(read_capture(tmp_path))
 
 
 def test_a_capture_that_measured_nothing_is_refused(tmp_path: Path) -> None:
@@ -340,7 +453,42 @@ def test_a_capture_that_measured_nothing_is_refused(tmp_path: Path) -> None:
     """
     _write_frames(tmp_path, {"0000": np.zeros((_HEIGHT, _WIDTH, 1), dtype=np.uint16)})
     with pytest.raises(DepthFixtureError, match="fill rate"):
-        assert_capture_is_plausible(reverify_from_fixture(tmp_path))
+        assert_capture_is_plausible(read_capture(tmp_path))
+
+
+def test_the_hook_itself_refuses_an_implausible_capture(tmp_path: Path) -> None:
+    """The hook judges what it reads; no report comes back out of it unjudged.
+
+    The hook is where a rig capture arrives, and a judgment a caller has to know to ask
+    for is a judgment that capture can arrive without. A blind capture is the case that
+    shows the difference: structurally flawless, and the camera saw nothing.
+    """
+    _write_frames(tmp_path, {"0000": np.zeros((_HEIGHT, _WIDTH, 1), dtype=np.uint16)})
+    with pytest.raises(DepthFixtureError, match="fill rate"):
+        reverify_from_fixture(tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("broken", "expected"),
+    [
+        (np.zeros((_HEIGHT, _WIDTH, 1), dtype=np.uint16), "fill rate"),
+        (_filled_frame(_BEYOND_DECLARED_RANGE_MM), "outside"),
+    ],
+)
+def test_every_frame_is_judged_not_only_the_first(
+    tmp_path: Path, broken: NDArray[np.uint16], expected: str
+) -> None:
+    """A later frame that is broken is refused, and named, on a healthy first frame.
+
+    A capture is a sequence, and the failures the judgment exists for arrive part-way
+    through one: a lens capped between takes, the arm carrying the camera past the far
+    end of the declared range. Judging only what came first accepts every one of those
+    and reports the capture as sound.
+    """
+    _write_frames(tmp_path, {"0000": _filled_frame(_MID_BAND_MM), "0001": broken})
+    with pytest.raises(DepthFixtureError, match=expected) as refusal:
+        assert_capture_is_plausible(read_capture(tmp_path))
+    assert "'0001'" in str(refusal.value)
 
 
 def test_a_capture_left_in_metres_is_refused_by_its_own_declared_range(tmp_path: Path) -> None:
@@ -353,7 +501,7 @@ def test_a_capture_left_in_metres_is_refused_by_its_own_declared_range(tmp_path:
     metres_as_mm = np.full((_HEIGHT, _WIDTH, 1), _MID_BAND_AS_BARE_METRES_MM, dtype=np.uint16)
     _write_frames(tmp_path, {"0000": metres_as_mm})
 
-    report = reverify_from_fixture(tmp_path)
+    report = read_capture(tmp_path)
     assert report.frames[0].fill_rate.fill_rate == 1.0  # nothing structural to catch
     with pytest.raises(DepthFixtureError, match="outside"):
         assert_capture_is_plausible(report)
@@ -367,14 +515,14 @@ def test_a_capture_past_its_declared_range_is_refused(tmp_path: Path) -> None:
     """
     _write_frames(tmp_path, {"0000": _filled_frame(_BEYOND_DECLARED_RANGE_MM)})
     with pytest.raises(DepthFixtureError, match="outside"):
-        assert_capture_is_plausible(reverify_from_fixture(tmp_path))
+        assert_capture_is_plausible(read_capture(tmp_path))
 
 
 def test_a_capture_with_no_frames_is_refused(tmp_path: Path) -> None:
     """An empty frames directory is a capture that measured nothing at all."""
     _write_frames(tmp_path, {})
     with pytest.raises(DepthFixtureError, match="no depth frame"):
-        assert_capture_is_plausible(reverify_from_fixture(tmp_path))
+        assert_capture_is_plausible(read_capture(tmp_path))
 
 
 def test_the_fill_rate_bar_sits_between_a_blind_camera_and_a_hard_scene() -> None:
@@ -403,7 +551,7 @@ def test_real_depth_capture_reverify() -> None:
     """
     fixture_dir = fixture_dir_from_env()
     assert fixture_dir is not None
-    assert_capture_is_plausible(reverify_from_fixture(fixture_dir))
+    reverify_from_fixture(fixture_dir)
 
 
 @pytest.mark.parametrize("device", list(DepthDevice))
@@ -534,7 +682,9 @@ def test_the_probe_reads_the_link_speed_and_every_interface_class(tmp_path: Path
     """
     usb_id = (STEREOLABS_USB_VENDOR_ID, ZED_MINI_USB_PRODUCT_ID)
 
-    as_fitted = probe_usb_link(usb_id, _zed_sysfs(tmp_path / "fitted", _FULL_SPEED_MBPS, ("03",)))
+    as_fitted = probe_usb_link(
+        usb_id, _zed_sysfs(tmp_path / "fitted", _FULL_SPEED_MBPS, (_USB_HID_INTERFACE_CLASS,))
+    )
     assert as_fitted.present
     assert as_fitted.link_speed_mbps == _FULL_SPEED_MBPS
     assert as_fitted.interface_classes == (_USB_HID_INTERFACE_CLASS,)
@@ -542,7 +692,11 @@ def test_the_probe_reads_the_link_speed_and_every_interface_class(tmp_path: Path
 
     recabled = probe_usb_link(
         usb_id,
-        _zed_sysfs(tmp_path / "recabled", _SUPERSPEED_MBPS, (USB_VIDEO_INTERFACE_CLASS, "03")),
+        _zed_sysfs(
+            tmp_path / "recabled",
+            _SUPERSPEED_MBPS,
+            (USB_VIDEO_INTERFACE_CLASS, _USB_HID_INTERFACE_CLASS),
+        ),
     )
     assert recabled.link_speed_mbps == _SUPERSPEED_MBPS
     assert recabled.carries_video
@@ -553,7 +707,11 @@ def test_the_probe_does_not_match_a_different_camera(tmp_path: Path) -> None:
     sysfs_root = tmp_path / "usb-devices"
     sysfs_root.mkdir()
     _write_usb_device(
-        sysfs_root, "3-1", (STEREOLABS_USB_VENDOR_ID, "0001"), _SUPERSPEED_MBPS, ("0e",)
+        sysfs_root,
+        "3-1",
+        (STEREOLABS_USB_VENDOR_ID, _OTHER_STEREOLABS_PRODUCT_ID),
+        _SUPERSPEED_MBPS,
+        (USB_VIDEO_INTERFACE_CLASS,),
     )
     link = probe_usb_link((STEREOLABS_USB_VENDOR_ID, ZED_MINI_USB_PRODUCT_ID), sysfs_root)
     assert not link.present
@@ -566,3 +724,31 @@ def test_a_host_with_no_usb_tree_is_not_an_error(tmp_path: Path) -> None:
         (STEREOLABS_USB_VENDOR_ID, ZED_MINI_USB_PRODUCT_ID), tmp_path / "nothing-here"
     )
     assert not link.present
+
+
+def test_the_default_usb_root_is_the_path_the_kernel_publishes_devices_under() -> None:
+    """The probe's default root is pinned, because being wrong is indistinguishable here.
+
+    A root nothing can be read from is a legitimate answer — it is what a bench with no
+    USB tree looks like — so from inside the probe, one wrong character and an empty
+    machine produce the same `present=False`. The cost is not a failing test: it is a
+    deferral that names "no camera is enumerated" for a camera sitting on the bus, and
+    an operator sent to check a cable that was never the problem.
+    """
+    assert Path(_KERNEL_USB_DEVICES_PATH) == USB_SYSFS_ROOT
+
+
+@pytest.mark.skipif(
+    not _SYSFS_MOUNT.is_dir(),
+    reason="this host publishes no sysfs at all, so there is no kernel USB tree for the "
+    "probe's default root to be checked against",
+)
+def test_the_default_usb_root_enumerates_this_hosts_own_devices() -> None:
+    """The pinned root is a real USB tree on this machine, not merely a plausible string.
+
+    Held against the kernel rather than against the constant, so a path that exists and
+    holds something else fails here too. `idVendor` is the attribute the probe matches
+    on, so its presence is what makes the tree the one the probe can work in.
+    """
+    entries = sorted(USB_SYSFS_ROOT.iterdir())
+    assert any((entry / "idVendor").is_file() for entry in entries)

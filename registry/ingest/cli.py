@@ -29,6 +29,14 @@ SCHEMA_PATH = REPO_ROOT / "registry" / "schema" / "traceability.schema.json"
 REPORT_PATH = REPO_ROOT / "registry" / "build" / "reconciliation.md"
 SPINE_DOC = SPINE_DOC_REL
 
+# The band acceptance gate requires every issued work package to carry at least one record
+# (`06` §2.1 ①). The catalogs issue this many; a package short of it fails the gate.
+ISSUED_PACKAGE_COUNT = 177
+
+# How many offending ids each failure prints before truncating. The full list lives in the
+# reconciliation report; this is the summary a gate runner shows.
+MAX_REPORTED_IDS = 10
+
 
 class _NoAliasDumper(yaml.SafeDumper):
     """Dump every record in full rather than emitting YAML anchors.
@@ -69,6 +77,7 @@ def _render_report(document: dict[str, Any], report: Any, errors: list[str]) -> 
     deferred = [entry for entry in entries if entry["wp"] == "DEFERRED"]
     rules = report.assignment_rules
     resolved = rules.get(RULE_DOC06, 0) + rules.get(RULE_SOLE, 0) + rules.get(RULE_COVERAGE, 0)
+    registered = len({entry["wp"] for entry in entries} - {"DEFERRED", "OUT"})
 
     lines = [
         "# 산문 ↔ 레지스트리 대조 리포트",
@@ -81,8 +90,8 @@ def _render_report(document: dict[str, Any], report: Any, errors: list[str]) -> 
         "",
         "| 조건 | 목표 | 실측 | 판정 |",
         "|---|---|---|---|",
-        f"| ① 발급 WP 전량 등재 | 177 | {len({e['wp'] for e in entries} - {'DEFERRED', 'OUT'})} | "
-        f"{'PASS' if len({e['wp'] for e in entries} - {'DEFERRED', 'OUT'}) == 177 else 'FAIL'} |",
+        f"| ① 발급 WP 전량 등재 | {ISSUED_PACKAGE_COUNT} | {registered} | "
+        f"{'PASS' if registered == ISSUED_PACKAGE_COUNT else 'FAIL'} |",
         f"| ② 스키마 검증 | 오류 0 | {len(errors)} | {'PASS' if not errors else 'FAIL'} |",
         f"| 레코드 총계 | — | {len(entries)} | — |",
         f"| 명세 선언 요구사항 | — | {report.requirements} | — |",
@@ -175,6 +184,14 @@ def _render_report(document: dict[str, Any], report: Any, errors: list[str]) -> 
         report.malformed_ranges,
     )
     section(
+        "3.4b `06` §6이 발급되지 않은 WP를 소유자로 지목한 요구사항",
+        "§3.4a와 같은 조용한 강등이 ID 칸 대신 **소유자 칸**에서 일어난 것이다. 발급되지 않은 "
+        "WP는 배정에 쓸 수 없으므로(레코드가 없는 WP를 가리키면 전량 등재 게이트가 깨진다) "
+        "선언이 버려지고 더 약한 sole-citation 규칙으로 떨어진다. 행을 지운 것과 WP를 잘못 적은 "
+        "것이 산출물에서 구별되지 않으므로 여기 남긴다 — 사람이 문서 쪽을 고쳐야 한다.",
+        report.unissued_owners,
+    )
+    section(
         "3.5 카탈로그가 다단계로 선언한 WP",
         "형상·실행클래스 칸에 토큰이 둘 이상이다. 스칼라 칸에 토큰 2개는 금지이므로 "
         "`phases[]`로 인코딩했고, 각 스테이지의 `cancel_policy`는 실행 클래스에서 도출했다 — "
@@ -185,6 +202,42 @@ def _render_report(document: dict[str, Any], report: Any, errors: list[str]) -> 
     if errors:
         lines += ["## 4. 스키마 위반", ""] + [f"- {error}" for error in errors[:40]] + [""]
     return "\n".join(lines)
+
+
+def diverged_requirements(document: dict[str, Any], registry_path: Path) -> list[str]:
+    """Return requirement ids whose committed record differs from a fresh seed.
+
+    The registry is the query surface every workflow reads, and the corpus is
+    where its facts are stated. A record that exists only on disk is a fact no
+    document carries: the next seeding run deletes it, and until then the two
+    disagree with no way to tell which one is lying. Divergence is therefore a
+    failure of the corpus to state something the registry asserts, and it is
+    repaired in the corpus, never by editing the file back.
+
+    Comparison is per requirement rather than over the whole document because
+    `spine_ref` binds to `HEAD` (`main`): it differs from the committed value
+    on every commit, so a whole-document comparison would report everything as
+    diverged, which carries the same information as reporting nothing.
+
+    A registry that is absent or unreadable as a mapping diverges wholesale,
+    which is the fail-closed direction: an empty comparison basis must not read
+    as agreement.
+
+    Args:
+        document: Freshly seeded registry document.
+        registry_path: Path to the committed `traceability.yaml`.
+
+    Returns:
+        (list) Requirement ids in exactly one of the two, or in both with
+        differing content, sorted.
+    """
+    committed: Any = {}
+    if registry_path.is_file():
+        committed = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
+    entries = committed.get("entries") if isinstance(committed, dict) else None
+    on_disk = {entry["req"]: entry for entry in entries or ()}
+    seeded = {entry["req"]: entry for entry in document["entries"]}
+    return sorted(req for req in set(on_disk) | set(seeded) if on_disk.get(req) != seeded.get(req))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -206,6 +259,12 @@ def main(argv: list[str] | None = None) -> int:
         for error in validator.iter_errors(document)
     ]
 
+    # Read against the registry as committed, which the write below replaces. Measuring after
+    # the write compares a file to the document it was just produced from, which is zero
+    # whatever the corpus says, and prints beside the measured counts as though it meant
+    # something.
+    drift = diverged_requirements(document, REGISTRY_PATH)
+
     if not args.check:
         REGISTRY_PATH.write_text(
             yaml.dump(
@@ -221,10 +280,22 @@ def main(argv: list[str] | None = None) -> int:
         REPORT_PATH.write_text(_render_report(document, report, errors), encoding="utf-8")
 
     packages = len({entry["wp"] for entry in document["entries"]} - {"DEFERRED", "OUT"})
-    print(f"records={len(document['entries'])} packages={packages}/177 schema_errors={len(errors)}")
-    for error in errors[:10]:
+    # Seeding is the act that closes divergence, so a count here names what this run rewrote
+    # rather than a fault. Only `--check` judges it, and only `--check` calls it drift.
+    measured = "drift" if args.check else "reseeded"
+    print(
+        f"records={len(document['entries'])} packages={packages}/{ISSUED_PACKAGE_COUNT} "
+        f"schema_errors={len(errors)} {measured}={len(drift)}"
+    )
+    for error in errors[:MAX_REPORTED_IDS]:
         print(f"  {error}", file=sys.stderr)
-    return 0 if not errors and packages == 177 else 1
+    if args.check:
+        for req in drift[:MAX_REPORTED_IDS]:
+            print(
+                f"  drift: {req} — committed record is not what the corpus seeds", file=sys.stderr
+            )
+    blocking_drift = drift if args.check else []
+    return 0 if not errors and not blocking_drift and packages == ISSUED_PACKAGE_COUNT else 1
 
 
 if __name__ == "__main__":

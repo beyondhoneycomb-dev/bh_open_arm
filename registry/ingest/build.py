@@ -32,6 +32,7 @@ from registry.ingest.resolve import (
     fill_coverage,
     read_doc06_assignments,
     resolve,
+    unissued_owners,
     unregistered_packages,
 )
 from registry.ingest.spec import Requirement
@@ -106,6 +107,8 @@ class BuildReport:
         pipe_defects: Table rows holding an unescaped pipe inside a code span.
         malformed_ranges: `06` §6 requirement ranges that did not parse, so the
             ids they cover were not assigned from the canonical table.
+        unissued_owners: `06` §6 assignments naming a work package the catalogs
+            never issued, so the stated owner was dropped for a weaker rule.
     """
 
     requirements: int = 0
@@ -118,6 +121,7 @@ class BuildReport:
     multi_stage_packages: list[str] = field(default_factory=list)
     pipe_defects: list[str] = field(default_factory=list)
     malformed_ranges: list[str] = field(default_factory=list)
+    unissued_owners: list[str] = field(default_factory=list)
 
 
 def read_glob_ownership(registry_doc: Path) -> dict[str, list[dict[str, str]]]:
@@ -733,6 +737,7 @@ def build(plan_dir: Path, spec_dir: Path, spine_ref: str) -> tuple[dict[str, Any
             for line, _ in find_pipe_defects(path)
         ],
         malformed_ranges=malformed_ranges,
+        unissued_owners=unissued_owners(entries, doc06_assignments),
     )
 
     document = {"version": SCHEMA_VERSION, "spine_ref": spine_ref, "entries": records}

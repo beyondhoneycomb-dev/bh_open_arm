@@ -1,9 +1,9 @@
 """Named constants for the WP-2A-06 stop-path shape and static check.
 
 Every value here is an identifier or a stated constraint — no thresholds, because this
-package judges no quantity. The stop-path latency it once carried is not measured
-anywhere in this tree; `NO_LATENCY_REASON` is why, and it is recorded into the evidence
-so a reader of the artifact never has to guess whether the number is missing or hidden.
+package judges no quantity. No stop-path latency is measured anywhere in this tree;
+`NO_LATENCY_REASON` is why, and it is recorded into the evidence so a reader of the
+artifact never has to guess whether the number is missing or hidden.
 """
 
 from __future__ import annotations

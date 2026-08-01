@@ -4,12 +4,18 @@ The AI-offline decision (home = J4=π/2, J4=0 hardstop rejected) is real and rec
 Human-judgment confirm — an operator looking at the arm and confirming the J4=0 pose is the
 fully-extended hardstop — is SKIP-with-reason plus a hook that only ever echoes a real
 operator observation and refuses a malformed one. It never fabricates a PASS.
+
+What the hook can fail on is the shape of the observation, and it does: when
+`HARDSTOP_FIXTURE_ENV_VAR` names a directory, every capture in it must name an operator and
+carry a boolean verdict, or the deferred check goes red. The verdict itself is reported and
+never judged — the adopted decision stands either way.
 """
 
 from __future__ import annotations
 
 import json
 import math
+import os
 from pathlib import Path
 
 import pytest
@@ -22,6 +28,37 @@ from backend.home.decision import (
     fixture_dir_from_env,
     reverify_visual_confirm,
 )
+
+# Read once, at collection: the operator names the directory on the pytest command line, so
+# the skip decision and the assertion below must see the same value. The skip turns on the raw
+# string rather than the resolved directory — a mistyped path is a typo to report, not a
+# deferral to honour, and resolving first would silently turn it back into a skip.
+_FIXTURE_ENV_RAW = os.environ.get(HARDSTOP_FIXTURE_ENV_VAR, "")
+
+
+@pytest.mark.skipif(
+    not _FIXTURE_ENV_RAW,
+    reason=(
+        "the J4=0 hardstop confirm is a person looking at the powered arm; set "
+        f"{HARDSTOP_FIXTURE_ENV_VAR} to a directory of recorded observations to read them here"
+    ),
+)
+def test_operator_confirm_from_the_real_fixture_is_well_formed() -> None:
+    """Every recorded observation names its operator and carries a boolean verdict.
+
+    The verdict is echoed, never asserted: FR-MAN-047 adopts J4=π/2 whichever way the
+    operator called the rejected pose. An unattributed or non-boolean capture is the failure.
+    """
+    fixture_dir = fixture_dir_from_env()
+    assert fixture_dir is not None, (
+        f"{HARDSTOP_FIXTURE_ENV_VAR} names {_FIXTURE_ENV_RAW!r}, which is not a directory"
+    )
+    records = reverify_visual_confirm(fixture_dir)
+    assert records, f"no operator confirmation capture in {fixture_dir}"
+    for record in records:
+        assert not record.refusal, f"capture refused: {record.refusal}"
+        assert record.is_fully_extended_hardstop is not None
+        assert record.operator
 
 
 def test_adoption_is_recorded() -> None:

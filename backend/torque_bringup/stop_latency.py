@@ -1,12 +1,13 @@
 """The release-to-CAN-stop latency artifact builder, and the forgery it refuses to publish.
 
-This is the shared builder, not WP-1-05's measurement. WP-1-05 does not carry PG-STOP-001 as
-one of its own gates, the re-verification hook rebuilds no latency from a real capture, and no
-WP-1-05 acceptance asserts one. The live consumers are `backend.loadtest.stop_path`, which
-records the authoritative gate as deferred and names this builder as its re-verification hook,
-and `tests/wp5_05`, which drives the refusal directly. The symbols sit in this package rather
-than in a consumer's tree because the alternative is two divergent copies of the one number
-`04` NFR-MAN-002 forbids nailing.
+PG-STOP-001 is WP-1-05's gate (`03` §5.7 WP binding), which is why the builder lives in this
+package. What it does not have is a measurement: on this rig the gate cannot be opened at
+all, so the re-verification hook rebuilds no latency from a real capture and no WP-1-05
+acceptance asserts one. The live consumers are `backend.loadtest.stop_path`, which records
+the authoritative gate as deferred and names this builder as its re-verification hook, and
+`tests/wp5_05`, which drives the refusal directly. One builder rather than a copy per
+consumer, because the alternative is two divergent copies of the one number `04` NFR-MAN-002
+forbids nailing.
 
 `03` §5.7.0 admits a stop latency only from a single trusted clock domain: an evdev kernel
 timestamp crossed with SO_TIMESTAMPING, or an independent GPIO marker. The fitted adapter

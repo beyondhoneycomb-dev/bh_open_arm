@@ -20,11 +20,13 @@ from backend.torque_bringup import (
     TORQUE_BRINGUP_ROOT,
     FittedMotorMismatchError,
     GuardedTorqueOn,
+    StopPathScanEmptyError,
     TorqueCutOnStopPathError,
     TorqueDisengageRefusedError,
     TorqueOnManifest,
     assert_stop_path_cuts_no_torque,
     find_torque_cut_on_stop_path,
+    stop_path_files,
 )
 from backend.torque_bringup import sequence as sequence_module
 from contracts.units import Rad
@@ -215,6 +217,28 @@ def test_default_scan_root_is_this_package() -> None:
     assert set(SCANNED_MODULE_NAMES) <= scanned
 
 
+def test_the_default_scan_reads_every_module_of_this_package() -> None:
+    # The engage calls the refusal with no argument, so what the *default* covers is what
+    # decides whether the refusal can fire. Compared against an independent walk rather than
+    # against the constant: a default repointed at any other directory — empty, absent, or
+    # simply someone else's clean tree — lands here instead of reporting a pass over it.
+    expected = {
+        path.resolve()
+        for path in TORQUE_BRINGUP_ROOT.rglob("*.py")
+        if not any(part.startswith(".") for part in path.relative_to(TORQUE_BRINGUP_ROOT).parts)
+    }
+    assert {path.name for path in expected} >= set(SCANNED_MODULE_NAMES)
+    assert set(stop_path_files()) == expected
+
+
+def test_a_scan_that_parsed_nothing_is_refused(tmp_path: Path) -> None:
+    # An empty violation list from a tree holding no Python file is silence, not an absence,
+    # and admitting it would put 0xFC behind a check that cannot fail.
+    assert stop_path_files(tmp_path) == ()
+    with pytest.raises(StopPathScanEmptyError, match="parsed no file"):
+        assert_stop_path_cuts_no_torque(tmp_path)
+
+
 def test_stop_path_scan_catches_a_planted_torque_cut(tmp_path) -> None:  # noqa: ANN001
     # The refusal is real, not a scanner that never fires: a planted torque cut is found
     # and turned into a raise.
@@ -300,7 +324,7 @@ def test_disengage_is_available_after_an_engage_that_raised(
     assert bus.calls[-1] == "drop_torque"
 
 
-def test_disengage_refused_unsupported_even_when_the_session_never_engaged(
+def test_disengage_refused_unsupported_while_torque_is_live_but_unrecorded(
     fitted_profile: EndEffectorProfile,
     passing_preflight: PreflightReport,
     passing_manifest: TorqueOnManifest,
@@ -318,3 +342,21 @@ def test_disengage_refused_unsupported_even_when_the_session_never_engaged(
         session.disengage(arm_supported=False)
     assert "drop_torque" not in bus.calls
     assert session.torque_may_be_live
+
+
+def test_disengage_refused_unsupported_before_any_engage(
+    recording_bus: RecordingEngageBus,
+    fitted_profile: EndEffectorProfile,
+    passing_preflight: PreflightReport,
+    passing_manifest: TorqueOnManifest,
+) -> None:
+    # Nothing this session did put torque on, and the refusal still holds. Narrowing it to
+    # sessions that believe torque is live would send 0xFD on the strength of this process's
+    # own memory — and the arm a previous session left powered is exactly the one nobody is
+    # holding when the frame lands.
+    session = _session(recording_bus, fitted_profile, passing_preflight, passing_manifest)
+    assert not session.torque_may_be_live
+    assert not session.engaged
+    with pytest.raises(TorqueDisengageRefusedError, match="holding brake"):
+        session.disengage(arm_supported=False)
+    assert recording_bus.calls == []

@@ -57,7 +57,7 @@ def test_producer_holds_when_the_gateway_blocks() -> None:
     # Fail-closed complement to the static proof: when the gateway rejects (a latched collision
     # guard), the producer emits no motion rather than driving the bus around the gateway.
     pytest.importorskip("mujoco")
-    from backend.actuation.clock import WallClock
+    from backend.actuation.clock import ManualClock, WallClock
     from backend.actuation.enforcement import ActuationGateway
     from backend.actuation.guard import CollisionGuard, GuardSample
     from backend.actuation.safety import SafetyFilter
@@ -93,6 +93,7 @@ def test_producer_holds_when_the_gateway_blocks() -> None:
         friction_seed(),
         gateway,
         tuple(DEFAULT_KD_FREEDRIVE for _ in ENTRY_POSE_RAD),
+        ManualClock(),
     )
     frame = producer.produce_frame(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
     assert frame.engaged is False

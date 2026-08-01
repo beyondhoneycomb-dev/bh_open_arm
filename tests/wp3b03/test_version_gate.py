@@ -54,6 +54,20 @@ class _RuntimeWithDepthApi:
         """Non-blocking latest-depth peek (v0.6.0)."""
 
 
+class _RuntimeWithAsyncReadOnly:
+    """A runtime carrying half the API: the background read without the latest-depth peek."""
+
+    def async_read_depth(self) -> None:
+        """Background-thread depth read (v0.6.0)."""
+
+
+class _RuntimeWithLatestReadOnly:
+    """A runtime carrying the other half: the latest-depth peek without the background read."""
+
+    def read_latest_depth(self) -> None:
+        """Non-blocking latest-depth peek (v0.6.0)."""
+
+
 _DEPTH_ON = DepthToggles(frozenset({"overhead"}))
 _DEPTH_OFF = DepthToggles(frozenset())
 
@@ -62,6 +76,22 @@ def test_api_presence_is_the_judgment_not_a_version_string() -> None:
     """The gate reads the two method names, not a version."""
     assert depth_record_api_present(_RuntimeWithDepthApi)
     assert not depth_record_api_present(_RuntimeWithoutDepthApi)
+
+
+@pytest.mark.parametrize(
+    "runtime",
+    [_RuntimeWithAsyncReadOnly, _RuntimeWithLatestReadOnly],
+    ids=["async-read-only", "latest-read-only"],
+)
+def test_half_the_depth_api_is_not_the_depth_api(runtime: type) -> None:
+    """Both names are required, and neither one alone opens the gate.
+
+    The recording path needs the background read and the preview path needs the latest-depth
+    peek. A runtime carrying one would be judged startable, the session would begin, and
+    whichever path lost its method would have nothing to read. The all-or-nothing fixtures
+    above cannot see this: each fails or passes on both names at once.
+    """
+    assert not depth_record_api_present(runtime)
 
 
 def test_every_named_family_has_a_backend_decision() -> None:
@@ -118,6 +148,18 @@ def test_a_supplied_camera_class_cannot_buy_a_green_for_an_undriveable_family() 
     """
     with pytest.raises(DepthBackendMissingError, match="no camera class"):
         assert_depth_startable(_DEPTH_ON, DepthDevice.STEREOLABS_ZED, _RuntimeWithDepthApi)
+
+
+def test_a_family_with_no_backend_is_refused_for_that_and_not_for_its_classs_api() -> None:
+    """Both blocks apply, and the one reported is the backend — the order is the contract.
+
+    A ZED handed a 0.5.1-shaped class fails both judgments, so it is the one case where
+    the order is visible in the outcome. Probing first turns this into
+    `DepthApiMissingError`, which sends an operator to upgrade LeRobot for a family no
+    LeRobot version ships a camera class for; the fix is a different camera.
+    """
+    with pytest.raises(DepthBackendMissingError, match="no camera class"):
+        assert_depth_startable(_DEPTH_ON, DepthDevice.STEREOLABS_ZED, _RuntimeWithoutDepthApi)
 
 
 def test_the_backend_check_stands_alone_from_any_class() -> None:

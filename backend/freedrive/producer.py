@@ -12,6 +12,12 @@ feed-forward torque to Peak Torque before the command is assembled from its verd
 releases the position path's tau-zero constraint through the sanctioned torque channel while the
 gateway stays the single point every command source passes — releasing the constraint is not the
 same as opening a second write path, and this producer opens none.
+
+The action-stream watchdog (``03`` FR-MOT-058 ②) is measured here rather than assumed fresh, and
+it matters more on this path than on any other: Freedrive is where a person's hands are on the
+arm. A stalled producer whose last gravity-compensation torque keeps standing is pushing against
+those hands, so the silence before each frame is fed to the gateway's FRESHNESS stage and a frame
+past the window holds instead.
 """
 
 from __future__ import annotations
@@ -20,8 +26,10 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from backend.actuation.clock import Clock
 from backend.actuation.enforcement import ActuationGateway
 from backend.actuation.safety import KD_MAX, KD_MIN, SafetyReason
+from backend.actuation.watchdog import ActionStreamWatchdog
 from backend.freedrive.constants import FREEDRIVE_DQ, FREEDRIVE_KP, FREEDRIVE_PRODUCER_ID
 from backend.friction.model import FrictionParams
 from backend.gravity.backend import GravityBackend
@@ -67,6 +75,7 @@ class FreedriveProducer:
         friction_params: tuple[FrictionParams, ...],
         gateway: ActuationGateway,
         kd_freedrive: tuple[float, ...],
+        clock: Clock,
     ) -> None:
         """Wire the producer to its dynamics sources, the gateway, and the per-joint damping.
 
@@ -75,6 +84,9 @@ class FreedriveProducer:
             friction_params: Per-joint identified friction law (WP-2B-07), arm width.
             gateway: The single enforcement gateway (I-4) the frame is routed through.
             kd_freedrive: Per-joint Freedrive damping, each validated against ``[KD_MIN, KD_MAX]``.
+            clock: The monotonic source the action-stream watchdog measures frame intervals on.
+                Required rather than defaulted: an omitted clock is how a path ends up telling
+                the gateway its source is always fresh.
 
         Raises:
             ValueError: If the friction/damping widths disagree, or a damping gain is out of band.
@@ -95,6 +107,7 @@ class FreedriveProducer:
         self._gateway = gateway
         self._kd_freedrive = kd_freedrive
         self._width = len(kd_freedrive)
+        self._watchdog = ActionStreamWatchdog(clock)
         self._joined = False
 
     @property
@@ -156,7 +169,7 @@ class FreedriveProducer:
             request_deg,
             request_deg,
             calibrated=True,
-            source_age_sec=0.0,
+            source_age_sec=self._watchdog.gap_sec(),
             feedforward_torque_nm=feedforward,
             kp=tuple(FREEDRIVE_KP for _ in range(self._width)),
             kd=self._kd_freedrive,

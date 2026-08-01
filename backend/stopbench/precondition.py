@@ -3,9 +3,9 @@
 `03` §5.7 fixes the stop-path architecture: an immediate stop is one MIT position-hold
 frame, and `04` NFR-MAN-002 is explicit that cutting torque with `bus.disable_torque()`
 on the stop path cannot meet the budget and drops a brakeless arm. This holds at any
-latency and needs no clock, which is why it is the part of WP-2A-06 that stands after the
-timing measurement was descoped: a stop path that cuts torque is a fall, whether it takes
-2 ms or 200 ms to get there.
+latency and needs no clock, which is what makes it checkable on a rig that cannot time the
+path at all: a stop path that cuts torque is a fall, whether it takes 2 ms or 200 ms to get
+there.
 
 This does not re-implement that scan. `backend.actuation.staticcheck.find_disable_torque`
 already is it (WP-0A-01, acceptance ⑦), and the single-source rule is why it is reused by
@@ -81,10 +81,14 @@ def _repo_relative(root: Path) -> str:
 def _scanned_file_count(root: Path, exclude: tuple[Path, ...]) -> int:
     """Count the files the reused scan parses under a root.
 
-    Mirrors the reused scan's file enumeration — recursive `*.py`, hidden directories
-    skipped, caller-excluded directories skipped — so the count is what was read rather
-    than what happens to sit under the root. `test_no_disable_torque` pins the mirror by
-    scanning a tree where every parsed file yields exactly one violation.
+    A second enumeration of the scan's own traversal rules — recursive `*.py`, hidden
+    directories skipped, caller-excluded directories skipped — because the reused scan
+    reports what it found and never how much it read. The two are held together by
+    `tests/wp2a06/test_no_disable_torque.py`, over a tree in which every parsed file
+    yields exactly one violation, so a count that stops matching the scan's traversal
+    stops matching the violation total. What no test here can catch is this enumeration
+    counting a file the scan skipped in a tree that holds no violation at all; closing
+    that needs `find_disable_torque` to report its own coverage.
 
     Args:
         root: Directory handed to the scan.

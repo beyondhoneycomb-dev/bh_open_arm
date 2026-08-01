@@ -1,23 +1,24 @@
-"""The deferred live-registration acceptance (phase 2) — skipped with a reason, re-run by hook.
+"""The live-registration acceptance — deferred offline, run against a real static-hold capture.
 
 Live payload-registration verification needs the powered brakeless arm held torque-ON with a
-real payload mounted, and cannot run on this host: no CAN, no motor, no PG-SAFE-001 PASS. It
-is deferred — never asserted green. What is tested here is the re-verification hook: given a
-real static-hold capture it registers the declared payload and re-runs the identical residual
-check, confirming the registration only when the measured hold matches, and it refuses a
-capture whose measurement disagrees with the declared payload, so the hook cannot manufacture
-the registration pass THE ONE RULE forbids.
+real payload mounted, which a desktop has none of, so offline it is skipped with a reason and
+never asserted green. It stops being deferred the moment `PAYLOAD_FIXTURE_ENV_VAR` names a
+capture directory: the acceptance then registers each declared payload and re-runs the
+residual check over the measured hold, and a capture whose measurement disagrees with its
+declared payload fails. The synthetic tests exercise both directions of that same check.
 """
 
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
 
 from backend.gravity import Arm
 from backend.payload import (
+    PAYLOAD_FIXTURE_ENV_VAR,
     Payload,
     PayloadGravityModel,
     fixture_dir_from_env,
@@ -26,6 +27,18 @@ from backend.payload import (
 )
 
 _POSE = (0.3, 1.2, -0.4, 0.8, 0.2, -0.3, 0.1)
+
+# Read once, at collection: the operator names the directory on the pytest command line, so
+# the skip decision and the assertion below must see the same value. The skip turns on the raw
+# string rather than the resolved directory — a mistyped path is a typo to report, not a
+# deferral to honour, and resolving first would silently turn it back into a skip.
+_FIXTURE_ENV_RAW = os.environ.get(PAYLOAD_FIXTURE_ENV_VAR, "")
+
+_DEFERRED_REASON = (
+    "live payload registration needs the powered arm held torque-ON with a mounted payload; "
+    f"set {PAYLOAD_FIXTURE_ENV_VAR} to a directory of static-hold captures to run the "
+    "acceptance here (WP-2B-04 phase 2)"
+)
 
 
 def _capture(payload_declared: Payload, measured_tau: tuple[float, ...]) -> dict[str, object]:
@@ -46,15 +59,22 @@ def _write(directory: Path, name: str, body: dict[str, object]) -> None:
     (directory / name).write_text(json.dumps(body), encoding="utf-8")
 
 
-def test_live_registration_deferred_without_real_fixture() -> None:
-    # Phase 2: with no fixture directory the live registration verify is deferred, not asserted.
-    if fixture_dir_from_env() is not None:
-        pytest.skip("real fixture present; the deferred path is not exercised")
-    pytest.skip(
-        "live payload registration verification requires the powered arm held torque-ON with "
-        "a mounted payload; deferred to the real fixture via OPENARM_PAYLOAD_REAL_FIXTURE — "
-        "never asserted green here (WP-2B-04 phase 2)"
+@pytest.mark.skipif(not _FIXTURE_ENV_RAW, reason=_DEFERRED_REASON)
+def test_live_registration_against_the_real_fixture() -> None:
+    # The deferred acceptance itself, over the operator's captures: every declared payload
+    # must be confirmed by its own measured hold.
+    fixture_dir = fixture_dir_from_env()
+    assert fixture_dir is not None, (
+        f"{PAYLOAD_FIXTURE_ENV_VAR} names {_FIXTURE_ENV_RAW!r}, which is not a directory"
     )
+    verifications = reverify_from_fixture(fixture_dir)
+    assert verifications, f"no static-hold capture in {fixture_dir}"
+    for verification in verifications:
+        assert verification.confirmed, (
+            f"payload {verification.payload_label!r} was not confirmed: the measured static "
+            "hold disagrees with the declared mass"
+        )
+        assert not verification.check.misdetected
 
 
 def test_hook_confirms_matching_capture(tmp_path: Path) -> None:

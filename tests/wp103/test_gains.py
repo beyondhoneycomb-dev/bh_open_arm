@@ -93,6 +93,21 @@ def test_omitting_the_stiffness_does_not_excuse_zero_damping() -> None:
     assert result.reason is SafetyReason.KD_ZERO_POSITION_CONTROL
 
 
+def test_a_stiffness_named_without_a_damping_is_admitted_on_the_hold_damping() -> None:
+    """Retuning stiffness alone is a normal command, and the damping it is paired with is the hold.
+
+    The unnamed slot is not empty on the wire: `positions_to_batch` writes `MIT_HOLD_KD` into it,
+    so the pair judged here is the pair the joint is actually sent. Filling it with zero instead
+    would refuse every command that names a stiffness and leaves damping alone — which is what
+    tuning a joint's stiffness looks like — and nothing else in this file would notice, because
+    nothing else supplies kp without kd.
+    """
+    gateway, _guard = make_gateway(make_limits())
+    result = gateway.submit(degs(1.0, 1.0), degs(0.0, 0.0), kp=(DRIVING_KP, DRIVING_KP))
+    assert not result.rejected
+    assert result.reason is SafetyReason.NONE
+
+
 def test_the_hold_damping_is_admitted() -> None:
     """The gains the spine actually holds with must survive the rule, or nothing can hold."""
     gateway, _guard = make_gateway(make_limits())

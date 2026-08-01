@@ -204,6 +204,35 @@ def resolve(
     return resolved
 
 
+def unissued_owners(
+    entries: list[CatalogEntry],
+    doc06_assignments: dict[str, str],
+) -> list[str]:
+    """Report `06` §6 assignments naming a work package the catalogs never issued.
+
+    `resolve` requires a stated owner to be issued before it will use it, because a record
+    pointing at a package that does not exist would break the band acceptance gate. But
+    failing that test drops the requirement to `sole-citation` or `DEFERRED`, which is the
+    same silent demotion §3.4a exists to surface for the id column: the declaration is lost
+    and the requirement acquires an owner the canon contradicts. Deleting the row outright
+    and misspelling its work package produce identical output, so without this the two are
+    indistinguishable.
+
+    Args:
+        entries: Work packages issued by the catalogs.
+        doc06_assignments: Explicit assignments from `06` §6.
+
+    Returns:
+        (list) `<req id> -> <unissued wp id>` for each such assignment, sorted.
+    """
+    issued = {entry.wp_id for entry in entries}
+    return sorted(
+        f"{req_id} -> {stated}"
+        for req_id, stated in doc06_assignments.items()
+        if stated and stated not in issued
+    )
+
+
 def fill_coverage(
     assignments: dict[str, Assignment], entries: list[CatalogEntry]
 ) -> dict[str, Assignment]:

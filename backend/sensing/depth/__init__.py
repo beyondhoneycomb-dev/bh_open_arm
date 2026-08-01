@@ -26,9 +26,11 @@ independent blockers, which `reverify.real_depth_supported` reports together bec
 clearing any one of them leaves the other two: the camera fitted to this rig is a
 Stereolabs ZED Mini, whose depth comes from the ZED SDK (`pyzed`, not installed); the
 installed LeRobot ships no camera class for it; and it is cabled onto a full-speed link
-where it publishes its HID interface and no video one. `reverify.reverify_from_fixture`
-re-runs the identical calculators the moment a real capture directory is supplied, and
-`reverify.assert_capture_is_plausible` judges what comes back.
+where it publishes its HID interface and no video one — the last of which no amount of
+installing clears, only a different port. `reverify.reverify_from_fixture` re-runs the
+identical calculators the moment a real capture directory is supplied and judges what
+comes back through `reverify.assert_capture_is_plausible`; `reverify.read_capture` is
+the reading half on its own, for a capture whose numbers are the thing under study.
 """
 
 from __future__ import annotations
@@ -60,6 +62,7 @@ from backend.sensing.depth.reverify import (
     assert_capture_is_plausible,
     fixture_dir_from_env,
     load_frame,
+    read_capture,
     real_depth_supported,
     reverify_from_fixture,
 )
@@ -132,6 +135,7 @@ __all__ = [
     "lerobot_backend_exists",
     "load_frame",
     "probe_usb_link",
+    "read_capture",
     "real_depth_supported",
     "resolve_depth_toggles",
     "reverify_from_fixture",

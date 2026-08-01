@@ -46,17 +46,10 @@ from backend.actuation.safety import (
     MotionHistory,
     SafetyFilter,
     SafetyReason,
+    clamp_reason_for,
 )
-from contracts.action import ClampReason, SafetyOverride
+from contracts.action import SafetyOverride
 from contracts.units import Deg, Nm, deg_to_rad
-
-# A stop reason's audit `ClampReason`, for the `safetyOverride` on a rejection.
-_REASON_TO_CLAMP = {
-    SafetyReason.STALE_SOURCE: ClampReason.STALE_SOURCE,
-    SafetyReason.COLLISION_LATCH: ClampReason.SAFETY_LATCH,
-    SafetyReason.JOINT_LIMIT: ClampReason.JOINT_LIMIT,
-    SafetyReason.TORQUE_EXCEEDS_PEAK: ClampReason.TORQUE_LIMIT,
-}
 
 
 @dataclass(frozen=True)
@@ -259,7 +252,7 @@ class ActuationGateway:
             accepted=present,
             override=SafetyOverride(
                 override_active=True,
-                clamp_reason=_REASON_TO_CLAMP.get(reason, ClampReason.JOINT_LIMIT),
+                clamp_reason=clamp_reason_for(reason),
                 stale=reason is SafetyReason.STALE_SOURCE,
                 latched=reason is SafetyReason.COLLISION_LATCH,
             ),

@@ -68,6 +68,21 @@ def test_the_default_scan_covers_every_file_of_the_declared_tree() -> None:
     assert check.as_record()["scanned_file_count"] == len(expected)
 
 
+def test_the_record_names_the_root_relative_to_the_repo() -> None:
+    # The artifact is read on machines that are not this one, so the root it publishes is
+    # the path inside the repo rather than this checkout's absolute location.
+    record = check_no_disable_torque().as_record()
+    assert record["root"] == DECLARED_REACTION_PATH_TREE.as_posix()
+
+
+def test_a_root_outside_the_repo_is_named_absolutely(tmp_path: Path) -> None:
+    # Nothing outside the tree has a repo-relative name, and truncating one would publish a
+    # path that reads as a directory inside the repo the scan never opened.
+    (tmp_path / "hold.py").write_text("def react(bus):\n    bus.mit_hold()\n", encoding="utf-8")
+    record = check_no_disable_torque(tmp_path).as_record()
+    assert record["root"] == tmp_path.resolve().as_posix()
+
+
 def test_bench_own_tree_has_no_disable_torque() -> None:
     check = check_no_disable_torque(REPO_ROOT / "backend" / "reaction_bench")
     assert check.passed, f"reaction_bench introduced disable_torque: {check.violations}"

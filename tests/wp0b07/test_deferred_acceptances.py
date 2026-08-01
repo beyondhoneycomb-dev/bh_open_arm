@@ -1,20 +1,25 @@
-"""Deferred acceptances ①②④⑤⑥ (real 16 motors) + proof the hook that re-runs them works.
+"""Deferred acceptances ①②④⑤⑥ (real powered motors) + proof the hook that re-runs them works.
 
-None of these five can run on this host: they need 16 powered motors with torque OFF
-asserted first (`12` FR-SAF-075), and there is no motor, no power, and no vcan here.
-So each is SKIPPED WITH A REASON — never asserted green — and each is wired to the
+None of these five can run on a desktop: they need the fitted motors powered with torque
+OFF asserted first (`12` FR-SAF-075), and there is no motor, no power, and no vcan here.
+Offline each is SKIPPED WITH A REASON — never asserted green. Each is wired to the
 re-verification hook that re-runs the identical judgment the moment a real capture
-directory is supplied via `OPENARM_RID_REAL_FIXTURE` (plan 02a §4.1).
+directory is supplied via `FIXTURE_ENV_VAR` (plan 02a §4.1), and they fail from there.
+
+The real judgment is made against the *fitted* motor ids, not the eight-motor registration
+`ARM_SEND_IDS`. Those differ on a build with no gripper, and judging a seven-motor arm
+against eight reports the absent 0x08 as a motor that failed to answer.
 
 To prove the hook itself is real and not a stub, `test_reverify_hook_*` build a
 synthetic capture directory in the `dump.py` schema — the same schema a real capture
-uses — and run the hook end to end. That exercises the plumbing without pretending
-to have reached hardware; the hardware truth stays in the skipped tests above.
+uses — and run the hook end to end over the full eight-motor registration. That exercises
+the plumbing without pretending to have reached hardware.
 """
 
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -23,14 +28,22 @@ from backend.can.rid.evaluate import DumpEvaluation
 from backend.can.rid.judge import PgStatus
 from backend.can.rid.layout import ARM_MOTOR_TYPES, ARM_SEND_IDS, DM4340_MOTOR_IDS, J7_MOTOR_ID
 from backend.can.rid.registers import RID_OC, RID_OT, RID_OV, RID_UV
-from backend.can.rid.reverify import fixture_dir_from_env, reverify_from_fixture
+from backend.can.rid.reverify import FIXTURE_ENV_VAR, fixture_dir_from_env, reverify_from_fixture
+from backend.endeffector import default_profile
 from tests.wp0b07 import rid_fixtures as fx
 
 _REAL_FIXTURE = fixture_dir_from_env()
+_FIXTURE_ENV_RAW = os.environ.get(FIXTURE_ENV_VAR, "")
 _MARGIN_LSB = 20
+
+# The ids a real capture is judged against come from the fitted tool, not from the eight-motor
+# registration. On a build with no gripper, 0x08 is nobody, and demanding an answer from it
+# turns a fact about the bench into a read failure against every arm.
+_FITTED_SEND_IDS = default_profile().motor_send_ids
+
 _SKIP_REASON = (
-    "requires 16 powered motors with torque-OFF asserted first (12 FR-SAF-075); "
-    "set OPENARM_RID_REAL_FIXTURE to a real capture directory to re-verify"
+    "requires every fitted motor powered with torque-OFF asserted first (12 FR-SAF-075); "
+    f"set {FIXTURE_ENV_VAR} to a real capture directory to re-verify"
 )
 
 
@@ -90,17 +103,26 @@ def test_reverify_hook_rejects_an_empty_capture_dir(tmp_path: Path) -> None:
 # --- Deferred hardware acceptances: skipped with a reason, re-run only on a real capture ---
 
 
+@pytest.mark.skipif(not _FIXTURE_ENV_RAW, reason=_SKIP_REASON)
+def test_the_named_capture_directory_exists() -> None:
+    # A path the operator mistyped resolves to None, and every acceptance below would skip on
+    # it — a typo wearing a deferral's clothes. Reported here instead.
+    assert _REAL_FIXTURE is not None, (
+        f"{FIXTURE_ENV_VAR} names {_FIXTURE_ENV_RAW!r}, which is not a directory"
+    )
+
+
 @pytest.mark.skipif(_REAL_FIXTURE is None, reason="① " + _SKIP_REASON)
-def test_deferred_all16_rid9_read() -> None:
+def test_deferred_fitted_motors_rid9_read() -> None:
     assert _REAL_FIXTURE is not None
-    for evaluation in reverify_from_fixture(_REAL_FIXTURE, _MARGIN_LSB):
+    for evaluation in reverify_from_fixture(_REAL_FIXTURE, _MARGIN_LSB, _FITTED_SEND_IDS):
         assert evaluation.rid9.missing_motor_ids == ()
 
 
 @pytest.mark.skipif(_REAL_FIXTURE is None, reason="② " + _SKIP_REASON)
 def test_deferred_rid9_branch_judgment() -> None:
     assert _REAL_FIXTURE is not None
-    for evaluation in reverify_from_fixture(_REAL_FIXTURE, _MARGIN_LSB):
+    for evaluation in reverify_from_fixture(_REAL_FIXTURE, _MARGIN_LSB, _FITTED_SEND_IDS):
         # Each motor lands in exactly one branch — the judgment is total.
         assert all(m.branch is not None for m in evaluation.rid9.per_motor)
 
@@ -108,20 +130,21 @@ def test_deferred_rid9_branch_judgment() -> None:
 @pytest.mark.skipif(_REAL_FIXTURE is None, reason="④ " + _SKIP_REASON)
 def test_deferred_j7_tmax_judgment() -> None:
     assert _REAL_FIXTURE is not None
-    j7_seen = [e.j7 for e in reverify_from_fixture(_REAL_FIXTURE, _MARGIN_LSB) if e.j7]
+    evaluations = reverify_from_fixture(_REAL_FIXTURE, _MARGIN_LSB, _FITTED_SEND_IDS)
+    j7_seen = [evaluation.j7 for evaluation in evaluations if evaluation.j7]
     assert j7_seen, f"no J7 (motor 0x{J7_MOTOR_ID:02X}) RID 23 in the capture"
 
 
 @pytest.mark.skipif(_REAL_FIXTURE is None, reason="⑤ " + _SKIP_REASON)
 def test_deferred_dm4340_vmax_judgment() -> None:
     assert _REAL_FIXTURE is not None
-    for evaluation in reverify_from_fixture(_REAL_FIXTURE, _MARGIN_LSB):
+    for evaluation in reverify_from_fixture(_REAL_FIXTURE, _MARGIN_LSB, _FITTED_SEND_IDS):
         assert evaluation.vmax, "no DM4340 VMAX read in the capture"
 
 
 @pytest.mark.skipif(_REAL_FIXTURE is None, reason="⑥ " + _SKIP_REASON)
 def test_deferred_protection_thresholds_recorded() -> None:
     assert _REAL_FIXTURE is not None
-    for evaluation in reverify_from_fixture(_REAL_FIXTURE, _MARGIN_LSB):
+    for evaluation in reverify_from_fixture(_REAL_FIXTURE, _MARGIN_LSB, _FITTED_SEND_IDS):
         for motor in evaluation.per_motor:
             assert motor.protection, f"no UV/OT/OC/OV recorded for motor 0x{motor.motor_id:02X}"

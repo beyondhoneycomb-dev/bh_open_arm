@@ -608,14 +608,57 @@ def _is_stale(result: _StepResult) -> bool:
     return result.reason is SafetyReason.STALE_SOURCE
 
 
-_REASON_TO_CLAMP = {
+# Every safety reason's audit `ClampReason`, grouped by the axis the intervention was on:
+# the position envelope, the torque the command would produce, source age, the collision
+# latch, and — for everything the filter refuses that is none of those — the command-filter
+# stop `14` F22/FR-OPS-039 assigns `OA-CTL-003` to. The MIT gains sit on the torque axis
+# because they are the torque-producing terms of the frame the motor executes,
+# `tau = kp*(q_cmd - q) + kd*(dq_cmd - dq) + tau_ff`: a wrapped stiffness and a zero damping
+# under a driving stiffness are both refused for the torque they would put on the joint, and
+# neither has anything to do with a position bound.
+_REASON_TO_CLAMP: dict[SafetyReason, ClampReason] = {
     SafetyReason.NONE: ClampReason.NONE,
     SafetyReason.JOINT_LIMIT: ClampReason.JOINT_LIMIT,
     SafetyReason.WORKSPACE_WALL: ClampReason.JOINT_LIMIT,
     SafetyReason.TORQUE_EXCEEDS_PEAK: ClampReason.TORQUE_LIMIT,
+    SafetyReason.KP_OUT_OF_RANGE: ClampReason.TORQUE_LIMIT,
+    SafetyReason.KD_OUT_OF_RANGE: ClampReason.TORQUE_LIMIT,
+    SafetyReason.KD_ZERO_POSITION_CONTROL: ClampReason.TORQUE_LIMIT,
     SafetyReason.STALE_SOURCE: ClampReason.STALE_SOURCE,
     SafetyReason.COLLISION_LATCH: ClampReason.SAFETY_LATCH,
+    SafetyReason.UNIT_MISMATCH: ClampReason.SAFETY_LATCH,
+    SafetyReason.ZERO_UNCALIBRATED: ClampReason.SAFETY_LATCH,
+    SafetyReason.VELOCITY_LIMIT: ClampReason.SAFETY_LATCH,
+    SafetyReason.STEP_DELTA: ClampReason.SAFETY_LATCH,
+    SafetyReason.ACCEL_LIMIT: ClampReason.SAFETY_LATCH,
+    SafetyReason.JERK_LIMIT: ClampReason.SAFETY_LATCH,
+    SafetyReason.NOT_STOPPED: ClampReason.SAFETY_LATCH,
+    SafetyReason.ORDER_VIOLATION: ClampReason.SAFETY_LATCH,
+    SafetyReason.OPERATIONAL_NOT_SUBSET: ClampReason.SAFETY_LATCH,
+    SafetyReason.MERGED_RATE_GUARD: ClampReason.SAFETY_LATCH,
 }
+
+
+def clamp_reason_for(reason: SafetyReason) -> ClampReason:
+    """Return the audit `ClampReason` a safety reason is recorded as.
+
+    Looked up without a default, and the map is total over `SafetyReason`. A default is what
+    makes an unclassified reason readable as something it is not: `ClampReason.JOINT_LIMIT` is
+    what `backend.eval.taxonomy.engine` derives `POLICY_OUT_OF_BOUNDS` from, so a defaulted
+    gain refusal tells an incident reader the arm hit a joint limit when a command in fact
+    tried to drive position with zero damping.
+
+    Args:
+        reason: The decisive safety reason.
+
+    Returns:
+        (ClampReason) The audit reason for that cause.
+
+    Raises:
+        KeyError: When a reason carries no classification. That is a gap in this map, not a
+            runtime condition, and it fails where it is introduced rather than in the log.
+    """
+    return _REASON_TO_CLAMP[reason]
 
 
 def _override(active: bool, reason: SafetyReason, stale: bool) -> SafetyOverride:
@@ -631,9 +674,7 @@ def _override(active: bool, reason: SafetyReason, stale: bool) -> SafetyOverride
     """
     return SafetyOverride(
         override_active=active,
-        clamp_reason=_REASON_TO_CLAMP.get(
-            reason, ClampReason.JOINT_LIMIT if active else ClampReason.NONE
-        ),
+        clamp_reason=clamp_reason_for(reason),
         stale=stale,
         latched=reason is SafetyReason.COLLISION_LATCH,
     )

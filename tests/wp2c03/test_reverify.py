@@ -1,17 +1,17 @@
-"""The deferred calibration run (phase 2) — skipped with a reason, re-run by hook (WP-2C-03).
+"""The calibration run: deferred until a real capture is named, then actually run (WP-2C-03).
 
 The real calibration run needs a powered arm, WP-2C-01's live residual and an operator
-watching for contact, and cannot run on this host: no CAN, no motor, no operator. It is
-deferred — never asserted green. What is tested here is the re-verification hook: given a
-real collision-free residual capture it re-runs the identical collector-proposer-bounds
-pipeline, stamps canon only when the operator attested no collision, and reads the physics
-floor from WP-1-06 rather than the capture — so the hook can neither self-approve an
-unattested run nor accept a threshold below noise, the two ways THE ONE RULE could be broken.
+watching for contact, none of which a desktop has, so it is skipped with a reason and never
+asserted green from nothing. It stops being deferred the moment `FIXTURE_ENV_VAR` names a
+capture directory: the acceptance then runs over those bytes and can fail. The remaining
+tests exercise the same hook on synthetic captures — canon only on an operator attestation,
+the physics floor read from WP-1-06 rather than the capture, a malformed capture refused.
 """
 
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import numpy as np
@@ -19,6 +19,7 @@ import pytest
 
 from backend.safety_bringup.thresholds import floor_for_joint
 from backend.threshold_calib import (
+    FIXTURE_ENV_VAR,
     METHOD_MAX_PLUS_SIGMA,
     fixture_dir_from_env,
     reverify_from_fixture,
@@ -26,6 +27,18 @@ from backend.threshold_calib import (
 )
 
 _ARM_JOINTS = 7
+
+# Read once, at collection: the operator supplies the directory on the pytest command line,
+# so the skip decision and the assertion below must see the same value. The skip turns on the
+# raw string rather than the resolved directory — a mistyped path is a typo to report, not a
+# deferral to honour, and resolving first would silently turn it back into a skip.
+_FIXTURE_ENV_RAW = os.environ.get(FIXTURE_ENV_VAR, "")
+
+_DEFERRED_REASON = (
+    "threshold calibration requires a real collision-free run under WP-2C-01's live residual "
+    f"with an operator attesting no contact; set {FIXTURE_ENV_VAR} to that capture directory "
+    "to run the acceptance here — never asserted green without one (02a §4.1)"
+)
 
 
 def _capture(
@@ -52,15 +65,30 @@ def _real_runs() -> list[list[list[float]]]:
     return [synthetic_residual_run(i).tolist() for i in range(3)]
 
 
-def test_calibration_run_deferred_without_real_fixture() -> None:
-    # Phase 2: with no fixture directory the real calibration run is deferred, not asserted.
-    if fixture_dir_from_env() is not None:
-        pytest.skip("real fixture present; the deferred path is not exercised")
-    pytest.skip(
-        "threshold calibration requires a real collision-free run under WP-2C-01's live "
-        "residual with an operator attesting no contact; deferred to the real fixture via "
-        "OPENARM_THRESHOLD_CALIB_REAL_FIXTURE — never asserted green here (02a §4.1)"
+@pytest.mark.skipif(not _FIXTURE_ENV_RAW, reason=_DEFERRED_REASON)
+def test_calibration_run_against_the_real_fixture() -> None:
+    # The deferred acceptance itself, run over the operator's captures. Every capture must
+    # be attested and produce canon for all seven joints at or above the physics floor; a
+    # capture the pipeline refused is a failure here, not a silent omission.
+    fixture_dir = fixture_dir_from_env()
+    assert fixture_dir is not None, (
+        f"{FIXTURE_ENV_VAR} names {_FIXTURE_ENV_RAW!r}, which is not a directory"
     )
+    verifications = reverify_from_fixture(fixture_dir)
+    assert verifications, f"no residual capture in {fixture_dir}"
+    for verification in verifications:
+        assert not verification.refusal, (
+            f"capture {verification.trajectory_id!r} refused: {verification.refusal}"
+        )
+        calibration = verification.calibration
+        assert calibration is not None
+        assert calibration.canonical, (
+            f"capture {verification.trajectory_id!r} produced no canon: the operator did not "
+            "attest the run collision-free"
+        )
+        assert len(calibration.require_canonical()) == _ARM_JOINTS
+        for joint in calibration.proposal.per_joint:
+            assert joint.effective_nm >= floor_for_joint(joint.joint_index)
 
 
 def test_hook_stamps_canon_on_attested_capture(tmp_path: Path) -> None:

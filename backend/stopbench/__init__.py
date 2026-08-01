@@ -1,12 +1,12 @@
 """WP-2A-06 — the stop path's declared shape and its no-torque-cut static check.
 
-What this package holds is what survives without a clock. The stop-path latency is not
+Everything this package holds is checkable without a clock. The stop-path latency is not
 measured here and not measured anywhere in this tree: `03` §5.7.0 admits exactly two
 sources for the release instant and this rig can supply neither, so the number is out of
-scope rather than approximated (`constants.NO_LATENCY_REASON`). PG-STOP-001 remains
-WP-1-05's gate (`03` §5.7 WP binding); this package is no longer one of its consumers.
+scope rather than approximated (`constants.NO_LATENCY_REASON`). PG-STOP-001 is WP-1-05's
+gate (`03` §5.7 WP binding) and this package is not one of its consumers.
 
-What remains is live:
+What this package does carry:
 
 - the absence of `disable_torque` on the stop path, run as a publish-gating refusal over
   the WP-0A-01 scan (`backend.actuation.find_disable_torque`) rather than a second

@@ -16,9 +16,12 @@ re-verify, and the hard-E-Stop drop — is deferred to a real fixture and re-run
 `reverify.reverify_from_fixture` (`02a` §4.1); it is never asserted green here, because a
 human trusts these gates before powering a 40 Nm brakeless arm.
 
-The release-to-CAN-stop latency is not one of this WP's measurements. `stop_latency` states
-the clock constraint that puts it out of reach; its builder ships from here as the single
-definition `backend.loadtest.stop_path` consumes.
+PG-STOP-001 — the release-to-CAN-stop latency — is this WP's gate (`03` §5.7 WP binding),
+and it is the one gate here that no rig run can open: `03` §5.7.0 admits two clock sources
+for the release instant and the fitted adapter supplies neither. `stop_latency` states that
+constraint and refuses to publish a number without a trusted provenance, so the gate stays
+unopened instead of being closed with a forge. `backend.loadtest.stop_path` consumes that
+builder as the single definition.
 """
 
 from __future__ import annotations
@@ -67,9 +70,11 @@ from backend.torque_bringup.stop_latency import (
 )
 from backend.torque_bringup.stop_path import (
     TORQUE_BRINGUP_ROOT,
+    StopPathScanEmptyError,
     TorqueCutOnStopPathError,
     assert_stop_path_cuts_no_torque,
     find_torque_cut_on_stop_path,
+    stop_path_files,
 )
 
 __all__ = [
@@ -86,6 +91,7 @@ __all__ = [
     "RealVerification",
     "SafeHoldViolationError",
     "StopLatencyArtifactRefusedError",
+    "StopPathScanEmptyError",
     "TorqueCutOnStopPathError",
     "TorqueDisengageRefusedError",
     "TorqueEngageBus",
@@ -105,6 +111,7 @@ __all__ = [
     "fixture_dir_from_env",
     "observe_hard_estop",
     "reverify_from_fixture",
+    "stop_path_files",
     "verify_hold_maintenance",
     "verify_lease_expiry",
 ]

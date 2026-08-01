@@ -1,16 +1,17 @@
 """Acceptance ⑤ — real-fixture re-verification hooks for the two deferred checks.
 
 The M-24 source reading needs the real `openarm_driver`, and the live double-bind
-gate needs a real second SocketCAN bind; neither exists on this host. Each hook
-skips with a reason until its fixture is supplied, and re-runs the identical check
-the moment it is. The skip tests document the honest deferral; the supplied-input
-tests prove the hooks are actually wired (exercised here against a real capture
-directory and a real driver-shaped source, so the hooks are not dead code).
+gate needs a real second SocketCAN bind; neither exists on a desktop. Offline each
+one skips with a reason. Both read the operator's environment at collection, so
+naming a real `driver.py` or a real capture directory runs the deferred check over
+those bytes and it can fail. The supplied-input tests point the same hooks at a
+driver-shaped source and a capture this repository ships, so neither is dead code.
 """
 
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -27,14 +28,29 @@ from backend.can.bind.reverify import (
 
 _FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
+# Read once, at collection: the operator names both on the pytest command line, so the skip
+# decisions and the assertions below must see the same values. The skips turn on the raw
+# strings rather than the resolved paths — a mistyped path is a typo to report, not a deferral
+# to honour, and resolving first would silently turn it back into a skip.
+_DRIVER_SOURCE_ENV_RAW = os.environ.get(DRIVER_SOURCE_ENV_VAR, "")
+_CAPTURE_ENV_RAW = os.environ.get(CAPTURE_ENV_VAR, "")
 
-def test_driver_reverify_skips_without_fixture(monkeypatch: pytest.MonkeyPatch) -> None:
-    """With no real driver.py supplied, the M-24 re-verification is deferred, not faked."""
-    monkeypatch.delenv(DRIVER_SOURCE_ENV_VAR, raising=False)
+
+@pytest.mark.skipif(
+    not _DRIVER_SOURCE_ENV_RAW,
+    reason=(
+        f"the M-24 source reading needs the real openarm_driver, absent here; set "
+        f"{DRIVER_SOURCE_ENV_VAR} to a real openarm_driver/driver.py to run it"
+    ),
+)
+def test_driver_reverify_runs_against_the_real_driver_source() -> None:
+    """The M-24 audit over the operator's real driver.py: the file must exist and be read."""
     source = driver_source_from_env()
-    if source is None:
-        pytest.skip(f"deferred: set {DRIVER_SOURCE_ENV_VAR} to a real openarm_driver/driver.py")
-    reverify_driver_audit(source)  # pragma: no cover - runs only when a real source is supplied
+    assert source is not None, (
+        f"{DRIVER_SOURCE_ENV_VAR} names {_DRIVER_SOURCE_ENV_RAW!r}, which is not a file"
+    )
+    verdict = reverify_driver_audit(source)
+    assert verdict.present, f"{source} was not readable as a driver source"
 
 
 def test_driver_reverify_runs_against_supplied_source(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -47,13 +63,20 @@ def test_driver_reverify_runs_against_supplied_source(monkeypatch: pytest.Monkey
     assert verdict.opens_can is True
 
 
-def test_gate_reverify_skips_without_capture(monkeypatch: pytest.MonkeyPatch) -> None:
-    """With no real capture supplied, the live-gate re-verification is deferred."""
-    monkeypatch.delenv(CAPTURE_ENV_VAR, raising=False)
-    capture = capture_dir_from_env()
-    if capture is None:
-        pytest.skip(f"deferred: set {CAPTURE_ENV_VAR} to a real WP-0B-03 foreign-binder capture")
-    assert reverify_gate_from_capture(capture) is False  # pragma: no cover - real capture only
+@pytest.mark.skipif(
+    not _CAPTURE_ENV_RAW,
+    reason=(
+        f"the live double-bind gate needs a real second SocketCAN binder, absent here; set "
+        f"{CAPTURE_ENV_VAR} to a real WP-0B-03 foreign-binder capture directory to run it"
+    ),
+)
+def test_gate_reverify_refuses_connect_on_the_real_capture() -> None:
+    """A real rig's captured foreign binder, replayed through the gate, still refuses connect."""
+    capture_dir = capture_dir_from_env()
+    assert capture_dir is not None, (
+        f"{CAPTURE_ENV_VAR} names {_CAPTURE_ENV_RAW!r}, which is not a directory"
+    )
+    assert reverify_gate_from_capture(capture_dir) is False
 
 
 def test_gate_reverify_refuses_connect_on_supplied_capture(

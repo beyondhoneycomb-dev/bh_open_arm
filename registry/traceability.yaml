@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/v1/plan/00-실행계획-개요.md@34a4635
+spine_ref: docs/v1/plan/00-실행계획-개요.md@82b3f04
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -23283,23 +23283,389 @@ entries:
   spec_ref: 03#3.6
   priority: M
   tag: 신규구현
-  wp: DEFERRED
-  artifact: []
-  owns: []
+  wp: WP-1-03
+  artifact:
+  - id: ART-EVIDENCE-103A
+    kind: report
+    path: registry/build/evidence/CG-1-03a/
+  - id: ART-EVIDENCE-103B
+    kind: report
+    path: registry/build/evidence/CG-1-03b/
+  - id: ART-EVIDENCE-103C
+    kind: report
+    path: registry/build/evidence/CG-1-03c/
+  - id: ART-EVIDENCE-103D
+    kind: report
+    path: registry/build/evidence/CG-1-03d/
+  - id: ART-EVIDENCE-103E
+    kind: report
+    path: registry/build/evidence/CG-1-03e/
+  - id: ART-EVIDENCE-103F
+    kind: report
+    path: registry/build/evidence/CG-1-03f/
+  - id: ART-EVIDENCE-103G
+    kind: report
+    path: registry/build/evidence/CG-1-03g/
+  - id: ART-EVIDENCE-103H
+    kind: report
+    path: registry/build/evidence/CG-1-03h/
+  - id: ART-EVIDENCE-103I
+    kind: report
+    path: registry/build/evidence/CG-1-03i/
+  - id: ART-EVIDENCE-103J
+    kind: report
+    path: registry/build/evidence/CG-1-03j/
+  - id: ART-EVIDENCE-103K
+    kind: report
+    path: registry/build/evidence/CG-1-03k/
+  - id: ART-EVIDENCE-103L
+    kind: report
+    path: registry/build/evidence/CG-1-03l/
+  - id: ART-EVIDENCE-103M
+    kind: report
+    path: registry/build/evidence/CG-1-03m/
+  - id: ART-EVIDENCE-103N
+    kind: report
+    path: registry/build/evidence/CG-1-03n/
+  - id: ART-EVIDENCE-103O
+    kind: report
+    path: registry/build/evidence/CG-1-03o/
+  - id: ART-EVIDENCE-103P
+    kind: report
+    path: registry/build/evidence/CG-1-03p/
+  - id: ART-EVIDENCE-103Q
+    kind: report
+    path: registry/build/evidence/CG-1-03q/
+  - id: ART-EVIDENCE-103R
+    kind: report
+    path: registry/build/evidence/CG-1-03r/
+  - id: ART-EVIDENCE-103S
+    kind: report
+    path: registry/build/evidence/CG-1-03s/
+  owns:
+  - glob: packages/lerobot_robot_openarm/openarm_follower_oa.py
+    mode: EXCLUSIVE
+  - glob: backend/actuation/**
+    mode: EXCLUSIVE
+  - glob: tests/wp103/**
+    mode: EXCLUSIVE
   contract:
     consumes: []
-    produces: []
-  gate: []
-  negative_branch: []
-  downstream: []
-  terminal: true
+    produces:
+    - CTR-GW@v1
+  gate:
+  - PG-STOP-001
+  - CG-1-03a
+  - CG-1-03b
+  - CG-1-03c
+  - CG-1-03d
+  - CG-1-03e
+  - CG-1-03f
+  - CG-1-03g
+  - CG-1-03h
+  - CG-1-03i
+  - CG-1-03j
+  - CG-1-03k
+  - CG-1-03l
+  - CG-1-03m
+  - CG-1-03n
+  - CG-1-03o
+  - CG-1-03p
+  - CG-1-03q
+  - CG-1-03r
+  - CG-1-03s
+  negative_branch:
+  - gate: PG-STOP-001
+    'on': RETRY_WITH_VARIANT
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03a
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03b
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03c
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03d
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03e
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03f
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03g
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03h
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03i
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03j
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03k
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03l
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03m
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03n
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03o
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03p
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03q
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03r
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  - gate: CG-1-03s
+    'on': FAIL
+    action: '① 우회 경로 0건: robot.bus 직접 접근 / send_action 우회 CAN write 심볼 = 정적검사 0히트 ② async gRPC 클라이언트 모사가
+      robot.send_action() 직접 호출 → 게이트웨이 통과 확인(파이프라인 스텝이 아니라 메서드 오버라이드임의 증명) ③ 8종 검사 각각을 유발하는 픽스처 → 개별
+      구별 사유 코드 반환 (합쳐서 "거부" 1종 금지) ④ 검사 순서 셔플 픽스처 → 거부 ⑤ 2단 클램프: 운영 리밋 ⊄ 기계 리밋 픽스처 → 저장 거부 ⑥ 속도 리밋 / 가속
+      리밋 / 점프 가드가 3개 분리 파라미터로 존재 — 하나로 합친 픽스처 → 거부(14 FR-OPS-012) ⑦ kp>500 / kd>5 지령 → 거부(조용한 래핑 0건) ⑧
+      토크 클램프가 Peak Torque(J1/J2 40 Nm, J3/J4 27 Nm) 기준 — T_MAX 기준 픽스처 → 거부 ⑨ JointPosChecker(클리핑 후 진행)
+      vs JointDeltaPosChecker(즉시 정지) 거동 구별 확인 ⑩ fail-CLOSED: 관측 결측 / 버스 read 실패 / 락 타임아웃 각각 주입 → 즉시 latch(3/3)
+      ⑪ 버스 독점 구간(enable/mode-set)에서 가드 pause() → 거짓 latch 0건 ⑫ latch 후 운영자 ack 없이 해제 시도 → 0건 성공 + 원인 기록
+      존재 ⑬ 정지 경로에 disable_torque 심볼 0건(정적검사) ⑭ Cat-2 정지 = MIT 홀드 프레임 1개 발행 확인(프레임 수 계수) ⑮ CAN 드랍 주입 →
+      드랍 카운터가 관측 feature로 노출(logger.warning만 남고 사라지는 상류 거동과 구별) ⑯ 모든 클램프에 requestedPositionAction + acceptedPositionAction
+      양쪽 기록(후클램프만 기록 픽스처 → 거부) ⑰ ERR-nibble 디코더가 알려진 코드 전량 매핑 — 미지 코드 → 명시적 오류(조용한 무시 0) ⑱ tau 라우팅: _mit_control_batch
+      tau 인자가 게이트웨이 값으로 전달됨 확인(0 하드코딩 해제) ⑲ 상시 홀드: 토크-ON 구간 전체에서 스케줄러 방출 4종 중 하나가 매 틱 존재(WP-0A-01 ①과 실기
+      결합 재확인)'
+  downstream:
+  - WP-1-04
+  - WP-1-05
+  - WP-G-04
   stale_on: []
   env_hash: null
+  workflow: SHAPE-CF
+  exec_class: AI-offline
+  planned: true
   provenance:
-    wp_rule: ambiguous-citation
-    wp_candidates:
-    - WP-2B-06
-    - WP-2D-03
+    wp_rule: doc06-section6
 - req: FR-MOT-059
   spec_ref: 03#3.6
   priority: M

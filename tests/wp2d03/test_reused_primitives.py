@@ -38,7 +38,7 @@ def test_cartesian_jog_adapter_is_importable() -> None:
 
 def test_producer_uses_the_injected_gravity_source() -> None:
     gravity = gravity_backend()
-    from backend.actuation.clock import WallClock
+    from backend.actuation.clock import ManualClock, WallClock
     from backend.actuation.guard import CollisionGuard
     from backend.actuation.safety import SafetyFilter
     from backend.freedrive.constants import (
@@ -54,7 +54,11 @@ def test_producer_uses_the_injected_gravity_source() -> None:
         freshness_window_sec=FREEDRIVE_FRESHNESS_WINDOW_SEC,
     )
     producer = FreedriveProducer(
-        gravity, friction_seed(), gateway, tuple(DEFAULT_KD_FREEDRIVE for _ in ENTRY_POSE_RAD)
+        gravity,
+        friction_seed(),
+        gateway,
+        tuple(DEFAULT_KD_FREEDRIVE for _ in ENTRY_POSE_RAD),
+        ManualClock(),
     )
     frame = producer.produce_frame(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
     # The frame's gravity term equals the injected backend's tau_grav, not a re-derived one.
