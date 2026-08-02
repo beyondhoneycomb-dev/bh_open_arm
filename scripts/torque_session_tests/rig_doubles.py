@@ -1,19 +1,20 @@
 """Doubles for standing the production rig assembly up with no CAN adapter present.
 
 Everything the assembly reaches for outside its own code is replaced here and nothing else is:
-the motors bus, the channel lock manager, the persisted channel binding, and the single writer.
-The assembly itself runs unmodified, which is the point — what is under test is the wiring, and
-a test that reimplemented the wiring would agree with itself.
+the motors bus, the channel lock manager, and the persisted channel binding. The assembly
+itself runs unmodified, which is the point — what is under test is the wiring, and a test that
+reimplemented the wiring would agree with itself.
+
+The single writer is deliberately **not** among them. `BimanualCanWriter` is what the benches
+build, so what the bus doubles receive is the production split of a real emission. A double for
+the writer would be a second implementation of the one thing whose output is the frame that
+reaches a motor, and every assertion about which channel got which half would then be an
+assertion about the double.
 
 The bus double records the argument of every call. That argument is the whole acceptance: a bus
 call that names no motors walks every motor the bus was constructed with, which on a spatula
 build is the id nothing answers on, and from outside the two are indistinguishable unless what
 was asked for is kept.
-
-The writer double is a fan-out of the shape the production one must have: one emission in, one
-write counted, each arm's fitted slots out on that arm's own bus, and the unfitted slot sent
-nowhere. It lives here rather than in a package because a `mit_control_batch` outside
-`backend/actuation` is what `find_producer_can_access` calls a producer reaching for the handle.
 """
 
 from __future__ import annotations
@@ -25,8 +26,6 @@ from typing import Any
 
 from backend.calibration.schema import MOTOR_ORDER
 from backend.endeffector import SIDE_LEFT, SIDE_RIGHT, SIDES
-from contracts.action import ExecutedMitCommand
-from contracts.units import rad_per_sec_to_deg_per_sec, rad_to_deg
 from ops.hw.canbind import ArmRole, ChannelBinding, binding_path, save_binding
 from ops.hw.canbind.discovery import CanChannel
 from scripts.rig_session import (
@@ -253,61 +252,6 @@ class RefusingLockManager(FakeLockManager):
         """Refuse, naming the channel and its holder."""
         self.acquired.append(list(ifaces))
         return _Acquired(ok=False, blocked_iface=ifaces[-1], holder="another-writer")
-
-
-class FanoutWriter:
-    """The single writer's shape: one emission in, one write counted, two channels out.
-
-    One `write_count` increment per call whatever the fan-out does, because the scheduler reads
-    the writer's own counter around the call and a tick must be exactly one write. The unfitted
-    slots go nowhere: nobody answers on `0x08`, and the unanswered frames walk the controller to
-    ERROR-PASSIVE and degrade the joints that are present.
-
-    Attributes:
-        batches: The emission handed to each call, in call order.
-    """
-
-    def __init__(self, slots: tuple[Any, ...]) -> None:
-        """Bind the writer to the per-arm slot plan.
-
-        Args:
-            slots: One `ArmWriteSlots` per arm, arm-major, together covering the emission.
-        """
-        self._slots = slots
-        self._write_count = 0
-        self.batches: list[tuple[ExecutedMitCommand, ...]] = []
-
-    @property
-    def write_count(self) -> int:
-        """Frames actually sent since construction."""
-        return self._write_count
-
-    def mit_control_batch(self, batch: tuple[ExecutedMitCommand, ...]) -> None:
-        """Split one emission arm-major and send each arm's fitted slots on its own channel.
-
-        Position and velocity cross back from the contract's radian audit units to the degrees
-        the bus API takes, the same crossing `BusCanWriter` performs; the torque is already in
-        newton-metres. A double that skipped the crossing would let a production writer that
-        skipped it pass.
-        """
-        self.batches.append(batch)
-        index = 0
-        for arm in self._slots:
-            commands: dict[str, tuple[float, float, float, float, float]] = {}
-            for name in arm.slot_names:
-                command = batch[index]
-                index += 1
-                if name is None:
-                    continue
-                commands[name] = (
-                    command.kp,
-                    command.kd,
-                    rad_to_deg(command.q).value,
-                    rad_per_sec_to_deg_per_sec(command.dq).value,
-                    command.tau.value,
-                )
-            arm.bus._mit_control_batch(commands)
-        self._write_count += 1
 
 
 def write_stub_binding(config_directory: Path) -> dict[str, str]:

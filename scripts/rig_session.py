@@ -66,10 +66,10 @@ from backend.actuation import (
     BIMANUAL_BATCH_WIDTH,
     AcceptedTargetPublisher,
     ActuationScheduler,
+    ArmWriteSlots,
     Clock,
     LeaseManager,
     MailboxProducer,
-    MitBus,
     TargetMailbox,
     TickTrace,
     WallClock,
@@ -271,22 +271,6 @@ class RigArmBus:
 
 
 @dataclass(frozen=True)
-class ArmWriteSlots:
-    """One arm's share of the bimanual emission: where it goes, and what each slot addresses.
-
-    Attributes:
-        bus: The arm's MIT bus — the one handle this half of a frame is sent on.
-        slot_names: One entry per slot of this arm's half, in the frozen layout order. `None`
-            marks a slot the fitted tool puts no motor behind; nothing answers there, and the
-            unanswered frames walk the controller to ERROR-PASSIVE and degrade the joints that
-            are present.
-    """
-
-    bus: MitBus
-    slot_names: tuple[str | None, ...]
-
-
-@dataclass(frozen=True)
 class RigSession:
     """One operator session's assembled write path, from the enforcement point to the channels.
 
@@ -375,6 +359,12 @@ def arm_write_slots(
     buses: Mapping[str, DamiaoMotorsBus], end_effectors: RigEndEffectors
 ) -> tuple[ArmWriteSlots, ...]:
     """Describe what each arm's half of one emission addresses, in the frozen arm order.
+
+    This is the single place a slot's index is joined to a motor name, and the join is a walk of
+    `MOTOR_ORDER` itself rather than of the fitted set — so the half is in the frozen layout
+    order whatever the tool leaves out, and the writer that consumes it can address the layout
+    by index the way the rest of the actuation tree does. A build that filtered instead of
+    masking would close the gap the unfitted slot leaves and shift every later joint by one.
 
     Args:
         buses: One raw bus per declared arm side.

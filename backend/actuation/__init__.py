@@ -19,9 +19,12 @@ from __future__ import annotations
 from backend.actuation.assembly import AcceptedTargetPublisher
 from backend.actuation.bus_writer import (
     BIMANUAL_BATCH_WIDTH,
+    ArmWriteSlots,
+    BimanualCanWriter,
     BusCanWriter,
     DropCounter,
     MitBus,
+    bus_command_tuple,
 )
 from backend.actuation.can_writer import (
     MIT_BATCH_WIDTH,
@@ -96,6 +99,8 @@ __all__ = [
     "ActionStreamWatchdog",
     "ActuationGateway",
     "ActuationScheduler",
+    "ArmWriteSlots",
+    "BimanualCanWriter",
     "BusCanWriter",
     "CanBusFaultError",
     "CanWriter",
@@ -141,6 +146,7 @@ __all__ = [
     "UnknownErrNibbleError",
     "WallClock",
     "accepted_to_rad",
+    "bus_command_tuple",
     "clamp_reason_for",
     "clamp_request",
     "decide",

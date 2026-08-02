@@ -7,10 +7,20 @@ symbol, and the scan that says so must genuinely fire on one. Both halves are as
 
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 
+import pytest
+
 import backend.friction_log
-from backend.friction_log.staticcheck import RULE_CAN_TRANSMIT, check_source, scan_tree
+from backend import actuation
+from backend.friction_log.staticcheck import (
+    _TRANSMIT_SYMBOLS,
+    RULE_CAN_TRANSMIT,
+    check_source,
+    scan_tree,
+    writer_class_names,
+)
 
 _FRICTION_LOG_ROOT = Path(backend.friction_log.__file__).resolve().parent
 
@@ -44,6 +54,56 @@ def test_scan_bites_on_socket_send_family() -> None:
     for symbol in ("send", "sendall", "sendto", "sendmsg"):
         findings = check_source(f"sock.{symbol}(frame)\n", "rogue.py")
         assert [f.rule for f in findings] == [RULE_CAN_TRANSMIT], symbol
+
+
+def test_the_scan_covers_every_writer_the_actuation_package_exports() -> None:
+    """① Not a written list: the writer names come from the package that holds them.
+
+    A literal list goes stale the moment a writer is added, and it did. `BimanualCanWriter` landed
+    in `backend.actuation` and a logger standing one up escaped this scan entirely, while the
+    byte-identical `BusCanWriter` version was caught — a FAIL_BLOCKING absence that had stopped
+    being checked. Writing the one new name in would have set the same trap for the next writer.
+    """
+    exported = {
+        name
+        for name in dir(actuation)
+        if inspect.isclass(getattr(actuation, name))
+        and hasattr(getattr(actuation, name), "mit_control_batch")
+        and hasattr(getattr(actuation, name), "write_count")
+    }
+
+    assert exported, "no writer class found; the derivation reads the wrong members"
+    assert exported <= _TRANSMIT_SYMBOLS
+    # And each is genuinely flagged, not merely listed.
+    for name in sorted(exported):
+        findings = check_source(f"w = {name}(bus, names)\n", "rogue.py")
+        assert [f.rule for f in findings] == [RULE_CAN_TRANSMIT], name
+
+
+def test_a_writer_added_to_the_actuation_package_is_covered_without_editing_this_scan(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """① The property that makes the derivation worth having, rather than the derivation's output.
+
+    Asserting the four names we happen to have today would pass just as well over a hand-written
+    list. What has to hold is that the next writer is covered by the package holding it, with
+    nothing here edited.
+    """
+
+    class _LaterWriter:
+        """A writer added after this scan was written."""
+
+        @property
+        def write_count(self) -> int:
+            """Writes so far."""
+            return 0
+
+        def mit_control_batch(self, batch: object) -> None:
+            """Write one batch."""
+
+    monkeypatch.setattr(actuation, _LaterWriter.__name__, _LaterWriter, raising=False)
+
+    assert _LaterWriter.__name__ in writer_class_names()
 
 
 def test_scan_bites_on_robot_bus_access() -> None:

@@ -1,10 +1,10 @@
-"""The real CAN writer and the drop counter — the actuation/bus boundary (`WP-1-03`).
+"""The real CAN writers and the drop counter — the actuation/bus boundary (`WP-1-03`).
 
-Two things live here, both at the single seam between the actuation spine and a
-real `DamiaoMotorsBus`, and both owned by the actuation tree so the single-writer
-static scan exempts their (legitimate) use of the CAN write symbol:
+Everything here sits at the single seam between the actuation spine and a real
+`DamiaoMotorsBus`, and is owned by the actuation tree so the single-writer static
+scan exempts its (legitimate) use of the CAN write symbol:
 
-- `BusCanWriter` is the production `CanWriter`. It turns the scheduler's
+- `BusCanWriter` is the one-channel production `CanWriter`. It turns the scheduler's
   `ExecutedMitCommand` batch into the 5-tuple `_mit_control_batch` takes and sends
   it. The whole point is the fifth element: LeRobot's stock `send_action` hardcodes
   `tau` (and `dq`) to `0` (`12` §2.7.0), while the bus-level `_mit_control_batch`
@@ -12,6 +12,16 @@ static scan exempts their (legitimate) use of the CAN write symbol:
   nothing but routing the emitted command's `tau` into that slot (acceptance ⑱).
   There is deliberately no `disable_torque` here: the stop path is a hold frame
   (`04` NFR-MAN-002, acceptance ⑬).
+
+- `BimanualCanWriter` is the two-channel production `CanWriter`, and it is what a
+  bimanual rig needs instead: one emission is `BIMANUAL_BATCH_WIDTH` slots wide
+  across two channels whose eight motor names are the same eight names, so a
+  `BusCanWriter` handed all sixteen names over one channel writes the second arm's
+  angles onto the first arm's motors. `ArmWriteSlots` is the per-arm half it splits
+  on, and it lives here for the same reason the writer does — a reference to the CAN
+  write symbol outside `backend/actuation` is what `staticcheck` calls a producer
+  reaching for the handle, so the type the writer consumes cannot live in the tree
+  that builds it.
 
 - `DropCounter` surfaces the CAN packet-drop count LeRobot only logs. `_batch_refresh`
   reuses the last known state on a drop and emits `logger.warning("Packet drop: …")`
@@ -24,6 +34,12 @@ static scan exempts their (legitimate) use of the CAN write symbol:
 `MitBus` is a structural type so this module imports no robot stack: the light lane
 never has `lerobot` installed, and the scheduler must stay importable there. A real
 `DamiaoMotorsBus` satisfies it; a fixture bus does too.
+
+Slot order inside a half is the frozen layout order and this module does not check it:
+the whole actuation tree addresses the layout by index and never by name — `MIT_BATCH_WIDTH`,
+`positions_to_batch` and the emission itself all do — and a name-order check here would be
+the one place in the tree that imports the layout, for a plan that is built from it in a
+single place. The order is therefore the plan builder's guarantee, not the writer's.
 """
 
 from __future__ import annotations
@@ -31,11 +47,16 @@ from __future__ import annotations
 import logging
 import threading
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Protocol
 
 from backend.actuation.can_writer import MIT_BATCH_WIDTH
 from contracts.action import ExecutedMitCommand
 from contracts.units import rad_per_sec_to_deg_per_sec, rad_to_deg
+
+# The width of one full bimanual emission. Named here as well so callers building a writer for
+# the whole command can assert it without reaching into the CAN-writer module.
+BIMANUAL_BATCH_WIDTH = MIT_BATCH_WIDTH
 
 # The Damiao motors bus logs a packet drop with this message prefix (`damiao.py`
 # `_batch_refresh`). Matching on the prefix is what turns the upstream warning into
@@ -59,6 +80,33 @@ class MitBus(Protocol):
     ) -> None:
         """Send one batched MIT frame: motor name to `(kp, kd, pos_deg, vel_deg_s, tau_nm)`."""
         ...
+
+
+def bus_command_tuple(command: ExecutedMitCommand) -> tuple[float, float, float, float, float]:
+    """Turn one emitted command into the 5-tuple `_mit_control_batch` takes.
+
+    The position and velocity cross back from the contract's radian audit units to the degrees
+    the LeRobot bus API takes (`_encode_mit_packet` re-radianises internally); the torque is
+    passed in newton-metres, and it is the emitted command's `tau`, never a hardcoded zero
+    (`12` §2.7.0, acceptance ⑱).
+
+    Shared by every writer in this module rather than repeated in each: two writers that
+    compute this tuple separately can disagree on which fields cross a unit boundary, and the
+    frame that reaches a motor would then depend on which writer the rig was assembled with.
+
+    Args:
+        command: One joint's emitted MIT command.
+
+    Returns:
+        (tuple[float, float, float, float, float]) `(kp, kd, pos_deg, vel_deg_s, tau_nm)`.
+    """
+    return (
+        command.kp,
+        command.kd,
+        rad_to_deg(command.q).value,
+        rad_per_sec_to_deg_per_sec(command.dq).value,
+        command.tau.value,
+    )
 
 
 class BusCanWriter:
@@ -94,11 +142,6 @@ class BusCanWriter:
     def mit_control_batch(self, batch: tuple[ExecutedMitCommand, ...]) -> None:
         """Send one MIT batch, routing each command's feed-forward torque to the bus.
 
-        The position and velocity cross back from the contract's radian audit units
-        to the degrees the LeRobot bus API takes (`_encode_mit_packet` re-radianises
-        internally); the torque is passed in newton-metres, and it is the emitted
-        command's `tau`, never a hardcoded zero (`12` §2.7.0, acceptance ⑱).
-
         Args:
             batch: One `ExecutedMitCommand` per motor, in `motor_names` order.
 
@@ -111,14 +154,141 @@ class BusCanWriter:
             )
         commands: dict[str, tuple[float, float, float, float, float]] = {}
         for name, command in zip(self._motor_names, batch, strict=True):
-            commands[name] = (
-                command.kp,
-                command.kd,
-                rad_to_deg(command.q).value,
-                rad_per_sec_to_deg_per_sec(command.dq).value,
-                command.tau.value,
-            )
+            commands[name] = bus_command_tuple(command)
         self._bus._mit_control_batch(commands)
+        self._write_count += 1
+
+
+@dataclass(frozen=True)
+class ArmWriteSlots:
+    """One arm's share of the bimanual emission: where it goes, and what each slot addresses.
+
+    Attributes:
+        bus: The arm's MIT bus — the one handle this half of a frame is sent on. Which channel
+            that is cannot be derived: both arms answer on send ids `0x01–0x08` (`03` §2.1), so
+            nothing on the bus tells left from right and a swapped pair is not a detected error.
+        slot_names: One entry per slot of this arm's half, in the frozen layout order. `None`
+            marks a slot the fitted tool puts no motor behind; nothing answers there, and the
+            unanswered frames walk the controller to ERROR-PASSIVE and degrade the joints that
+            are present.
+    """
+
+    bus: MitBus
+    slot_names: tuple[str | None, ...]
+
+
+class BimanualCanWriter:
+    """The production `CanWriter` for a rig whose one emission spans two channels.
+
+    Ownership: holds one bus handle per arm through the slot plan it was built from, and is
+    held only by the scheduler. Nothing here decides anything — the batch it splits is the
+    emission the decider produced from a target the eight-stage filter already passed, so this
+    is downstream of the gateway and is not a second way onto a channel.
+
+    One call is **one** counted write however many channels it touches. The scheduler reads
+    this writer's own `write_count` around the call and refuses a tick that did not resolve to
+    exactly one, so a fan-out that counted per channel would fail every tick, and one that
+    counted per channel and halved it would report a write for a fan-out that half failed.
+
+    Threading: one instance per session, driven from the thread that ticks the scheduler. The
+    two sends are sequential on one thread, which is also why a bus that raises mid-fan-out
+    leaves the earlier arms commanded and the later ones holding their previous MIT command
+    until the RID-9 no-send ceiling — the exception propagates and the count does not advance,
+    so the tick fails rather than recording a write that only half happened.
+    """
+
+    def __init__(self, arms: tuple[ArmWriteSlots, ...]) -> None:
+        """Bind the writer to the per-arm slot plan, refusing a plan that cannot address the rig.
+
+        Args:
+            arms: One `ArmWriteSlots` per arm, in the emission's arm-major order — the first
+                entry takes the emission's first slots. The order is the caller's declaration
+                of which arm occupies which half and cannot be checked here or on the bus.
+
+        Raises:
+            ValueError: If the plan does not describe the emission the scheduler will hand
+                over. Every case is a plan that looks well-formed and misaddresses the rig: an
+                arm whose half is a different width than the others splits the emission at the
+                wrong index even when the total is right; an arm with no fitted slot at all
+                would make a counted write that put no frame on that channel; and two slots of
+                one arm naming the same motor silently drops one joint's angle, because the
+                batch a bus takes is keyed by name.
+        """
+        if not arms:
+            raise ValueError("a bimanual writer with no arms has no channel to write on")
+        widths = {len(arm.slot_names) for arm in arms}
+        if len(widths) != 1:
+            raise ValueError(
+                f"the arms' halves are {sorted(widths)} slots wide; an emission is split at a "
+                "fixed index per arm, so unequal halves address one arm's joints from the "
+                "other arm's slots even when the total width is right"
+            )
+        width = sum(len(arm.slot_names) for arm in arms)
+        if width != BIMANUAL_BATCH_WIDTH:
+            raise ValueError(
+                f"the slot plan covers {width} slots and one emission is {BIMANUAL_BATCH_WIDTH}; "
+                "a plan narrower than the frame leaves joints uncommanded and a wider one is "
+                "addressed past its end"
+            )
+        for index, arm in enumerate(arms):
+            fitted = [name for name in arm.slot_names if name is not None]
+            if not fitted:
+                raise ValueError(
+                    f"arm {index} of the slot plan has no fitted motor; a write for it would "
+                    "put no frame on its channel while still counting as this tick's one "
+                    "write, and an arm nobody refreshes falls at the RID-9 no-send ceiling"
+                )
+            if len(set(fitted)) != len(fitted):
+                raise ValueError(
+                    f"arm {index} of the slot plan names a motor twice ({sorted(fitted)}); the "
+                    "batch a bus takes is keyed by motor name, so the later slot overwrites "
+                    "the earlier one and that joint is commanded with another joint's angle"
+                )
+        self._arms = arms
+        self._width = width
+        self._write_count = 0
+
+    @property
+    def write_count(self) -> int:
+        """Total emissions actually carried to every channel since construction.
+
+        Returns:
+            (int) Cumulative successful `mit_control_batch` calls — one per emission, not one
+            per channel, which is what the scheduler's per-tick single-write guard reads.
+        """
+        return self._write_count
+
+    def mit_control_batch(self, batch: tuple[ExecutedMitCommand, ...]) -> None:
+        """Split one emission arm-major and send each arm's fitted slots on its own channel.
+
+        A slot the plan marks `None` produces no frame at all. Motor `0x08` answered 0 of 20
+        polls on both arms of this rig; sixteen unanswered frames took both channels from
+        ERROR-ACTIVE to ERROR-PASSIVE, and a degraded controller then affects the seven joints
+        that are present, so an unfitted slot is skipped rather than sent and ignored.
+
+        Args:
+            batch: One `ExecutedMitCommand` per slot of the whole emission, arm-major in the
+                order the arms were declared in.
+
+        Raises:
+            ValueError: If the batch is not as wide as the slot plan. A narrower batch would
+                leave the last arm reading past its end; a wider one carries joints no channel
+                was declared for.
+        """
+        if len(batch) != self._width:
+            raise ValueError(
+                f"MIT batch width {len(batch)} does not match the {self._width}-slot plan"
+            )
+        index = 0
+        for arm in self._arms:
+            commands: dict[str, tuple[float, float, float, float, float]] = {}
+            for name in arm.slot_names:
+                command = batch[index]
+                index += 1
+                if name is None:
+                    continue
+                commands[name] = bus_command_tuple(command)
+            arm.bus._mit_control_batch(commands)
         self._write_count += 1
 
 
@@ -188,8 +358,3 @@ class DropCounter:
         """Record one packet drop, guarded so a read never races the increment."""
         with self._lock:
             self._count += 1
-
-
-# Re-exported so callers building a writer for the full bimanual command can assert
-# the scheduler's batch width without reaching into the CAN-writer module.
-BIMANUAL_BATCH_WIDTH = MIT_BATCH_WIDTH

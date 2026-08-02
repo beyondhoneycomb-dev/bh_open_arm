@@ -21,27 +21,62 @@ real package, which the acceptance test asserts is clean.
 from __future__ import annotations
 
 import ast
+import inspect
 from dataclasses import dataclass
 from pathlib import Path
+
+from backend import actuation
 
 RULE_CAN_TRANSMIT = "logger-can-transmit"
 RULE_GET_OBSERVATION = "logger-get-observation"
 
-# Symbols that put torque on the bus: the CAN-writer handle and its write method, and the
-# socket send family. A logger naming any of these is reaching to become a second writer.
-_TRANSMIT_SYMBOLS: frozenset[str] = frozenset(
+# The write method every CAN writer carries, and the socket send family. Named literally
+# because they are the calls, not the classes.
+_TRANSMIT_METHODS: frozenset[str] = frozenset(
     {
         "mit_control_batch",
         "_mit_control_batch",
-        "CanWriter",
-        "FakeCanWriter",
-        "BusCanWriter",
         "send",
         "sendall",
         "sendto",
         "sendmsg",
     }
 )
+
+
+# The two members `ActuationScheduler` drives a writer through. Anything carrying both can stand
+# in as the single writer, so anything carrying both is what the logger may not name.
+_WRITE_METHOD = "mit_control_batch"
+_WRITE_COUNTER = "write_count"
+
+
+def writer_class_names() -> frozenset[str]:
+    """Return every CAN-writer class `backend.actuation` exports, by name.
+
+    Derived rather than listed. A literal list goes stale the moment a writer is added to that
+    package — which happened: `BimanualCanWriter` landed and a logger standing one up escaped
+    this scan entirely, while the byte-identical `BusCanWriter` version was caught. Writing the
+    new name in would set the same trap for the next one.
+
+    A writer is anything carrying the two members `ActuationScheduler` drives it through, which
+    is what makes it usable as a second writer whatever it is called.
+
+    Returns:
+        (frozenset[str]) The exported writer class names.
+    """
+    return frozenset(
+        name
+        for name in dir(actuation)
+        if inspect.isclass(getattr(actuation, name))
+        and hasattr(getattr(actuation, name), _WRITE_METHOD)
+        and hasattr(getattr(actuation, name), _WRITE_COUNTER)
+    )
+
+
+# Symbols that put torque on the bus: every writer class the actuation package exports, its write
+# method, and the socket send family. A logger naming any of these is reaching to become a second
+# writer, which drops a brakeless arm (I-1).
+_TRANSMIT_SYMBOLS: frozenset[str] = _TRANSMIT_METHODS | writer_class_names()
 # Importing the CAN-writer module is reaching for the handle even without naming a method.
 _TRANSMIT_MODULE = "backend.actuation.can_writer"
 # `robot.bus` is the direct bus handle the tap must never take (05 §6.3.1).

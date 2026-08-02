@@ -61,14 +61,16 @@ def test_the_release_step_acts_and_measures_nothing() -> None:
 
 
 def test_the_release_step_refuses_while_the_torque_write_path_is_unassembled(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Recording a drop that never reached a motor ends a session green on an energized arm.
 
-    Both refusals this step can raise — no write path at all, and a write path with no release
-    code behind it — name the write path, so the assertion holds on either side of the binding
-    landing.
+    The writer is cleared rather than left to whatever this host happens to present. With a
+    writer bound, this step's own code opens both channels and sends 0xFD to the fitted motors —
+    a real release on a brakeless arm nobody is holding — and what would stop it here is only
+    that the CAN binding record happens to resolve nothing on the machine running the suite.
     """
+    monkeypatch.setattr(session, "BIMANUAL_CAN_WRITER", None)
     passed, detail = session.run_step(_release(), _config(tmp_path))
     assert passed is False
     assert "토크 쓰기 경로" in detail

@@ -111,16 +111,19 @@ def test_torque_write_path_gate_refuses_while_the_rig_binding_is_absent(tmp_path
     assert session.TORQUE_RIG_FACTORY in result.render()
 
 
-def test_torque_write_path_gate_refuses_while_the_single_writer_is_absent(tmp_path: Path) -> None:
+def test_torque_write_path_gate_refuses_while_the_single_writer_is_absent(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """The rig binding alone is half a write path, and half a write path engages nothing.
 
     A gate that read the binding's presence as the path would admit a session whose every
     torque step then refuses — and the operator is holding a brakeless arm by then, because the
-    timetable put the engage thirty seconds after the admission printed.
+    timetable put the engage thirty seconds after the admission printed. So the binding is left
+    present and only the writer is cleared: that is the half-assembled state the gate is for.
     """
     if not _rig_binding_exists():
         pytest.skip(f"{session.TORQUE_RIG_MODULE}.{session.TORQUE_RIG_FACTORY} does not exist yet")
-    assert session.BIMANUAL_CAN_WRITER is None
+    monkeypatch.setattr(session, "BIMANUAL_CAN_WRITER", None)
     result = session.AdmissionResult()
     session._admit_torque_write_path(result, _config(tmp_path))
     assert result.ok is False

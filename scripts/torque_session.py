@@ -50,6 +50,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from backend.actuation import BimanualCanWriter
+
 EXIT_OK = 0
 EXIT_REFUSED = 1
 EXIT_RUNNING = 2
@@ -141,18 +143,20 @@ TORQUE_LEFT_LIVE_DETAIL = (
 SYNTHETIC_POSE_STEP_RAD = 0.05
 
 # The single writer this rig's two CAN channels need, as a factory over the per-arm slot plan
-# (`scripts.rig_session.ArmWriteSlots`). None is why both torque steps refuse,
-# and it is the one wire this session is missing.
+# (`backend.actuation.ArmWriteSlots`): the class is the factory, because constructing one binds
+# it to the plan and returns the writer the scheduler takes.
 #
-# `BusCanWriter` binds one bus and one motor-name order, and one scheduler emission is
-# `BIMANUAL_BATCH_WIDTH` slots wide across two channels whose eight motor names are the same
-# eight names. Handed sixteen names over one channel it writes eight frames and the second arm's
-# angles land on the first arm's motors — measured on this host: a left slot asking for 0.0 rad
-# arrived as 458.4°. Handed eight it raises on the batch width. So the split that carries one
-# emission to both channels, and leaves the unfitted slot alone, has to exist first, and it
-# belongs in `backend/actuation` — the one tree `find_producer_can_access` exempts — because a
-# split written anywhere else puts the CAN write symbol outside it.
-BIMANUAL_CAN_WRITER: Callable[[Any], Any] | None = None
+# `BusCanWriter` is the wrong one and this is why the split exists at all. It binds one bus and
+# one motor-name order, and one scheduler emission is `BIMANUAL_BATCH_WIDTH` slots wide across
+# two channels whose eight motor names are the same eight names. Handed sixteen names over one
+# channel it writes eight frames and the second arm's angles land on the first arm's motors —
+# measured on this host: a left slot asking for 0.0 rad arrived as 458.4°. Handed eight it
+# raises on the batch width.
+#
+# Still `| None`, and the steps still ask before they engage: the annotation is what keeps the
+# refusal a live path rather than dead code, and the refusal is what the admission gate reads to
+# decide whether an operator is asked to hold a brakeless arm for steps that cannot run.
+BIMANUAL_CAN_WRITER: Callable[[Any], Any] | None = BimanualCanWriter
 
 # How often the engaged hold is re-sent while the arm is energized, seconds. Past the RID-9
 # no-send ceiling (`12` NFR-SAF-007, `RID9_NO_SEND_MARGIN_SEC`) the motor stops applying the
@@ -588,12 +592,10 @@ def _require_torque_write_path(step_key: str) -> None:
 
 
 def _require_bimanual_writer(step_key: str) -> Callable[[Any], Any]:
-    """Return the single-writer factory, refusing while this rig has none.
+    """Return the single-writer factory, refusing if this session has none to hand the rig.
 
-    The rig binding exists and the enforcement point publishes into the scheduler's mailbox;
-    what is missing is the one object that carries a scheduler emission to two CAN channels.
-    `BIMANUAL_CAN_WRITER` is where it is read from, so this refusal and the admission gate that
-    reports it cannot drift apart.
+    `BIMANUAL_CAN_WRITER` is the one place it is read from, so this refusal and the admission
+    gate that reports it cannot reach different verdicts about the same session.
 
     Args:
         step_key: The step asking, for the refusal message.
@@ -602,8 +604,8 @@ def _require_bimanual_writer(step_key: str) -> Callable[[Any], Any]:
         (Callable[[Any], Any]) The factory that builds the writer from the per-arm slot plan.
 
     Raises:
-        SessionRefusedError: While no writer exists. Engaging without one means 0xFC with no
-            frame behind it, and the only `CanWriter` in the tree misaddresses this rig: over
+        SessionRefusedError: If no writer factory is bound. Engaging without one means 0xFC with
+            no frame behind it, and the one-channel `BusCanWriter` misaddresses this rig: over
             one channel with sixteen names it puts the right arm's angles on the left arm's
             motors, which on a brakeless arm is a commanded jump.
     """
@@ -612,14 +614,14 @@ def _require_bimanual_writer(step_key: str) -> Callable[[Any], Any]:
         return factory
     raise SessionRefusedError(
         f"{step_key}: 토크 쓰기 경로가 절반만 조립돼 있다 — 두 채널에 하나의 이미션을 실어\n"
-        "  보내는 단일 작성자가 없다.\n"
-        "  지금 있는 유일한 프로덕션 CanWriter 는 BusCanWriter 이고, 그것은 버스 하나와 모터\n"
-        "  이름 순서 하나에 묶인다. 이 리그는 채널이 둘이고 두 팔의 모터 이름 여덟 개가 같은\n"
-        "  여덟 개다 — 한 채널에 16개 이름을 주면 프레임 8개만 나가고 오른팔 각도가 왼팔\n"
-        "  모터에 실린다(이 호스트에서 실측: 0.0 rad 를 요구한 왼팔 슬롯이 458.4°로 도착).\n"
-        "  8개를 주면 배치 폭에서 거부한다. 그래서 이미션을 두 채널로 쪼개고 장착되지 않은\n"
-        "  슬롯(0x08)을 건너뛰는 작성자가 먼저 있어야 하고, 그 자리는 backend/actuation 이다\n"
-        "  — find_producer_can_access 가 면제하는 단 하나의 트리이고, 그 밖에서 쪼개면 CAN\n"
+        "  보내는 단일 작성자가 이 세션에 걸려 있지 않다 (BIMANUAL_CAN_WRITER 가 None).\n"
+        "  작성자 없이 인게이지하면 0xFC 만 나가고 그 뒤를 받칠 프레임이 없다. 대신 한 채널용\n"
+        "  작성자를 끼우는 것도 답이 아니다 — 그것은 버스 하나와 모터 이름 순서 하나에 묶이고,\n"
+        "  이 리그는 채널이 둘이며 두 팔의 모터 이름 여덟 개가 같은 여덟 개다. 한 채널에 16개\n"
+        "  이름을 주면 프레임 8개만 나가고 오른팔 각도가 왼팔 모터에 실린다(이 호스트에서\n"
+        "  실측: 0.0 rad 를 요구한 왼팔 슬롯이 458.4°로 도착). 8개를 주면 배치 폭에서 거부한다.\n"
+        "  이 러너는 여기서 대신 하나를 만들지 않는다 — 작성자는 backend/actuation 안에만 있을\n"
+        "  수 있고(find_producer_can_access 가 면제하는 단 하나의 트리), 그 밖에서 쪼개면 CAN\n"
         "  쓰기 심볼이 그 트리 밖으로 나간다."
     )
 

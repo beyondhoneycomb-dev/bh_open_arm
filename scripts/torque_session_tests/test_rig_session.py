@@ -6,10 +6,14 @@ answer is invisible at runtime: an arm opened on the wrong channel commands the 
 joints, a scheduler stood up on zeros holds a brakeless arm at the horizontal, and a writer
 given the full frozen layout addresses a motor nobody answers on.
 
-The bus, the channel locks, the persisted binding and the single writer are doubles; the
-assembly runs unmodified. The interfaces the stub binding resolves are deliberately not
-`can0`/`can1`, because those are what the side placeholder guesses and an arm that opened on
-them would pass whether or not it ever read the record.
+The bus, the channel locks and the persisted binding are doubles; the assembly and the single
+writer are the production ones. The writer is deliberately not doubled — it is the thing whose
+output is the frame that reaches a motor, and a second implementation of the split would make
+every assertion about which channel got which half an assertion about that implementation.
+
+The interfaces the stub binding resolves are deliberately not `can0`/`can1`, because those are
+what the side placeholder guesses and an arm that opened on them would pass whether or not it
+ever read the record.
 """
 
 from __future__ import annotations
@@ -21,7 +25,7 @@ from typing import Any
 import pytest
 from lerobot.motors.damiao import DamiaoMotorsBus
 
-from backend.actuation import EmissionLabel
+from backend.actuation import ArmWriteSlots, BimanualCanWriter, EmissionLabel
 from backend.calibration.schema import MOTOR_ORDER
 from backend.endeffector import (
     GRIPPER_SEND_ID,
@@ -34,6 +38,7 @@ from backend.endeffector import (
 )
 from backend.preflight import PreflightReport
 from backend.torque_bringup import (
+    SEND_ID_BY_MOTOR,
     GuardedTorqueOn,
     TorqueOnManifest,
     assert_safe_hold,
@@ -59,7 +64,6 @@ from scripts.torque_session_tests.rig_doubles import (
     UNFITTED_SLOT_DEG,
     FakeDamiaoBus,
     FakeLockManager,
-    FanoutWriter,
     RefusingLockManager,
     present_deg,
     stub_channels,
@@ -124,7 +128,7 @@ class _Bench:
         self.interfaces = write_stub_binding(tmp_path)
         self.buses: dict[str, FakeDamiaoBus] = {}
         self.locks = locks if locks is not None else FakeLockManager()
-        self.writers: list[FanoutWriter] = []
+        self.writers: list[BimanualCanWriter] = []
         base = {SIDE_LEFT: LEFT_BASE_DEG, SIDE_RIGHT: RIGHT_BASE_DEG}
         bench = self
 
@@ -148,9 +152,9 @@ class _Bench:
         monkeypatch.setattr(rig_module, "LockManager", lambda: self.locks)
         monkeypatch.setattr(OaOpenArmFollower, "is_calibrated", property(lambda _self: True))
 
-    def make_writer(self, slots: tuple[Any, ...]) -> FanoutWriter:
-        """Build the single writer from the per-arm slot plan and keep it."""
-        writer = FanoutWriter(slots)
+    def make_writer(self, slots: tuple[ArmWriteSlots, ...]) -> BimanualCanWriter:
+        """Build the production single writer from the per-arm slot plan and keep it."""
+        writer = BimanualCanWriter(slots)
         self.writers.append(writer)
         return writer
 
@@ -227,6 +231,11 @@ def test_the_write_plan_leaves_the_unfitted_slot_unaddressed() -> None:
         assert arm.slot_names[:-1] == MOTOR_ORDER[:-1]
         assert arm.slot_names[-1] is None
     assert sum(len(arm.slot_names) for arm in slots) == len(MOTOR_ORDER) * len(SIDES)
+    # And each half is paired with its own side's bus, in the emission's arm-major order. The
+    # writer sends the first half on the first entry's bus, so this pairing is the whole
+    # statement of which arm the left half reaches — nothing on the bus can report it wrong.
+    for side, arm in zip(SIDES, slots, strict=True):
+        assert arm.bus is buses[side]
 
 
 def test_the_write_plan_addresses_the_gripper_when_one_is_fitted() -> None:
@@ -437,15 +446,26 @@ def test_the_engage_frame_reaches_both_channels_and_holds_the_reported_pose(
 
     writer = bench.writers[-1]
     assert writer.write_count == ENGAGE_TICKS
+    fitted = fitted_motor_names(spatula_build())
     for side, base in ((SIDE_LEFT, LEFT_BASE_DEG), (SIDE_RIGHT, RIGHT_BASE_DEG)):
         sent = bench.buses[side].sent[-1]
-        assert sorted(sent) == sorted(fitted_motor_names(spatula_build()))
+        assert len(bench.buses[side].sent) == writer.write_count
+        assert sorted(sent) == sorted(fitted)
         assert MOTOR_ORDER[-1] not in sent
-        first = fitted_motor_names(spatula_build())[0]
-        assert sent[first][2] == pytest.approx(base)
+        # Every joint, not just the first. A permuted half is the same width, the same count and
+        # the same set of names, so only a per-joint comparison separates it from a correct one —
+        # and each joint's reported angle differs from its neighbour's by one step.
+        for angle, name in zip(present_deg(base, len(fitted)), fitted, strict=True):
+            assert sent[name][2] == pytest.approx(angle)
+        # The names that received a frame are exactly the fitted send ids. Asserting names alone
+        # leaves the name-to-id join unchecked, and `0x08` is the id nothing answers on.
+        assert (
+            tuple(sorted(SEND_ID_BY_MOTOR[name] for name in sent)) == spatula_build().motor_send_ids
+        )
+        assert GRIPPER_SEND_ID not in {SEND_ID_BY_MOTOR[name] for name in sent}
     # The two arms carry different angles, so a half sent to the wrong channel is visible.
-    left_first = bench.buses[SIDE_LEFT].sent[-1][fitted_motor_names(spatula_build())[0]][2]
-    right_first = bench.buses[SIDE_RIGHT].sent[-1][fitted_motor_names(spatula_build())[0]][2]
+    left_first = bench.buses[SIDE_LEFT].sent[-1][fitted[0]][2]
+    right_first = bench.buses[SIDE_RIGHT].sent[-1][fitted[0]][2]
     assert left_first != right_first
 
 
