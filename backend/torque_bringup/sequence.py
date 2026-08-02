@@ -217,13 +217,19 @@ def assert_pose_covers_fitted_motors(present: tuple[Rad, ...], send_ids: tuple[i
 class GuardedTorqueOn:
     """One guarded torque-ON session, and its reversal.
 
-    Ownership: holds the bus, the fitted end-effector profile, the preflight report and the
-    startup manifest for one session. It engages at most once; the order of bus calls it
-    makes is what acceptance ③ reads, and every invariant clears before the 0xFC leaves.
+    Ownership: holds the bus, the fitted end-effector profile, and — for a session that may
+    engage — the preflight report and the startup manifest. It engages at most once; the order
+    of bus calls it makes is what acceptance ③ reads, and every invariant clears before the
+    0xFC leaves.
 
     Threading: single-threaded operator flow. `torque_may_be_live` is set before the bus
     call rather than after, so a bus that raises mid-engage still leaves a session that
     knows torque may be on and can be told to drop it.
+
+    The two authorizations gate the engage and nothing else. `for_release` builds a session that
+    can only disengage, because the operator reaching for a release is holding an arm something
+    else energized: requiring the report and the manifest the engage needed would refuse them for
+    want of a permission the drop never reads, and there is no other way down.
     """
 
     def __init__(
@@ -247,6 +253,36 @@ class GuardedTorqueOn:
         self._manifest = manifest
         self._engaged = False
         self._torque_may_be_live = False
+
+    @classmethod
+    def for_release(cls, bus: TorqueEngageBus, end_effector: EndEffectorProfile) -> GuardedTorqueOn:
+        """Bind a session that can only release, for an arm this process did not engage.
+
+        The engage's two authorizations are absent because `disengage` reads neither: it reads the
+        operator's support declaration, the fitted id set, and the bus. Demanding them here would
+        make the drop fail for want of a startup manifest while the arm stays live, and this is
+        the path that exists for exactly that arm — one a dead process left energized, with a
+        person holding its weight.
+
+        `engage` on the session this returns raises rather than proceeding unauthorized.
+
+        Args:
+            bus: The bus the drop is sent on.
+            end_effector: The tool fitted to this arm; decides which motors are addressed.
+
+        Returns:
+            (GuardedTorqueOn) A session whose only usable half is the release.
+        """
+        session = cls.__new__(cls)
+        session._bus = bus
+        session._end_effector = end_effector
+        session._preflight = None
+        session._manifest = None
+        session._engaged = False
+        # The arm may well be live — that is why a release is being asked for. Saying so is what
+        # makes the runner record an unreleased session rather than exit clean on a hang.
+        session._torque_may_be_live = True
+        return session
 
     @property
     def engaged(self) -> bool:
@@ -300,11 +336,19 @@ class GuardedTorqueOn:
             TorqueEngageSequenceError: If already engaged, or the hold target is not the
                 present pose.
             SafeHoldViolationError: If the hold frame is a torque-0 command (kp <= 0).
+            TorqueEngageSequenceError: If this session was built by `for_release`, which carries
+                no authorization to engage on.
         """
         if self._engaged:
             raise TorqueEngageSequenceError(
                 "torque-ON already engaged this session; a second engage would re-power on a "
                 "possibly-moved pose"
+            )
+        if self._preflight is None or self._manifest is None:
+            raise TorqueEngageSequenceError(
+                "this session was built by for_release and carries neither authorization; it can "
+                "drop torque and nothing else. An engage from here would put 0xFC on a brakeless "
+                "arm with no preflight report and no startup manifest behind it"
             )
         authorize_torque_on(self._preflight)
         assert_torque_on_allowed(self._manifest)

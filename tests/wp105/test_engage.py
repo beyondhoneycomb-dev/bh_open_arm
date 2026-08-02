@@ -24,6 +24,7 @@ from backend.torque_bringup import (
     StopPathScanEmptyError,
     TorqueCutOnStopPathError,
     TorqueDisengageRefusedError,
+    TorqueEngageSequenceError,
     TorqueOnManifest,
     assert_stop_path_cuts_no_torque,
     find_torque_cut_on_stop_path,
@@ -293,6 +294,61 @@ def test_engage_runs_the_stop_path_refusal_before_touching_the_bus(
 
 
 # --- Refusal 4: the disengage, and the arm's own weight ---
+
+
+def test_a_release_only_session_drops_without_either_authorization(
+    recording_bus: RecordingEngageBus,
+    fitted_profile: EndEffectorProfile,
+) -> None:
+    """The way down for an arm this process did not energize.
+
+    `disengage` reads the support declaration, the fitted id set and the bus. Requiring the engage's
+    preflight report and startup manifest to reach it would refuse the drop for want of a permission
+    it never reads — and the operator asking for a release is holding an arm something else turned
+    on, with no other way down.
+    """
+    session = GuardedTorqueOn.for_release(recording_bus, fitted_profile)
+
+    # It reports the arm as possibly live, which is why a release is being asked for at all.
+    assert session.torque_may_be_live
+
+    dropped = session.disengage(arm_supported=True)
+
+    assert dropped == fitted_profile.motor_send_ids
+    assert GRIPPER_SEND_ID not in dropped
+    assert recording_bus.addressed_ids[-1] == fitted_profile.motor_send_ids
+    assert not session.torque_may_be_live
+
+
+def test_a_release_only_session_refuses_to_engage(
+    recording_bus: RecordingEngageBus,
+    fitted_profile: EndEffectorProfile,
+) -> None:
+    """It carries no authorization, so the half that needs one is closed rather than improvised.
+
+    Without this the engage would reach `authorize_torque_on(None)` and fail on whatever that does
+    to a missing report, which is an accident rather than a refusal. What must not happen is 0xFC
+    on a brakeless arm with no preflight and no manifest behind it.
+    """
+    session = GuardedTorqueOn.for_release(recording_bus, fitted_profile)
+
+    with pytest.raises(TorqueEngageSequenceError, match="for_release"):
+        session.engage()
+
+    assert recording_bus.calls == []
+
+
+def test_a_release_only_session_still_refuses_an_unsupported_arm(
+    recording_bus: RecordingEngageBus,
+    fitted_profile: EndEffectorProfile,
+) -> None:
+    """Dropping the authorizations does not drop the one condition the release itself owns."""
+    session = GuardedTorqueOn.for_release(recording_bus, fitted_profile)
+
+    with pytest.raises(TorqueDisengageRefusedError, match="holding brake"):
+        session.disengage(arm_supported=False)
+
+    assert "drop_torque" not in recording_bus.calls
 
 
 def test_disengage_refused_while_the_arm_is_unsupported(

@@ -344,6 +344,66 @@ def test_the_release_alone_assembles_and_drops(
     assert bench.locks.releases == 1
 
 
+def test_the_release_alone_drops_with_no_startup_manifest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The release is gated on nothing the engage needed.
+
+    `disengage` reads the support declaration, the fitted id set and the bus. Building the engage's
+    two authorizations to reach it would refuse the drop for want of a permission it never reads,
+    and this path exists for an arm a dead process left energized — with both channels already
+    open by the time the refusal landed. The manifest gates the engage and must not reach here.
+    """
+    bench = _Bench(tmp_path, monkeypatch, manifest=False)
+    assert session._LIVE_SESSION is None
+
+    passed, detail = _release(bench)
+
+    assert passed is True, detail
+    assert bench.buses[SIDE_LEFT].disabled_motors == [list(FITTED)]
+    assert bench.buses[SIDE_LEFT].enabled_motors == []
+    assert bench.locks.releases == 1
+
+
+def test_a_maintenance_loop_that_will_not_stop_does_not_hold_up_the_drop(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A tick blocked on the bus must not keep torque on.
+
+    `canbus.send()` blocks while the transmit buffer stays full, which is where a channel sits
+    once it is ERROR-PASSIVE with nothing acknowledging — measured on both channels of this bench.
+    An unbounded join there hangs the release forever with the arm energized and the operator
+    holding it, and `run_step` cannot see it because a hang is not an exception.
+
+    0xFD reaching the motors is what matters; a stray re-send afterwards moves nothing, since a
+    MIT frame arriving at a disabled motor is the same no-op the engage's proving tick relies on.
+    """
+    monkeypatch.setattr(session, "HOLD_STOP_JOIN_TIMEOUT_SEC", 0.05)
+    bench = _Bench(tmp_path, monkeypatch)
+    _engage(bench)
+    live = session._LIVE_SESSION
+    assert live is not None
+
+    # A loop that never observes the stop event: exactly what a blocked send looks like. The join
+    # returns without the thread having ended, which is what `Thread.join(timeout=...)` does on a
+    # thread stuck in a syscall.
+    def _join_that_times_out(timeout: float | None = None) -> None:
+        """Return having waited, with the thread still running."""
+
+    def _still_running() -> bool:
+        """Report the loop as alive, the way a blocked tick leaves it."""
+        return True
+
+    monkeypatch.setattr(live.maintainer, "join", _join_that_times_out)
+    monkeypatch.setattr(live.maintainer, "is_alive", _still_running)
+
+    passed, detail = _release(bench)
+
+    assert passed is True, detail
+    assert bench.buses[SIDE_LEFT].disabled_motors == [list(FITTED)]
+    assert "버스를 놓지 않았다" in detail
+
+
 # --- Refusals the engage owes before it energizes anything ---
 
 

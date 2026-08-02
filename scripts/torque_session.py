@@ -160,6 +160,12 @@ BIMANUAL_CAN_WRITER: Callable[[Any], Any] | None = None
 # Half the ceiling, so one whole missed period still lands inside it.
 HOLD_REFRESH_DIVISOR = 2.0
 
+# How long the release waits for the maintenance loop to leave the bus before dropping torque
+# anyway. Generous against a healthy tick and short against a blocked one: `canbus.send()` blocks
+# while the transmit buffer is full, which is where a channel sits once it is ERROR-PASSIVE, and
+# waiting there indefinitely leaves the arm energized with the operator holding it.
+HOLD_STOP_JOIN_TIMEOUT_SEC = 2.0
+
 # What a step records when the operator is holding the arm. `GuardedTorqueOn.disengage` refuses
 # without this declaration, and it comes from the timetable rather than a prompt: the operator
 # was shown this step's wall-clock instant and its instruction before anything engaged, and this
@@ -688,15 +694,32 @@ class HoldMaintainer(threading.Thread):
             self.ticks += 1
             self._stop_event.wait(self._period_sec)
 
-    def stop(self) -> None:
-        """Stop re-sending and wait for the loop to leave the bus alone.
+    def stop(self) -> bool:
+        """Stop re-sending, waiting a bounded time for the loop to leave the bus alone.
 
         Tolerant of never having started, because the engage records the live session before it
         engages: a bus that raised before 0xFC leaves a session the release still has to close.
+
+        The wait is bounded and the caller proceeds either way. A tick reaches the bus through
+        `canbus.send()`, which blocks while the transmit buffer stays full — the state a channel
+        sits in once it is ERROR-PASSIVE with nothing acknowledging, measured on both channels of
+        this bench. An unbounded join there hangs the release forever with the arm energized and
+        the operator holding it, and `run_step` cannot see it: a hang is not an exception.
+
+        Dropping torque with a tick possibly still in flight is safe in the direction that
+        matters. 0xFD disables the motor, and a MIT frame arriving at a disabled motor moves
+        nothing — the same property the engage's torque-off proving tick rests on. So a stray
+        re-send after the drop costs nothing, and never dropping costs everything.
+
+        Returns:
+            (bool) Whether the loop actually stopped. False means a tick is still on the bus and
+            the caller must say so rather than report a clean release.
         """
         self._stop_event.set()
-        if self.ident is not None:
-            self.join()
+        if self.ident is None:
+            return True
+        self.join(timeout=HOLD_STOP_JOIN_TIMEOUT_SEC)
+        return not self.is_alive()
 
 
 def _end_effector_record() -> Any:
@@ -972,9 +995,12 @@ def _release_torque(config: SessionConfig) -> str:
     share one socket, and a drop racing a re-send is a frame going out after the motors were
     told to let go.
 
-    A selection that runs this step alone assembles its own session and drops there. Refusing
-    for want of an engage in this process would strand an operator whose arm was energized by
-    something else, and this is the step whose whole content is them taking its weight.
+    A selection that runs this step alone assembles its own session and drops there, through
+    `GuardedTorqueOn.for_release`. Refusing for want of an engage in this process would strand an
+    operator whose arm was energized by something else, and this is the step whose whole content
+    is them taking its weight — so it is gated on nothing the engage needed. No preflight report,
+    no startup manifest, no RID dump: the drop reads the support declaration, the fitted id set
+    and the bus, and a permission it never reads must not be able to refuse it.
 
     Args:
         config: This session's config.
@@ -994,7 +1020,7 @@ def _release_torque(config: SessionConfig) -> str:
         return _release_a_session_this_process_did_not_engage(config)
 
     _LIVE_SESSION = None
-    live.maintainer.stop()
+    stopped = live.maintainer.stop()
     try:
         dropped = live.guarded.disengage(arm_supported=ARM_SUPPORTED_BY_TIMETABLE)
     finally:
@@ -1006,6 +1032,12 @@ def _release_torque(config: SessionConfig) -> str:
         # of the session. The drop still happened and the operator still has the weight; what
         # they need is to know the hold was not being sent.
         return f"{line}; 유지 루프가 먼저 죽었다: {live.maintainer.failure}"
+    if not stopped:
+        # The loop did not leave the bus inside the wait, which is what a tick blocked in
+        # `canbus.send()` looks like — the state an ERROR-PASSIVE channel sits in. The drop went
+        # out regardless, and 0xFD reaching a motor before a stray re-send is the order that
+        # matters, but the channel is not healthy and the record must not read as a clean release.
+        return f"{line}; 유지 루프가 {HOLD_STOP_JOIN_TIMEOUT_SEC}초 안에 버스를 놓지 않았다"
     return line
 
 
@@ -1026,11 +1058,14 @@ def _release_a_session_this_process_did_not_engage(config: SessionConfig) -> str
     end_effectors = _end_effector_record()
     rig_session = _assemble_rig("release", end_effectors)
     try:
-        guarded = GuardedTorqueOn(
+        # `for_release`, not the engage constructor: `disengage` reads the support declaration,
+        # the fitted id set and the bus, and nothing else. Building the preflight report and the
+        # startup manifest here would refuse the drop for want of a permission it never reads —
+        # with both channels already open and the arm still energized, which is the state this
+        # path exists to end.
+        guarded = GuardedTorqueOn.for_release(
             rig_session.rig.for_side(config.arm),
             end_effectors.for_side(config.arm),
-            _preflight_report(config, rig_session.interfaces[config.arm], rig_session.locks),
-            _startup_manifest(config),
         )
         dropped = guarded.disengage(arm_supported=ARM_SUPPORTED_BY_TIMETABLE)
     finally:
