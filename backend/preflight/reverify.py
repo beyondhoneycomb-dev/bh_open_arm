@@ -2,16 +2,21 @@
 
 Four of the five preconditions run in full on this host — side, CAN-FD link, writer
 lock, and clamp-canon need no motors. The fifth, the RID 21/22/23 cross-check, runs its
-*gate logic* here on synthetic reads, but its *live* form needs sixteen powered motors
-with torque OFF asserted first (`12` FR-SAF-075), which this host cannot supply. That
-live read is deferred — SKIPPED WITH A REASON in the bound test, never asserted green —
-and wired to this hook, which re-runs the identical torque gate against real captured
-bytes the moment a capture directory is supplied via `OPENARM_RID_REAL_FIXTURE`.
+*gate logic* here on synthetic reads, but its *live* form needs every fitted motor
+powered with torque OFF asserted first (`12` FR-SAF-075), which this host cannot supply.
+That live read is deferred — SKIPPED WITH A REASON in the bound test, never asserted
+green — and wired to this hook, which re-runs the identical torque gate against real
+captured bytes the moment a capture directory is supplied via `OPENARM_RID_REAL_FIXTURE`.
 
 The read and judgment are reused wholesale from `backend.can.rid.reverify`
 (`WP-0B-07`); this module only re-applies the WP-2A-09 torque gate to each real
 evaluation, so the deferred acceptance re-runs the exact code the offline gate tests
 exercise, now pointed at real motors.
+
+Which motors a capture must cover is the fitted set, not the eight-motor registration
+`ARM_SEND_IDS`. The two differ on a build whose tool puts no motor on `0x08`, and
+judging such a capture against eight turns a fact about the build into a read failure
+on every channel — a torque-ON refusal no capture from that rig could ever clear.
 """
 
 from __future__ import annotations
@@ -25,6 +30,7 @@ from backend.can.rid.reverify import (
     fixture_dir_from_env,
     reverify_from_fixture,
 )
+from backend.endeffector import default_profile
 from backend.preflight.checks import check_rid_crosscheck
 from backend.preflight.model import CheckResult, RidCrosscheck
 
@@ -51,9 +57,10 @@ def reverify_rid_crosscheck(
     Args:
         fixture_dir: Directory of captured RID dump JSON files, one per interface.
         margin_lsb: RID 9 send-period margin in 50 µs LSBs for the timeout branch.
-        expected_motor_ids: The motors the arm actually has, from the fitted end effector.
-            Defaults to the eight-motor registration; a gripper-less rig has seven and would
-            otherwise report the absent gripper as a motor that failed to answer.
+        expected_motor_ids: The motors the arm actually has. Defaults to the ids the
+            fitted tool puts on the bus (`default_profile().motor_send_ids`) — an arm whose
+            tool has no gripper motor carries seven, and demanding an answer from `0x08`
+            makes the acceptance unclearable on that rig rather than strict.
 
     Returns:
         (list[CheckResult]) One RID cross-check result per capture, in load order.
@@ -61,7 +68,8 @@ def reverify_rid_crosscheck(
     Raises:
         FileNotFoundError: If the directory holds no capture (propagated from the read).
     """
+    fitted = default_profile().motor_send_ids if expected_motor_ids is None else expected_motor_ids
     return [
         check_rid_crosscheck(RidCrosscheck.confirmed(evaluation))
-        for evaluation in reverify_from_fixture(fixture_dir, margin_lsb, expected_motor_ids)
+        for evaluation in reverify_from_fixture(fixture_dir, margin_lsb, fitted)
     ]

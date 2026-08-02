@@ -89,6 +89,8 @@ from backend.can.rid.registers import (
 )
 from backend.can.rid.reverify import (
     FIXTURE_ENV_VAR,
+    ArmCoverageError,
+    assert_every_arm_answered,
     fixture_dir_from_env,
     reverify_from_fixture,
 )
@@ -100,6 +102,8 @@ from backend.can.rid.staticcheck import (
 )
 
 __all__ = [
+    "assert_every_arm_answered",
+    "ArmCoverageError",
     "ARM_MOTOR_TYPES",
     "ARM_SEND_IDS",
     "DM4340_MOTOR_IDS",

@@ -45,8 +45,10 @@ def _fixed_names_present() -> bool:
 
 
 _NO_RIG_REASON = (
-    "requires a booted rig with the CAN link unit installed (four fixed-name CAN "
-    "interfaces); none present on this host. Supply a real capture to "
+    f"requires a booted rig carrying all of {', '.join(INTERFACE_NAMES)} as CAN links; none are "
+    "present. Attaching this rig's adapter does not produce them: the fitted PCAN-USB Pro FD "
+    "carries two channels, so four fixed names need a second adapter, and it publishes no "
+    "ATTRS{serial} for a udev rule to key on. Supply a real capture to "
     "ops.systemd.reverify.reverify_from_fixture to re-verify (evidence shared with WP-0B-05)."
 )
 

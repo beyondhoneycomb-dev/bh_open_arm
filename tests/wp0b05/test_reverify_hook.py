@@ -88,7 +88,10 @@ def test_hook_flags_a_capture_whose_expectation_is_wrong(tmp_path: Path) -> None
     FIXTURE_ENV_VAR not in os.environ,
     reason=(
         f"no real udev capture: set {FIXTURE_ENV_VAR} to a directory of real "
-        "udevadm/ethtool/reboot captures from two physical adapters to re-verify"
+        "udevadm/ethtool/reboot captures from two physical adapters to re-verify. The directory "
+        "must also carry expected.json naming which claims it records — udevadm dumps alone "
+        "raise FileNotFoundError, because a capture with no recorded expectation has nothing "
+        "for the hook to disagree with"
     ),
 )
 def test_reverify_against_real_capture() -> None:

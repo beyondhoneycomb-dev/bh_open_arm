@@ -1,13 +1,14 @@
-"""DEFERRED — the physical open/close endpoint capture, honestly skipped (`02a` §4.1).
+"""The endpoint-capture re-verification hook, exercised offline end to end.
 
-The physical capture needs an operator and a live DM4310, neither present on this dev
-host, so `test_real_hardware_capture_is_deferred` skips with a reason until
-`OPENARM_GRIPPER_REAL_FIXTURE` points at a captured record. The hook machinery is not
-deferred: the offline tests drive `reverify_from_fixture` over synthetic-format
-captures and prove it re-runs build-and-validate — reporting a match for a config that
-loads and a mismatch for one that is refused — rather than being a stub. The two
-together are the honest shape: the machinery is green here, only the physical bytes
-are pending.
+`backend.gripper_endpoint.reverify` exists for a build whose tool puts a motor on CAN
+`0x08`. The rig's default tool does not, so there is no acceptance here that a gripper
+must be placed at its physical stops — the tool registry is open and the hook is what a
+future gripper needs, not a pending obligation on this bench.
+
+Everything the hook does apart from producing the bytes runs here: the environment
+discovery path, the rebuild through the same `from_json_dict` a normal load uses, and the
+verdict for both a record that loads and one that is refused. A real capture is therefore
+one environment variable away from being judged, with no code change.
 """
 
 from __future__ import annotations
@@ -57,24 +58,27 @@ def test_hook_reports_an_unmirrored_capture(tmp_path: Path) -> None:
 
 
 def test_reverification_hook_is_wired() -> None:
-    """The deferred acceptance ships a real-fixture hook, per plan `02a` §4.1."""
+    """The hook ships the shape plan `02a` §4.1 requires of a re-verification path."""
     assert hasattr(reverify, "reverify_from_fixture")
     assert reverify.FIXTURE_ENV_VAR == "OPENARM_GRIPPER_REAL_FIXTURE"
 
 
-@pytest.mark.skipif(
-    fixture_dir_from_env() is None,
-    reason=(
-        "deferred: needs an operator to place the gripper at the physical open/close "
-        "stops and a live DM4310 to read native rad; set OPENARM_GRIPPER_REAL_FIXTURE "
-        "to a directory holding record.json + expected.json from a real capture"
-    ),
-)
-def test_real_hardware_capture_is_deferred() -> None:
-    """Re-verify a real captured record the moment a fixture directory is supplied."""
+def test_hook_judges_the_directory_the_environment_names(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The environment variable is the whole discovery path a real capture travels."""
+    _write_fixture(tmp_path, make_record().to_json_dict(), expect_loads=True)
+    monkeypatch.setenv(reverify.FIXTURE_ENV_VAR, str(tmp_path))
+
     fixture_dir = fixture_dir_from_env()
-    assert fixture_dir is not None
+    assert fixture_dir == tmp_path
     results = reverify_from_fixture(fixture_dir)
-    assert results, "real fixture directory held no capture"
-    for result in results:
-        assert result.matched, result.detail
+    assert results and results[0].matched, results[0].detail
+
+
+def test_hook_finds_no_directory_when_the_environment_is_unset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An unset variable yields None rather than a path that would read the repo root."""
+    monkeypatch.delenv(reverify.FIXTURE_ENV_VAR, raising=False)
+    assert fixture_dir_from_env() is None

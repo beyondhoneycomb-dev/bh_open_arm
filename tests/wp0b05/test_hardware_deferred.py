@@ -68,8 +68,12 @@ def _two_adapters_present() -> bool:
 
 
 _NO_RIG_REASON = (
-    "requires two physical gs_usb CAN adapters (four channels); none attached on this host. "
-    "Supply a real capture to ops.hw.udev.reverify.reverify_from_fixture to re-verify."
+    f"requires {_REQUIRED_CHANNELS} CAN channels bound to {_IN_TREE_DRIVER}; none are. Attaching "
+    "this rig's adapter does not satisfy it either: the fitted PCAN-USB Pro FD (0c72:0011) binds "
+    "peak_usb and carries two channels, so the probe stays empty with it plugged in. The "
+    f"acceptance needs two {_IN_TREE_DRIVER} adapters, which is a purchase, not a cable. Until "
+    "then the arm-to-channel identity comes from ops.hw.canbind, and a real capture re-verifies "
+    "the parsers through ops.hw.udev.reverify.reverify_from_fixture."
 )
 
 

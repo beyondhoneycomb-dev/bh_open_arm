@@ -88,6 +88,14 @@ def _load_reboots(path: Path) -> tuple[RebootObservation, ...]:
     )
 
 
+# The expectation keys this hook compares. Named here so the refusal that fires when none of
+# them appear reports the real list rather than a restated one, and so a key added to a branch
+# below without being added here shows up as an unreadable field instead of silently passing.
+READABLE_EXPECTATION_FIELDS: frozenset[str] = frozenset(
+    {"serial_shared", "dev_id_distinguishes", "all_in_tree", "determinism_stable"}
+)
+
+
 def reverify_from_fixture(fixture_dir: Path) -> ReverifyReport:
     """Re-run every runnable check against a directory of real captures.
 
@@ -152,6 +160,15 @@ def reverify_from_fixture(fixture_dir: Path) -> ReverifyReport:
                 f"expected {expected['determinism_stable']}"
                 + (f" ({'; '.join(result.drifts)})" if result.drifts else "")
             )
+
+    if not checked:
+        # An expectation naming nothing this hook knows how to read compares nothing, and
+        # nothing compared is not agreement. An `expected.json` of `{}` — or one whose keys are
+        # all misspelled — would otherwise report a clean match over a capture never examined.
+        mismatches.append(
+            "the expectation named no field this hook reads, so nothing was compared; "
+            f"readable fields are {sorted(READABLE_EXPECTATION_FIELDS)}"
+        )
 
     return ReverifyReport(
         matched=not mismatches,

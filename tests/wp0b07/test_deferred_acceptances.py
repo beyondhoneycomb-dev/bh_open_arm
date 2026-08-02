@@ -28,7 +28,12 @@ from backend.can.rid.evaluate import DumpEvaluation
 from backend.can.rid.judge import PgStatus
 from backend.can.rid.layout import ARM_MOTOR_TYPES, ARM_SEND_IDS, DM4340_MOTOR_IDS, J7_MOTOR_ID
 from backend.can.rid.registers import RID_OC, RID_OT, RID_OV, RID_UV
-from backend.can.rid.reverify import FIXTURE_ENV_VAR, fixture_dir_from_env, reverify_from_fixture
+from backend.can.rid.reverify import (
+    FIXTURE_ENV_VAR,
+    assert_every_arm_answered,
+    fixture_dir_from_env,
+    reverify_from_fixture,
+)
 from backend.endeffector import default_profile
 from tests.wp0b07 import rid_fixtures as fx
 
@@ -115,7 +120,12 @@ def test_the_named_capture_directory_exists() -> None:
 @pytest.mark.skipif(_REAL_FIXTURE is None, reason="① " + _SKIP_REASON)
 def test_deferred_fitted_motors_rid9_read() -> None:
     assert _REAL_FIXTURE is not None
-    for evaluation in reverify_from_fixture(_REAL_FIXTURE, _MARGIN_LSB, _FITTED_SEND_IDS):
+    evaluations = reverify_from_fixture(_REAL_FIXTURE, _MARGIN_LSB, _FITTED_SEND_IDS)
+    # Every fitted motor of every arm, not every motor of whatever was captured. Each dump is
+    # judged on its own, so one arm's clean capture clears this acceptance while the other arm
+    # went unread — seven motors of fourteen, and every verdict in the seven passes.
+    assert_every_arm_answered(evaluations)
+    for evaluation in evaluations:
         assert evaluation.rid9.missing_motor_ids == ()
 
 

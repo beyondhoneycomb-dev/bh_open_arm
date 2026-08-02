@@ -44,13 +44,34 @@ _CAPTURE_ENV_RAW = os.environ.get(CAPTURE_ENV_VAR, "")
     ),
 )
 def test_driver_reverify_runs_against_the_real_driver_source() -> None:
-    """The M-24 audit over the operator's real driver.py: the file must exist and be read."""
+    """The M-24 audit over the operator's real driver.py, judged by its citations.
+
+    `M-24` is open in the spec, so neither answer to "does it open CAN" can be asserted here.
+    What can be asserted is that the verdict is usable: `present` is set unconditionally by
+    `audit_driver_source`, so reading it asks nothing — and `opens_can` is only actionable if
+    the operator can go to the cited line and see the construct. So the citations are checked
+    against the file they name.
+    """
     source = driver_source_from_env()
     assert source is not None, (
         f"{DRIVER_SOURCE_ENV_VAR} names {_DRIVER_SOURCE_ENV_RAW!r}, which is not a file"
     )
     verdict = reverify_driver_audit(source)
-    assert verdict.present, f"{source} was not readable as a driver source"
+    assert verdict.source_path == str(source), (
+        f"the verdict cites {verdict.source_path} but the operator named {source}"
+    )
+    assert verdict.opens_can is not None, f"{source} left M-24 unsettled"
+    assert bool(verdict.cited_lines) is verdict.opens_can, (
+        f"opens_can={verdict.opens_can} with {len(verdict.cited_lines)} cited lines"
+    )
+
+    lines = source.read_text(encoding="utf-8").splitlines()
+    for cited in verdict.cited_lines:
+        assert 1 <= cited.line <= len(lines), f"{source}:{cited.line} is outside the file"
+        assert cited.text == lines[cited.line - 1].strip(), (
+            f"{source}:{cited.line} cites {cited.text!r} but holds "
+            f"{lines[cited.line - 1].strip()!r}"
+        )
 
 
 def test_driver_reverify_runs_against_supplied_source(monkeypatch: pytest.MonkeyPatch) -> None:

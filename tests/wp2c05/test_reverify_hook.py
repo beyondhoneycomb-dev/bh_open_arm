@@ -1,12 +1,18 @@
 """The `NFR-SAF-007` hold-send-period acceptance: deferred offline, run on a real candump.
 
 The quantitative acceptance — the Cat-2 hold's CAN send period stays below the RID-9
-`TIMEOUT` — cannot run on a desktop: the RID-9 timeout is `[결정필요]` (unread without a
-CAN bus) and the true send period needs a hardware candump. Offline it is skipped with a
-reason, never asserted green (`THE ONE RULE`); the moment `FIXTURE_ENV_VAR` names a
-capture directory the acceptance runs over those timestamps and can fail. The synthetic
-tests exercise the same check both directions, and neither number is ever supplied by the
-test — both come from the capture, so the hook cannot manufacture a pass.
+`TIMEOUT` — cannot run on a desktop: the true send period needs a hardware candump.
+Offline it is skipped with a reason, never asserted green (`THE ONE RULE`); the moment
+`FIXTURE_ENV_VAR` names a capture directory the acceptance runs over those timestamps and
+can fail. The synthetic tests exercise the same check both directions, and neither number
+is ever supplied by the test — both come from the capture, so the hook cannot manufacture
+a pass.
+
+The timeout each capture carries is the motor's own, and on this rig every fitted motor
+reads RID 9 = 0 — `Rid9Branch.HW_FALLBACK_DISABLED`, no motor-side comm-loss deadline at
+all. A capture recording that value has no bound for a send period to stay under, so the
+verdict below is about the deadline the capture reports, not about a deadline the hardware
+is assumed to have.
 """
 
 from __future__ import annotations
@@ -30,9 +36,11 @@ from backend.reaction import (
 _FIXTURE_ENV_RAW = os.environ.get(FIXTURE_ENV_VAR, "")
 
 _DEFERRED_REASON = (
-    "NFR-SAF-007 hold-send-period is torque-ON / real-bus: the RID-9 TIMEOUT is [결정필요] and "
-    f"the send period needs a hardware candump; set {FIXTURE_ENV_VAR} to a directory of "
-    "decoded candump captures to run the acceptance here"
+    "NFR-SAF-007 hold-send-period is torque-ON / real-bus: the send period needs a hardware "
+    f"candump of the Cat-2 hold; set {FIXTURE_ENV_VAR} to a directory of decoded candump "
+    "captures to run the acceptance here. Every fitted motor on this rig reads RID 9 = 0, so a "
+    "capture that records that value carries no deadline and the acceptance cannot hold on it — "
+    "the motor-side comm-loss fallback is off and the software deadman is what stops the arm"
 )
 
 
@@ -48,7 +56,9 @@ def test_hold_send_period_against_the_real_fixture() -> None:
     for verdict in verdicts:
         assert verdict.within_deadline, (
             f"{verdict.source}: largest hold-send gap {verdict.max_interval_sec} s reached the "
-            f"RID-9 timeout {verdict.rid9_timeout_sec} s — the motors time out during the hold"
+            f"RID-9 timeout {verdict.rid9_timeout_sec} s. A timeout of 0 means the opposite of "
+            "a missed deadline — the motor-side fallback is off, so nothing on the motor drops "
+            "enable when the host goes quiet and only the software deadman does"
         )
 
 

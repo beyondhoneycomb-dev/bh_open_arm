@@ -9,6 +9,7 @@ owned fixtures; the byte layouts are packed locally so this tree owns all of its
 from __future__ import annotations
 
 import struct
+from collections.abc import Sequence
 
 from backend.actuation import SafetyLimits
 from backend.can.link import LinkState, parse_link_show
@@ -85,6 +86,7 @@ def build_rid_evaluation(
 def capture_dict(
     *,
     iface: str = TEST_IFACE,
+    send_ids: Sequence[int] = ARM_SEND_IDS,
     break_motor: int | None = None,
     break_rid: int | None = None,
     break_value: float | None = None,
@@ -97,6 +99,9 @@ def capture_dict(
 
     Args:
         iface: Interface name recorded on the capture.
+        send_ids: The motors this capture holds. A real capture holds the ids the fitted
+            tool puts on the bus, which is seven when the tool has no motor on `0x08`;
+            passing a subset of the fitted set is how a partial read is built.
         break_motor: CAN id whose register to corrupt, or None for a clean capture.
         break_rid: The RID (21/22/23) to corrupt on `break_motor`.
         break_value: The wrong value to write.
@@ -105,7 +110,7 @@ def capture_dict(
         (dict[str, object]) The capture object, ready to `json.dump`.
     """
     motors: dict[str, object] = {}
-    for motor_id in ARM_SEND_IDS:
+    for motor_id in send_ids:
         limit = MOTOR_LIMIT_PARAMS[expected_type(motor_id)]
         values = {RID_PMAX: limit.p_max, RID_VMAX: limit.v_max, RID_TMAX: limit.t_max}
         if motor_id == break_motor and break_rid is not None and break_value is not None:

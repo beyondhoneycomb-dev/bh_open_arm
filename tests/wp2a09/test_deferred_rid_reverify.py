@@ -10,6 +10,10 @@ To prove the hook is real and not a stub, the hook-proof tests build a capture d
 in the real `dump.py` schema and run `reverify_rid_crosscheck` end to end. That exercises
 the plumbing without pretending to reach hardware; the hardware truth stays in the skipped
 test.
+
+The set a capture is judged complete against is the fitted one. A build whose tool has no
+motor on `0x08` produces a seven-motor capture, and the two tests below pin both halves of
+that: such a capture clears the gate, and one short of a *fitted* motor still blocks.
 """
 
 from __future__ import annotations
@@ -20,6 +24,7 @@ from pathlib import Path
 import pytest
 
 from backend.can.rid.registers import RID_TMAX
+from backend.endeffector import default_profile
 from backend.preflight.reverify import (
     FIXTURE_ENV_VAR,
     fixture_dir_from_env,
@@ -29,6 +34,7 @@ from tests.wp2a09.builders import capture_dict
 
 _REAL_FIXTURE = fixture_dir_from_env()
 _DM4340_JOINT = 0x03
+_FITTED_SEND_IDS = default_profile().motor_send_ids
 
 
 def _write_capture(directory: Path, name: str, capture: dict[str, object]) -> None:
@@ -40,8 +46,9 @@ def _write_capture(directory: Path, name: str, capture: dict[str, object]) -> No
 @pytest.mark.skipif(
     _REAL_FIXTURE is None,
     reason=(
-        f"live RID cross-check needs 16 powered motors; set {FIXTURE_ENV_VAR} to a real "
-        "capture directory to re-run the deferred acceptance on hardware"
+        "live RID cross-check needs every fitted motor of both arms powered — seven per arm on "
+        f"the spatula build, nothing on 0x08; set {FIXTURE_ENV_VAR} to a real capture directory "
+        "holding one dump per arm to re-run the deferred acceptance on hardware"
     ),
 )
 def test_live_rid_crosscheck_against_real_capture() -> None:
@@ -68,3 +75,21 @@ def test_hook_blocks_on_mismatching_capture(tmp_path: Path) -> None:
     )
     results = reverify_rid_crosscheck(tmp_path)
     assert not results[0].passed
+
+
+def test_hook_passes_on_a_capture_holding_only_the_fitted_motors(tmp_path: Path) -> None:
+    # The rig's tool puts no motor on 0x08, so its capture holds seven. The gate judges
+    # completeness against the fitted set, not the eight-motor registration.
+    _write_capture(tmp_path, "can0.json", capture_dict(send_ids=_FITTED_SEND_IDS))
+    results = reverify_rid_crosscheck(tmp_path)
+    assert results[0].passed, results[0].detail
+
+
+def test_hook_blocks_when_a_fitted_motor_is_absent(tmp_path: Path) -> None:
+    # Narrowing the expected set to the fitted one must not narrow it further: a capture
+    # short of a motor the arm does carry is still the partial read that forbids torque-ON.
+    absent = _FITTED_SEND_IDS[-1]
+    _write_capture(tmp_path, "can0.json", capture_dict(send_ids=_FITTED_SEND_IDS[:-1]))
+    results = reverify_rid_crosscheck(tmp_path)
+    assert not results[0].passed
+    assert f"0x{absent:02x}" in results[0].detail

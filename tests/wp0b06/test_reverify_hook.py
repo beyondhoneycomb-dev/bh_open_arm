@@ -73,10 +73,38 @@ def test_hook_tolerates_a_missing_topology_capture(tmp_path: Path) -> None:
     ),
 )
 def test_real_hardware_reverify() -> None:
-    """Re-verify against a real rig capture the moment one is supplied."""
+    """Re-verify against a real rig capture the moment one is supplied.
+
+    The verdicts, not their containers. `TopologyReport` and `CanBusStats` are returned for
+    any input the parsers accept, including input they found nothing in: a topology that
+    located no adapter still reports `shared_controller=None` and `all_high_speed_usb2=False`,
+    and bus stats whose counter row did not match still carry `None` in every counter field.
+    Those are the answers acceptances ② ④ ⑥ are made of, so a capture that parsed to empty
+    satisfies an existence check while leaving all three unmeasured.
+    """
     fixture_dir = fixture_dir_from_env()
     assert fixture_dir is not None
     result = reverify_from_fixture(fixture_dir)
-    # A real capture must parse to *something*; an empty parse means format drift,
-    # which is exactly the regression this hook exists to catch.
-    assert result.topology is not None or result.bus_stats or result.fmax_per_arm
+
+    assert result.topology is not None or result.bus_stats, (
+        f"nothing in {fixture_dir} parsed: no lsusb_t.txt and no ip_s_d_<iface>.txt"
+    )
+
+    if result.topology is not None:
+        # ② and ⑥ are both statements about the adapters. With none located there is no
+        # controller to share and no link speed to record, and the report says so in fields
+        # that read as ordinary negatives.
+        assert result.topology.adapters, (
+            "the real lsusb -t parsed but located no CAN adapter, so the controller-sharing "
+            "and USB-2.0 link-speed acceptances have nothing to judge"
+        )
+
+    for stats in result.bus_stats:
+        # ④ records the error counters beside the rate, as the independent evidence that a
+        # high achieved rate was not bought with a rising error rate. Absent counters make
+        # that evidence silently empty.
+        assert stats.restarts is not None, f"{stats.iface}: no restart counter parsed"
+        assert stats.bus_errors is not None, f"{stats.iface}: no bus-error counter parsed"
+        assert stats.error_warn is not None, f"{stats.iface}: no error-warning counter parsed"
+        assert stats.error_pass is not None, f"{stats.iface}: no error-passive counter parsed"
+        assert stats.bus_off is not None, f"{stats.iface}: no bus-off counter parsed"
