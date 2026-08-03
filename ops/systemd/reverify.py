@@ -45,12 +45,20 @@ class ReverifyReport:
     Attributes:
         matched: True iff every expectation that was recorded held on the real bytes.
         checked: Names of the expectations that were present and evaluated.
+        unchecked: Readable expectations the capture did not record, so still deferred.
         mismatches: One human-readable line per expectation that failed.
     """
 
     matched: bool
     checked: tuple[str, ...]
+    unchecked: tuple[str, ...] = field(default_factory=tuple)
     mismatches: tuple[str, ...] = field(default_factory=tuple)
+
+
+# The expectation keys this hook compares. Named here so the refusal that fires when none of
+# them appear reports the real list, and so a key added to a branch below without being added
+# here surfaces as an unreadable field instead of silently passing.
+READABLE_EXPECTATION_FIELDS: frozenset[str] = frozenset({"link_ok", "determinism_stable"})
 
 
 def link_params_ok(state: LinkState) -> bool:
@@ -108,8 +116,8 @@ def reverify_from_fixture(fixture_dir: Path) -> ReverifyReport:
     """Re-run every runnable check against a directory of real captures.
 
     Only the expectations recorded in `expected.json` are evaluated, so a partial capture
-    (link dumps but no reboot log, or the reverse) verifies what it can and stays silent on
-    the rest.
+    (link dumps but no reboot log, or the reverse) verifies what it can and reports the rest
+    as `unchecked`. An expectation that records nothing readable is a mismatch, not a pass.
 
     Args:
         fixture_dir: Directory of real captures plus `expected.json`.
@@ -147,8 +155,18 @@ def reverify_from_fixture(fixture_dir: Path) -> ReverifyReport:
                 + (f" ({'; '.join(result.drifts)})" if result.drifts else "")
             )
 
+    if not checked:
+        # An expectation naming nothing this hook knows how to read compares nothing, and
+        # nothing compared is not agreement. An `expected.json` of `{}` — or one whose keys are
+        # all misspelled — would otherwise report a clean match over a capture never examined.
+        mismatches.append(
+            "the expectation named no field this hook reads, so nothing was compared; "
+            f"readable fields are {sorted(READABLE_EXPECTATION_FIELDS)}"
+        )
+
     return ReverifyReport(
         matched=not mismatches,
         checked=tuple(checked),
+        unchecked=tuple(sorted(READABLE_EXPECTATION_FIELDS - set(checked))),
         mismatches=tuple(mismatches),
     )

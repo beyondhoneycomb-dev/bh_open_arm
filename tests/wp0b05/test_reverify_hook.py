@@ -18,6 +18,7 @@ import pytest
 
 from ops.hw.udev.reverify import (
     FIXTURE_ENV_VAR,
+    READABLE_EXPECTATION_FIELDS,
     fixture_dir_from_env,
     reverify_from_fixture,
 )
@@ -84,19 +85,61 @@ def test_hook_flags_a_capture_whose_expectation_is_wrong(tmp_path: Path) -> None
     assert any("determinism_stable" in mismatch for mismatch in report.mismatches)
 
 
+def test_an_empty_expectation_is_a_mismatch_not_a_match(tmp_path: Path) -> None:
+    """`expected.json` of `{}` compares nothing, and nothing compared is not agreement."""
+    capture = tmp_path / "cap"
+    (capture / "udevadm").mkdir(parents=True)
+    shutil.copy(_FIXTURES / "udevadm" / "can0_serial.txt", capture / "udevadm" / "can0.txt")
+    (capture / "expected.json").write_text(json.dumps({}), encoding="utf-8")
+    report = reverify_from_fixture(capture)
+    assert report.matched is False
+    assert report.checked == ()
+    assert set(report.unchecked) == READABLE_EXPECTATION_FIELDS
+
+
+def test_a_partial_capture_reports_what_it_could_not_settle(tmp_path: Path) -> None:
+    """Whatever a capture omits comes back named, so `matched` cannot be read as full coverage.
+
+    `checked` and `unchecked` partition the readable roster. A field evaluated by some branch
+    but missing from `READABLE_EXPECTATION_FIELDS` breaks the partition here rather than
+    quietly counting as coverage nobody offered.
+    """
+    capture = tmp_path / "cap"
+    (capture / "udevadm").mkdir(parents=True)
+    for name in ("can0_peak_hub_serial.txt", "can1_peak_hub_serial.txt"):
+        shutil.copy(_FIXTURES / "udevadm" / name, capture / "udevadm" / name)
+    (capture / "expected.json").write_text(
+        json.dumps({"dev_id_distinguishes": True}), encoding="utf-8"
+    )
+    report = reverify_from_fixture(capture)
+    assert report.matched is True
+    assert report.checked == ("dev_id_distinguishes",)
+    assert set(report.checked) | set(report.unchecked) == READABLE_EXPECTATION_FIELDS
+    assert set(report.checked) & set(report.unchecked) == set()
+    assert "serial_shared" in report.unchecked
+
+
 @pytest.mark.skipif(
     FIXTURE_ENV_VAR not in os.environ,
     reason=(
         f"no real udev capture: set {FIXTURE_ENV_VAR} to a directory of real "
-        "udevadm/ethtool/reboot captures from two physical adapters to re-verify. The directory "
-        "must also carry expected.json naming which claims it records — udevadm dumps alone "
-        "raise FileNotFoundError, because a capture with no recorded expectation has nothing "
-        "for the hook to disagree with"
+        "udevadm/ethtool/reboot captures to re-verify. The directory must also carry "
+        "expected.json naming which claims it records — udevadm dumps alone raise "
+        "FileNotFoundError, because a capture with no recorded expectation has nothing for the "
+        "hook to disagree with. A capture from one two-channel adapter settles the channel "
+        "axis only; serial sharing across adapters and the ten-reboot determinism come back "
+        "in `unchecked` and stay deferred"
     ),
 )
 def test_reverify_against_real_capture() -> None:
-    """Deferred acceptance ①②③⑤: re-run every check against a real capture directory."""
+    """Deferred acceptances ①②③⑤, to the extent the supplied capture records them.
+
+    `matched` alone would let a capture recording one field read as the whole set, so the
+    coverage the capture did not offer is asserted to be reported rather than absent.
+    """
     fixture_dir = fixture_dir_from_env()
     assert fixture_dir is not None
     report = reverify_from_fixture(fixture_dir)
     assert report.matched, f"real-capture re-verification failed: {report.mismatches}"
+    assert report.checked, "the capture recorded no readable expectation"
+    assert set(report.checked) | set(report.unchecked) == READABLE_EXPECTATION_FIELDS

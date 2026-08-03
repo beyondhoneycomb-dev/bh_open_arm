@@ -28,7 +28,6 @@ from backend.can.rid.judge import (
     judge_vmax,
 )
 from backend.can.rid.layout import (
-    ARM_SEND_IDS,
     DM4340_MOTOR_IDS,
     J7_MOTOR_ID,
     expected_type,
@@ -44,6 +43,7 @@ from backend.can.rid.registers import (
     RID_UV,
     RID_VMAX,
 )
+from backend.endeffector import default_profile
 
 # The protection-threshold registers recorded for acceptance ⑥ (`03` FR-MOT-039).
 PROTECTION_RIDS: tuple[int, ...] = (RID_UV, RID_OT, RID_OC, RID_OV)
@@ -139,17 +139,23 @@ def evaluate_dump(
     Args:
         dump: The decoded read-backs for one interface.
         margin_lsb: The RID 9 send-period margin in 50 us LSBs.
-        expected_motor_ids: The motors this arm actually has, from the fitted end effector
-            (`backend.endeffector.EndEffectorProfile.motor_send_ids`). Defaults to the full
-            eight-motor registration. A spatula arm has seven, and judging it against eight
-            reports the absent gripper as a motor that failed to answer — a finding about the
-            build, dressed as a fault.
+        expected_motor_ids: The motors this arm actually has. Defaults to the ids the fitted
+            tool puts on the bus (`default_profile().motor_send_ids`), which is the same
+            default `backend.preflight.reverify.reverify_rid_crosscheck` applies — one answer
+            to "which motors must answer", reached whether the caller states it or not. The
+            eight-motor registration `ARM_SEND_IDS` is not that answer: on a build with no
+            gripper it demands a reply from `0x08`, and no capture taken on that rig can
+            supply one, so the acceptance reports the build as a read failure forever.
 
     Returns:
         (DumpEvaluation) Misreads, the RID 9 judgment, per-motor limit/protection
         evaluations, the J7 judgment (when read), and DM4340 VMAX judgments.
     """
-    expected = tuple(expected_motor_ids) if expected_motor_ids is not None else ARM_SEND_IDS
+    expected = (
+        tuple(expected_motor_ids)
+        if expected_motor_ids is not None
+        else default_profile().motor_send_ids
+    )
     misreads = tuple(find_type_misreads(dump.all_misread_entries()))
 
     observed_rid9 = {

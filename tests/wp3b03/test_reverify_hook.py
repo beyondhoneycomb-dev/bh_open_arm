@@ -603,21 +603,51 @@ def test_a_superspeed_zed_clears_the_cabling_blocker_and_only_that_one(tmp_path:
     assert "enumerated on USB" not in reason
 
 
+def _publishes_video_interface(entry: Path) -> bool:
+    """Whether this USB device carries a video-class interface.
+
+    What separates a camera from its companion. A ZED Mini enumerates as two functions under
+    the same manufacturer and a product string that starts the same way, and only one of them
+    carries video; the other is an HID device for the IMU. Read off the interface descriptors
+    rather than the product id, because the product id is what the test using this is checking.
+    """
+    try:
+        interfaces = sorted(entry.glob(f"{entry.name}:*"))
+    except OSError:
+        return False
+    for interface in interfaces:
+        try:
+            if (interface / "bInterfaceClass").read_text(
+                encoding="utf-8"
+            ).strip() == USB_VIDEO_INTERFACE_CLASS:
+                return True
+        except OSError:
+            continue
+    return False
+
+
 def _fitted_stereolabs_device_dir() -> Path | None:
-    """The sysfs entry the kernel labelled as a Stereolabs ZED, located by its strings."""
+    """The sysfs entry of the fitted Stereolabs camera, located without the id under test.
+
+    Found by vendor plus a video-class interface. The manufacturer string cannot do it: measured
+    on this bench, the camera function reports `Technologies, Inc.` while only the HID companion
+    reports `STEREOLABS`, so a manufacturer match finds the companion or nothing. The two also
+    share a product prefix, and the HID one sorts first — a locator that returned it would
+    compare the recorded camera id against the companion's, failing on a correct constant.
+
+    The vendor id is not what the test checks, so keying on it is not circular; the product id
+    is, and nothing here reads it.
+    """
     try:
         entries = sorted(USB_SYSFS_ROOT.iterdir())
     except OSError:
         return None
     for entry in entries:
         try:
-            manufacturer = (entry / "manufacturer").read_text(encoding="utf-8").strip()
-            product = (entry / "product").read_text(encoding="utf-8").strip()
+            vendor = (entry / "idVendor").read_text(encoding="utf-8").strip()
         except OSError:
             continue
-        if manufacturer.upper() == _ZED_USB_MANUFACTURER and product.upper().startswith(
-            _ZED_USB_PRODUCT_PREFIX
-        ):
+        if vendor == STEREOLABS_USB_VENDOR_ID and _publishes_video_interface(entry):
             return entry
     return None
 

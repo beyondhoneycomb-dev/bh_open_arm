@@ -20,6 +20,11 @@ from ops.hw.udev.model import UdevInterface
 # A block header names the level being described; the first (non-parent) block is
 # the net device, every later one is an ancestor.
 _BLOCK_HEADER = re.compile(r"looking at (?:parent )?device '([^']*)':")
+# A USB interface node's `KERNELS` carries `:<config>.<interface>`; cutting there names
+# the adapter's own device node. Only that level's `ATTRS{serial}` belongs to the adapter.
+# Hubs and the root hub above it publish serials too, and the root hub's is the host
+# controller's PCI address — shared by every USB device on the bus, CAN or not.
+_USB_INTERFACE_SUFFIX = ":"
 # `KERNEL==`, `DRIVER==`, `KERNELS==`, `DRIVERS==` — a bare match key and value.
 _PLAIN_ATTR = re.compile(r'^\s*(KERNELS?|DRIVERS?|SUBSYSTEMS?)=="(.*)"\s*$')
 # `ATTR{dev_id}=="0x0"` / `ATTRS{serial}=="..."` — a keyed attribute and value.
@@ -86,14 +91,40 @@ def _assign_plain(block: _Block, key: str, value: str) -> None:
         block.drivers = value
 
 
+def _adapter_serial(ancestors: list[_Block], port_path: str | None) -> str | None:
+    """Read `ATTRS{serial}` from the adapter's own USB device node, or None.
+
+    Scoped deliberately to that one level. An unbounded walk up the parent chain reaches
+    the hubs and finally the root hub, whose serial is the host controller's PCI address
+    (`0000:80:14.0`) — a value every USB device on that bus reports identically. Taking it
+    would key two channels of an adapter that publishes no iSerial to a "serial" they share
+    with every other device on the controller, and would suppress the port-path fallback
+    (`16` M-12) that such an adapter is supposed to fall through to.
+
+    Args:
+        ancestors: Parent blocks in walk order, nearest first.
+        port_path: `KERNELS` of the adapter's USB interface node, or None if unresolved.
+
+    Returns:
+        (str | None) The adapter's serial, or None when it publishes none.
+    """
+    if port_path is None:
+        return None
+    device_node = port_path.split(_USB_INTERFACE_SUFFIX, 1)[0]
+    for block in ancestors:
+        if block.kernels == device_node:
+            return block.attrs.get("serial")
+    return None
+
+
 def parse_udevadm_info(text: str) -> UdevInterface:
     """Fold one `udevadm info -a` dump into a single interface record.
 
     The channel axis (`dev_id`, `type`) is read from the net-device block; the
     adapter axis (`serial`, port path, driver) is read from the first ancestor
     that actually declares a `DRIVERS` — the USB-interface node that carries
-    `gs_usb`. Serial is taken from the first ancestor that exposes `ATTRS{serial}`,
-    which sits one level further up on the USB device node.
+    `gs_usb`. Serial is taken from that node's USB device node and nowhere else,
+    so an adapter reporting no iSerial yields None rather than a hub's serial.
 
     Args:
         text: Raw dump for exactly one interface.
@@ -121,11 +152,7 @@ def parse_udevadm_info(text: str) -> UdevInterface:
             port_path = block.kernels
             break
 
-    serial: str | None = None
-    for block in blocks[1:]:
-        if "serial" in block.attrs:
-            serial = block.attrs["serial"]
-            break
+    serial = _adapter_serial(blocks[1:], port_path)
 
     return UdevInterface(
         interface=interface,

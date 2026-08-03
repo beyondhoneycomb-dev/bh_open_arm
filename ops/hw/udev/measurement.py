@@ -82,6 +82,11 @@ def build_measurement_table(interfaces: tuple[UdevInterface, ...]) -> Measuremen
     return MeasurementTable(entries=entries)
 
 
+# How many channels of one adapter a capture must hold before it can show that `dev_id`
+# separates them. One channel exhibits no separation: nothing is absent and nothing collides.
+_CHANNELS_NEEDED_TO_SHOW_SEPARATION = 2
+
+
 def serial_shared_per_adapter(table: MeasurementTable) -> bool:
     """Answer acceptance ②: is `ATTRS{serial}` shared per adapter, not per channel?
 
@@ -116,8 +121,18 @@ def serial_shared_per_adapter(table: MeasurementTable) -> bool:
 def dev_id_distinguishes_channels(table: MeasurementTable) -> bool:
     """Answer acceptance ③: does `ATTR{dev_id}` distinguish channels within an adapter?
 
-    True iff no adapter has two channels reporting the same (or absent) `dev_id` —
-    i.e. within every adapter the channel discriminator is present and unique.
+    True iff every adapter carries more than one channel and no adapter has two channels
+    reporting the same (or absent) `dev_id`.
+
+    The multi-channel requirement is the acceptance rather than a precondition of it. What ③
+    claims is that `dev_id` *separates* the channels of an adapter, and a capture holding one
+    channel of one adapter exhibits no separation to judge: it has no absent id and no
+    collision, so a bare uniqueness test passes it vacuously. `serial_shared_per_adapter`
+    guards the mirrored claim with `saw_shared` for the same reason.
+
+    Counting interfaces would not do it. Two dumps from two different adapters, each holding
+    one channel and both reading `dev_id` 0x0, is two interfaces and still no adapter whose
+    channels were separated — so the requirement is per adapter, not per capture.
 
     Args:
         table: The measurement table.
@@ -129,6 +144,8 @@ def dev_id_distinguishes_channels(table: MeasurementTable) -> bool:
     if not groups:
         return False
     for entries in groups.values():
+        if len(entries) < _CHANNELS_NEEDED_TO_SHOW_SEPARATION:
+            return False
         dev_ids = [entry.dev_id for entry in entries]
         if any(dev_id is None for dev_id in dev_ids):
             return False

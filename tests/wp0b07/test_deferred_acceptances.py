@@ -20,13 +20,19 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
 
 from backend.can.rid.evaluate import DumpEvaluation
 from backend.can.rid.judge import PgStatus
-from backend.can.rid.layout import ARM_MOTOR_TYPES, ARM_SEND_IDS, DM4340_MOTOR_IDS, J7_MOTOR_ID
+from backend.can.rid.layout import (
+    ARM_SEND_IDS,
+    DM4340_MOTOR_IDS,
+    J7_MOTOR_ID,
+    expected_type,
+)
 from backend.can.rid.registers import RID_OC, RID_OT, RID_OV, RID_UV
 from backend.can.rid.reverify import (
     FIXTURE_ENV_VAR,
@@ -34,7 +40,7 @@ from backend.can.rid.reverify import (
     fixture_dir_from_env,
     reverify_from_fixture,
 )
-from backend.endeffector import default_profile
+from backend.endeffector import GRIPPER_SEND_ID, default_profile, gripper_build, spatula_build
 from tests.wp0b07 import rid_fixtures as fx
 
 _REAL_FIXTURE = fixture_dir_from_env()
@@ -46,22 +52,33 @@ _MARGIN_LSB = 20
 # turns a fact about the bench into a read failure against every arm.
 _FITTED_SEND_IDS = default_profile().motor_send_ids
 
+# Two joints — never the eight-motor registration and never any tool's fitted set, so a
+# judgment that comes back naming exactly these came from the caller's argument and could not
+# have come from either default. This is what makes the pass-through checkable at all.
+_CALLER_NAMED_SUBSET: tuple[int, ...] = (0x01, 0x02)
+
+# The two registered builds, taken from the tool registry rather than the ambient rig file, so
+# the seven-vs-eight distinction these tests turn on survives a refit of the bench.
+_SPATULA_SEND_IDS = spatula_build().motor_send_ids
+_GRIPPER_SEND_IDS = gripper_build().motor_send_ids
+
 _SKIP_REASON = (
     "requires every fitted motor powered with torque-OFF asserted first (12 FR-SAF-075); "
     f"set {FIXTURE_ENV_VAR} to a real capture directory to re-verify"
 )
 
 
-def _write_arm_capture(directory: Path, iface: str) -> None:
-    """Write one arm's 8-motor healthy capture into a dump JSON file.
+def _write_arm_capture(directory: Path, iface: str, send_ids: Sequence[int] = ARM_SEND_IDS) -> None:
+    """Write one arm's healthy capture into a dump JSON file.
 
     Args:
         directory: The capture directory.
         iface: The interface name (also the file stem).
+        send_ids: The motors the capture holds. Defaults to the eight-motor registration;
+            a real spatula capture holds seven.
     """
     motors = {
-        send_id: fx.healthy_motor(motor_type, timeout_lsb=1000)
-        for send_id, motor_type in zip(ARM_SEND_IDS, ARM_MOTOR_TYPES, strict=True)
+        send_id: fx.healthy_motor(expected_type(send_id), timeout_lsb=1000) for send_id in send_ids
     }
     (directory / f"{iface}.json").write_text(json.dumps(fx.dump(iface, motors)), encoding="utf-8")
 
@@ -103,6 +120,41 @@ def test_reverify_hook_runs_over_a_capture_dir(tmp_path: Path) -> None:
 def test_reverify_hook_rejects_an_empty_capture_dir(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
         reverify_from_fixture(tmp_path, _MARGIN_LSB)
+
+
+# --- Which motors must answer: the caller's word, and the default when there is none ---
+
+
+def test_the_hook_judges_the_motor_ids_the_caller_named(tmp_path: Path) -> None:
+    # The argument reaching the judgment is not observable from a capture that happens to hold
+    # the same motors the default would have picked. Naming a set that is neither default makes
+    # a dropped argument visible: discard it and the verdict names eight ids, or seven, never two.
+    _write_arm_capture(tmp_path, "oa_fl")
+    judged = reverify_from_fixture(tmp_path, _MARGIN_LSB, _CALLER_NAMED_SUBSET)[0].rid9
+    assert tuple(motor.motor_id for motor in judged.per_motor) == _CALLER_NAMED_SUBSET
+    assert judged.missing_motor_ids == ()
+
+
+def test_a_motor_the_caller_named_and_the_capture_lacks_is_a_partial_read(tmp_path: Path) -> None:
+    # A gripper arm's capture taken on a spatula bench. The caller names eight; the bytes hold
+    # seven. Torque-ON is forbidden on a partial read, and the id that went unanswered is named.
+    _write_arm_capture(tmp_path, "oa_fl", _SPATULA_SEND_IDS)
+    judged = reverify_from_fixture(tmp_path, _MARGIN_LSB, _GRIPPER_SEND_IDS)[0].rid9
+    assert judged.missing_motor_ids == (GRIPPER_SEND_ID,)
+    assert judged.status is PgStatus.FAIL_BLOCKING
+
+
+def test_the_default_expected_set_is_the_fitted_tool(tmp_path: Path) -> None:
+    # No caller argument, so the judgment picks its own set, and the one it must pick is what the
+    # fitted tool puts on the bus. The eight-motor registration is the other candidate, and on a
+    # build with no gripper it turns every capture that rig can produce into a partial read.
+    # On a rig refitted with a gripper the two candidates coincide and this proves less; the
+    # caller-honoured tests above are the ones that hold either way.
+    _write_arm_capture(tmp_path, "oa_fl", _FITTED_SEND_IDS)
+    judged = reverify_from_fixture(tmp_path, _MARGIN_LSB)[0].rid9
+    assert tuple(motor.motor_id for motor in judged.per_motor) == tuple(_FITTED_SEND_IDS)
+    assert judged.missing_motor_ids == ()
+    assert judged.status is PgStatus.PASS
 
 
 # --- Deferred hardware acceptances: skipped with a reason, re-run only on a real capture ---

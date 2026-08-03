@@ -18,6 +18,7 @@ import pytest
 from ops.systemd.constants import INTERFACE_NAMES
 from ops.systemd.reverify import (
     FIXTURE_ENV_VAR,
+    READABLE_EXPECTATION_FIELDS,
     fixture_dir_from_env,
     reverify_from_fixture,
 )
@@ -102,6 +103,42 @@ def test_partial_capture_checks_only_present_keys(tmp_path: Path) -> None:
     report = reverify_from_fixture(tmp_path)
     assert report.checked == ("link_ok",)
     assert report.matched
+
+
+def test_empty_expectation_is_a_mismatch_not_a_match(tmp_path: Path) -> None:
+    """`expected.json` of `{}` compares nothing, and nothing compared is not agreement.
+
+    The capture written here is deliberately a *bad* one — a mis-set link and drifting
+    reboots. An expectation naming no readable field must still refuse it, because the
+    refusal has to come from having compared nothing, not from the bytes happening to be good.
+    """
+    _write_linkshow(tmp_path, _BAD_LINKSHOW)
+    _write_reboots(tmp_path, drift=True)
+    _write_expected(tmp_path, {})
+    report = reverify_from_fixture(tmp_path)
+    assert report.matched is False
+    assert report.checked == ()
+    assert set(report.unchecked) == READABLE_EXPECTATION_FIELDS
+
+
+def test_misspelled_expectation_keys_do_not_count_as_coverage(tmp_path: Path) -> None:
+    """An expectation whose keys the hook does not read is unread, not agreed with."""
+    _write_linkshow(tmp_path, _GOOD_LINKSHOW)
+    _write_expected(tmp_path, {"link_okay": True, "determinism": True})
+    report = reverify_from_fixture(tmp_path)
+    assert report.matched is False
+    assert report.checked == ()
+
+
+def test_partial_capture_names_what_it_left_deferred(tmp_path: Path) -> None:
+    """`checked` and `unchecked` partition the roster, so `matched` is never read as full."""
+    _write_linkshow(tmp_path, _GOOD_LINKSHOW)
+    _write_expected(tmp_path, {"link_ok": True})
+    report = reverify_from_fixture(tmp_path)
+    assert report.matched is True
+    assert set(report.checked) | set(report.unchecked) == READABLE_EXPECTATION_FIELDS
+    assert set(report.checked) & set(report.unchecked) == set()
+    assert report.unchecked == ("determinism_stable",)
 
 
 def test_missing_expected_is_an_error(tmp_path: Path) -> None:

@@ -1,0 +1,51 @@
+
+Udevadm info starts with the device specified by the devpath and then
+walks up the chain of parent devices. It prints for every device
+found, all possible attributes in the udev rules key format.
+A rule to match, can be composed by the attributes of the device
+and the attributes from one single parent device.
+
+  looking at device '/devices/pci0000:80/0000:80:14.0/usb3/3-10/3-10.3/3-10.3.1/3-10.3.1.2/3-10.3.1.2:1.0/net/can0':
+    KERNEL=="can0"
+    SUBSYSTEM=="net"
+    DRIVER==""
+    ATTR{dev_id}=="0x0"
+    ATTR{type}=="280"
+    ATTR{tx_queue_len}=="10"
+
+  looking at parent device '/devices/pci0000:80/0000:80:14.0/usb3/3-10/3-10.3/3-10.3.1/3-10.3.1.2/3-10.3.1.2:1.0':
+    KERNELS=="3-10.3.1.2:1.0"
+    SUBSYSTEMS=="usb"
+    DRIVERS=="peak_usb"
+    ATTRS{bInterfaceNumber}=="00"
+    ATTRS{bInterfaceClass}=="00"
+    ATTRS{interface}=="PCAN-USB Pro FD CAN"
+
+  looking at parent device '/devices/pci0000:80/0000:80:14.0/usb3/3-10/3-10.3/3-10.3.1/3-10.3.1.2':
+    KERNELS=="3-10.3.1.2"
+    SUBSYSTEMS=="usb"
+    DRIVERS=="usb"
+    ATTRS{idVendor}=="0c72"
+    ATTRS{idProduct}=="0011"
+    ATTRS{manufacturer}=="PEAK-System Technik GmbH"
+    ATTRS{product}=="PCAN-USB Pro FD"
+
+  looking at parent device '/devices/pci0000:80/0000:80:14.0/usb3/3-10/3-10.3/3-10.3.1':
+    KERNELS=="3-10.3.1"
+    SUBSYSTEMS=="usb"
+    DRIVERS=="usb"
+    ATTRS{idVendor}=="3447"
+    ATTRS{idProduct}=="2520"
+
+  looking at parent device '/devices/pci0000:80/0000:80:14.0/usb3':
+    KERNELS=="usb3"
+    SUBSYSTEMS=="usb"
+    DRIVERS=="usb"
+    ATTRS{idVendor}=="1d6b"
+    ATTRS{idProduct}=="0002"
+    ATTRS{serial}=="0000:80:14.0"
+
+  looking at parent device '/devices/pci0000:80/0000:80:14.0':
+    KERNELS=="0000:80:14.0"
+    SUBSYSTEMS=="pci"
+    DRIVERS=="xhci_hcd"

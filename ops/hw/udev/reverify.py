@@ -51,11 +51,16 @@ class ReverifyReport:
     Attributes:
         matched: True iff every expectation that was recorded held on the real bytes.
         checked: Names of the expectations that were present and evaluated.
+        unchecked: Readable expectations the capture did not record, so still deferred.
+            A capture from one two-channel adapter can settle the channel axis and nothing
+            about serial sharing across adapters; without this the caller sees `matched`
+            and cannot tell how much of the acceptance the capture actually reached.
         mismatches: One human-readable line per expectation that failed.
     """
 
     matched: bool
     checked: tuple[str, ...]
+    unchecked: tuple[str, ...] = field(default_factory=tuple)
     mismatches: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -173,5 +178,6 @@ def reverify_from_fixture(fixture_dir: Path) -> ReverifyReport:
     return ReverifyReport(
         matched=not mismatches,
         checked=tuple(checked),
+        unchecked=tuple(sorted(READABLE_EXPECTATION_FIELDS - set(checked))),
         mismatches=tuple(mismatches),
     )

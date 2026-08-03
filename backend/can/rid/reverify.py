@@ -83,11 +83,12 @@ def reverify_from_fixture(
     Args:
         fixture_dir: Directory of captured dump JSON files, one per interface.
         margin_lsb: RID 9 send-period margin in 50 us LSBs for the timeout branch.
-        expected_motor_ids: The motors the arm actually has, from the fitted end effector
-            (`backend.endeffector.EndEffectorProfile.motor_send_ids`). Defaults to the full
-            eight-motor registration. A rig with no gripper has seven, and judging it against
-            eight reports the absent motor as one that failed to answer — a fact about the
-            build, dressed as a fault. Observed on this bench before the argument existed.
+        expected_motor_ids: The motors the arm actually has. Passed through to
+            `evaluate_dump`, which defaults it to the ids the fitted tool puts on the bus
+            (`default_profile().motor_send_ids`) — the same default the WP-2A-09 torque gate
+            applies, so both hooks answer "which motors must answer" identically. Observed on
+            this bench: judged against the eight-motor registration, the absent `0x08` is
+            reported as a motor that failed to answer, on every channel, forever.
 
     Returns:
         (list[DumpEvaluation]) One evaluation per capture file, ordered by filename.

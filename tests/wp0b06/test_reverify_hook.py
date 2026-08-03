@@ -94,9 +94,31 @@ def test_real_hardware_reverify() -> None:
         # ② and ⑥ are both statements about the adapters. With none located there is no
         # controller to share and no link speed to record, and the report says so in fields
         # that read as ordinary negatives.
-        assert result.topology.adapters, (
+        adapters = result.topology.adapters
+        assert adapters, (
             "the real lsusb -t parsed but located no CAN adapter, so the controller-sharing "
             "and USB-2.0 link-speed acceptances have nothing to judge"
+        )
+        # ② is answered, not necessarily True — two adapters on one controller is a finding
+        # about bandwidth contention, not a requirement. What the acceptance forbids is the
+        # question going unanswered, which is what `None` means: fewer than two adapters were
+        # located, so there was never a second one to share with.
+        assert result.topology.shared_controller is not None, (
+            f"only {len(adapters)} CAN adapter interface(s) located in the real lsusb -t, so "
+            "whether the two arms' channels contend for one host controller has no answer"
+        )
+        # ⑥ is the link-speed verdict, not the presence of a link-speed field. `link_speed` is
+        # populated for any device line that carried a speed token, including 12M and 5000M, so
+        # reading only that it is set accepts an adapter enumerated at a speed `16` §10.1 says
+        # it does not use — and the sweep ceiling would then be attributed to the wrong bus.
+        assert result.topology.all_high_speed_usb2, (
+            "an adapter did not enumerate as High-Speed USB 2.0 (480M): "
+            + ", ".join(
+                f"bus {adapter.bus} dev {adapter.dev} if {adapter.interface} at "
+                f"{adapter.link_speed}"
+                for adapter in adapters
+                if not adapter.is_high_speed_usb2
+            )
         )
 
     for stats in result.bus_stats:

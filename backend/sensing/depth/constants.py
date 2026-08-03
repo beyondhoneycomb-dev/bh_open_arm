@@ -87,12 +87,25 @@ DEPTH_SDK_MODULE: dict[DepthDevice, str] = {
 }
 
 # USB identity of the depth camera fitted to this rig, so the deferral names something
-# checkable instead of an assumption. The ZED exposes its stereo pair through the
-# Stereolabs SDK rather than as a V4L2 node, which is why an enumeration keyed on
-# `/dev/video*` does not merely come up empty — on this host those nodes belong to an
-# unrelated UVC camera, and a keyed-on-V4L2 probe would bind that one instead.
+# checkable instead of an assumption.
+#
+# A ZED Mini is two USB functions and only one of them is the camera. Measured on this bench
+# with both present at once: `2b03:f682` "ZED-M", SuperSpeed, two interfaces of video class
+# `0e` bound to `uvcvideo`; and `2b03:f681` "ZED-M Hid Device", one HID interface at 12 Mbit/s.
+# The HID function is full-speed by design, so keying the link check on it reports a healthy
+# camera as unusable and tells the operator to move a cable that is already right — which is
+# what this constant did before it named `f682`.
+#
+# The stereo pair is opened through the Stereolabs SDK rather than as a V4L2 node, which is why
+# an enumeration keyed on `/dev/video*` does not merely come up empty: on this host those nodes
+# also belong to the two wrist cameras, and a keyed-on-V4L2 probe would bind one of those.
 STEREOLABS_USB_VENDOR_ID = "2b03"
-ZED_MINI_USB_PRODUCT_ID = "f681"
+ZED_MINI_USB_PRODUCT_ID = "f682"
+
+# The ZED Mini's IMU/HID companion function. Not the camera, and not what the link check keys
+# on: it is a full-speed device whatever the camera negotiated, so its presence says nothing
+# about whether a stream can be opened.
+ZED_MINI_USB_HID_PRODUCT_ID = "f681"
 
 # The `(vendor, product)` pair `usb_link` recognises each family by when it reports how
 # the camera is attached. None means no identity is recorded and no link check runs for
