@@ -357,13 +357,52 @@ class OaOpenArmFollower(OpenArmFollower):
         if config.side is None:
             raise SessionError("OaOpenArmFollower requires a side; the config must set left|right")
         side_str = config.side.value
-        return OpenArmFollowerConfig(
+        hardware = OpenArmFollowerConfig(
             id=config.id,
             calibration_dir=config.calibration_dir,
             port=port if port is not None else PORT_BY_SIDE.get(side_str, _DEFAULT_PORT),
             side=side_str,
             use_velocity_and_torque=config.use_velocity_and_torque,
         )
+        hardware.motor_config = self._fitted_motor_config(hardware.motor_config)
+        return hardware
+
+    def _fitted_motor_config(
+        self, full: dict[str, tuple[int, int, str]]
+    ) -> dict[str, tuple[int, int, str]]:
+        """Narrow the follower's motor table to the ids the fitted tool actually carries.
+
+        `DamiaoMotorsBus.connect` handshakes every motor it was registered with, so the
+        registered set is not a convenience — it is what the bus demands answer before it will
+        open. A tool-less arm registered with the stock table waits on a gripper that is not
+        bolted on and the whole connect fails; an arm whose table was narrowed past the fitted
+        set comes up a joint short and nothing downstream notices.
+
+        Keyed on send id rather than motor name: the profile's authority is `motor_send_ids`,
+        and a name-keyed filter would agree with a table whose names drifted.
+
+        Args:
+            full: The stock follower's motor table, name to (send id, recv id, type).
+
+        Returns:
+            (dict) The same entries for the fitted ids only, in the profile's id order.
+
+        Raises:
+            SessionError: If the profile declares a send id the table has no entry for. Dropping
+                it silently is what turns a typo into an arm that comes up missing a joint.
+        """
+        entry_by_send_id = {spec[0]: (name, spec) for name, spec in full.items()}
+        fitted = tuple(self._end_effector.motor_send_ids)
+        unknown = [send_id for send_id in fitted if send_id not in entry_by_send_id]
+        if unknown:
+            missing = ", ".join(f"{send_id:#04x}" for send_id in unknown)
+            known = ", ".join(f"{send_id:#04x}" for send_id in entry_by_send_id)
+            raise SessionError(
+                f"the fitted tool declares motor id(s) {missing}, which the follower's motor "
+                f"table does not carry (it has {known}); registering the rest anyway would open "
+                "the bus one joint short of what is bolted on"
+            )
+        return dict(entry_by_send_id[send_id] for send_id in fitted)
 
     @property
     def side(self) -> str:

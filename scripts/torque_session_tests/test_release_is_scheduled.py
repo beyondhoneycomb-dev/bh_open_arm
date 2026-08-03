@@ -50,6 +50,11 @@ INERT_TITLE = "합성 무동작 단계 — 토크를 건드리지 않는다"
 # Number for the step that changes nothing, appended after a real one.
 INERT_NUMBER = 99
 
+# Verdicts a stubbed step reports, so a case reading a recorded detail reads the outcome it
+# chose rather than whatever the bus said.
+STUBBED_PASS_DETAIL = "stubbed pass"
+STUBBED_RELEASE_REFUSAL = "stubbed release refusal"
+
 
 def _config(tmp_path: Path) -> session.SessionConfig:
     """A session config confined to a temporary tree."""
@@ -71,6 +76,23 @@ def _admit_everything(monkeypatch: pytest.MonkeyPatch) -> None:
         return result
 
     monkeypatch.setattr(session, "admit", _admit)
+
+
+def _refuse_the_release(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Run every step in-process, with the release refusing and everything else passing.
+
+    `run_step` is stubbed rather than left to the table's own performers, which open can0/can1.
+    On a host with the arm attached those drive it during a test run and the release actually
+    succeeds — which erases the very state these cases exist to check — and on a host without
+    one they fail for a reason no case chose. Both make the verdict a property of the bench.
+    """
+
+    def _run(step: session.Step, _config: object) -> tuple[bool, str]:
+        if step.torque is session.Torque.RELEASE:
+            return False, STUBBED_RELEASE_REFUSAL
+        return True, STUBBED_PASS_DETAIL
+
+    monkeypatch.setattr(session, "run_step", _run)
 
 
 def _recorded(tmp_path: Path) -> dict[str, dict[str, object]]:
@@ -267,6 +289,7 @@ def test_a_session_that_engaged_and_never_released_records_that_torque_may_be_li
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     _admit_everything(monkeypatch)
+    _refuse_the_release(monkeypatch)
     start = time.time() - RAN_LATE_SECONDS
     session.run_worker(_steps(ENGAGE_STEP, RELEASE_STEP), _config(tmp_path), start)
     recorded = _recorded(tmp_path)
@@ -278,6 +301,7 @@ def test_a_session_that_never_engaged_records_no_live_torque(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     _admit_everything(monkeypatch)
+    _refuse_the_release(monkeypatch)
     start = time.time() - RAN_LATE_SECONDS
     session.run_worker(_steps(RELEASE_STEP), _config(tmp_path), start)
     assert session.TORQUE_STATE_KEY not in _recorded(tmp_path)
@@ -363,6 +387,7 @@ def test_the_worker_exit_code_reports_a_refused_step(
 ) -> None:
     """`--status` is the verdict, and it is read as an exit code by whatever ran the session."""
     _admit_everything(monkeypatch)
+    _refuse_the_release(monkeypatch)
     code = session.run_worker(
         _steps(RELEASE_STEP), _config(tmp_path), time.time() - RAN_LATE_SECONDS
     )
@@ -399,6 +424,7 @@ def test_status_shows_the_operator_that_torque_may_still_be_live(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     _admit_everything(monkeypatch)
+    _refuse_the_release(monkeypatch)
     start = time.time() - RAN_LATE_SECONDS
     session.run_worker(_steps(ENGAGE_STEP, RELEASE_STEP), _config(tmp_path), start)
     capsys.readouterr()
@@ -421,3 +447,73 @@ def test_a_session_whose_producer_raised_still_records_the_live_torque(
     with pytest.raises(KeyboardInterrupt):
         session.run_worker(_steps(ENGAGE_STEP, RELEASE_STEP), _config(tmp_path), start)
     assert session.TORQUE_STATE_KEY in _recorded(tmp_path)
+
+
+def _pass_every_step(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Run every step in-process with a stated success, touching no CAN channel."""
+
+    def _run(_step: session.Step, _config: object) -> tuple[bool, str]:
+        return True, STUBBED_PASS_DETAIL
+
+    monkeypatch.setattr(session, "run_step", _run)
+
+
+def test_a_release_that_passed_retires_an_older_sessions_live_torque_warning(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The warning is about the arm, so the 0xFD that answered is what retires it.
+
+    Left standing, a warning from a session that died mid-engage makes every later clean session
+    exit refused and tell the operator the arm may be energized when it is not — which is how the
+    one message they must act on becomes the one they learn to scroll past.
+    """
+    _admit_everything(monkeypatch)
+    _refuse_the_release(monkeypatch)
+    start = time.time() - RAN_LATE_SECONDS
+    session.run_worker(_steps(ENGAGE_STEP, RELEASE_STEP), _config(tmp_path), start)
+    assert session.TORQUE_STATE_KEY in _recorded(tmp_path)
+
+    _pass_every_step(monkeypatch)
+    code = session.run_worker(_steps(ENGAGE_STEP, RELEASE_STEP), _config(tmp_path), start)
+
+    assert session.TORQUE_STATE_KEY not in _recorded(tmp_path)
+    assert code == session.EXIT_OK
+
+
+def test_a_session_that_refuses_at_admission_leaves_an_older_warning_standing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A session that never energized anything cannot be what proves the arm is down."""
+    _admit_everything(monkeypatch)
+    _refuse_the_release(monkeypatch)
+    start = time.time() - RAN_LATE_SECONDS
+    session.run_worker(_steps(ENGAGE_STEP, RELEASE_STEP), _config(tmp_path), start)
+    assert session.TORQUE_STATE_KEY in _recorded(tmp_path)
+
+    def _refuse(_config: object) -> object:
+        result = session.AdmissionResult()
+        result.record(False, "test", "admission refused")
+        return result
+
+    monkeypatch.setattr(session, "admit", _refuse)
+    code = session.run_worker(_steps(RELEASE_STEP), _config(tmp_path), start)
+
+    assert code == session.EXIT_REFUSED
+    assert session.TORQUE_STATE_KEY in _recorded(tmp_path)
+
+
+def test_a_new_session_does_not_show_the_previous_sessions_step_verdicts(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """`--status` is read as one session's verdict, so it must not mix two."""
+    _admit_everything(monkeypatch)
+    _pass_every_step(monkeypatch)
+    start = time.time() - RAN_LATE_SECONDS
+    session.run_worker(_steps(ENGAGE_STEP, RELEASE_STEP), _config(tmp_path), start)
+    assert session.STEP_BY_NUMBER[ENGAGE_STEP].key in _recorded(tmp_path)
+
+    session.run_worker(_steps(RELEASE_STEP), _config(tmp_path), start)
+
+    recorded = _recorded(tmp_path)
+    assert session.STEP_BY_NUMBER[RELEASE_STEP].key in recorded
+    assert session.STEP_BY_NUMBER[ENGAGE_STEP].key not in recorded

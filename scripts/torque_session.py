@@ -158,12 +158,6 @@ SYNTHETIC_POSE_STEP_RAD = 0.05
 # decide whether an operator is asked to hold a brakeless arm for steps that cannot run.
 BIMANUAL_CAN_WRITER: Callable[[Any], Any] | None = BimanualCanWriter
 
-# How often the engaged hold is re-sent while the arm is energized, seconds. Past the RID-9
-# no-send ceiling (`12` NFR-SAF-007, `RID9_NO_SEND_MARGIN_SEC`) the motor stops applying the
-# last MIT command, and with no brake that is the arm falling rather than the arm stopping.
-# Half the ceiling, so one whole missed period still lands inside it.
-HOLD_REFRESH_DIVISOR = 2.0
-
 # How long the release waits for the maintenance loop to leave the bus before dropping torque
 # anyway. Generous against a healthy tick and short against a blocked one: `canbus.send()` blocks
 # while the transmit buffer is full, which is where a channel sits once it is ERROR-PASSIVE, and
@@ -1101,7 +1095,6 @@ def _produce_engage(config: SessionConfig) -> Measurement:
     """
     global _LIVE_SESSION
 
-    from backend.actuation.config import RID9_NO_SEND_MARGIN_SEC
     from backend.torque_bringup import GuardedTorqueOn
     from backend.torque_bringup.rig import fitted_motor_names
 
@@ -1114,7 +1107,12 @@ def _produce_engage(config: SessionConfig) -> Measurement:
     manifest = _startup_manifest(config)
     profile = end_effectors.for_side(config.arm)
     rig_session = _assemble_rig("engage", end_effectors)
-    maintainer = HoldMaintainer(rig_session.rig, RID9_NO_SEND_MARGIN_SEC / HOLD_REFRESH_DIVISOR)
+    # The period comes from the manifest, not from a constant recomputed here: it is the declared
+    # value `assert_torque_on_allowed` checked against the RID-9 no-send ceiling, and a locally
+    # derived one would run the loop at a rate no gate ever saw. Past that ceiling
+    # (`12` NFR-SAF-007) the motor stops applying the last MIT command, and with no brake that is
+    # the arm falling rather than the arm stopping.
+    maintainer = HoldMaintainer(rig_session.rig, manifest.rid9_send_period_sec)
     guarded = GuardedTorqueOn(
         rig_session.rig.for_side(config.arm),
         profile,
@@ -1512,6 +1510,41 @@ def _record_step(captures_root: Path, key: str, entry: dict[str, Any]) -> None:
     _atomic_write_json(path, document)
 
 
+def _begin_session_state(captures_root: Path) -> None:
+    """Start this session's state file, carrying only an unresolved torque warning forward.
+
+    Step records describe the run that wrote them, and `_record_step` merges by key, so a run
+    that does not reach a step leaves the previous run's verdict for it standing — `--status`
+    then reads as one session while showing steps from two.
+
+    The torque warning is the exception and is carried across. It is a claim about the arm
+    rather than about a run: a session that refuses at admission never energized anything, so
+    an older warning is still the live truth and erasing it would swallow the one message the
+    operator has to act on.
+    """
+    path = session_dir(captures_root) / STATE_FILENAME
+    carried: dict[str, Any] = {}
+    if path.exists():
+        previous = json.loads(path.read_text(encoding="utf-8")).get("steps", {})
+        if TORQUE_STATE_KEY in previous:
+            carried[TORQUE_STATE_KEY] = previous[TORQUE_STATE_KEY]
+    _atomic_write_json(path, {"steps": carried})
+
+
+def _retire_torque_warning(captures_root: Path) -> None:
+    """Drop the live-torque warning; a release that passed is what proves the arm is down.
+
+    Retired on the release rather than at the end of the run, because what retires it is the
+    0xFD the motors answered, not the session reaching its last step.
+    """
+    path = session_dir(captures_root) / STATE_FILENAME
+    if not path.exists():
+        return
+    document = json.loads(path.read_text(encoding="utf-8"))
+    if document.get("steps", {}).pop(TORQUE_STATE_KEY, None) is not None:
+        _atomic_write_json(path, document)
+
+
 def run_step(step: Step, config: SessionConfig) -> tuple[bool, str]:
     """Produce, judge and write one step's capture.
 
@@ -1549,6 +1582,7 @@ def run_worker(steps: tuple[Step, ...], config: SessionConfig, start_epoch: floa
     so rather than exit 0.
     """
     assert_session_releases_torque(steps)
+    _begin_session_state(config.captures_root)
     admission = admit(config)
     print(f"[{_wall_clock(time.time())}] 워커 시작 — 선행조건 재확인", flush=True)
     print(admission.render(), flush=True)
@@ -1588,6 +1622,7 @@ def run_worker(steps: tuple[Step, ...], config: SessionConfig, start_epoch: floa
             if step.torque is Torque.RELEASE and passed:
                 released = True
                 torque_may_be_live = False
+                _retire_torque_warning(config.captures_root)
             failures += 0 if passed else 1
     finally:
         if torque_may_be_live and not released:

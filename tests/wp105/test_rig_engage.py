@@ -33,7 +33,13 @@ from backend.actuation import (
 )
 from backend.actuation.config import LEASE_DURATION_SEC
 from backend.calibration.schema import MOTOR_ORDER
-from backend.endeffector import GRIPPER_SEND_ID, SIDES, EndEffectorProfile, spatula_build
+from backend.endeffector import (
+    GRIPPER_SEND_ID,
+    SIDES,
+    EndEffectorProfile,
+    gripper_build,
+    spatula_build,
+)
 from backend.preflight import PreflightReport
 from backend.torque_bringup import (
     SEND_ID_BY_MOTOR,
@@ -779,19 +785,27 @@ def test_a_side_the_rig_does_not_carry_is_refused(tmp_path: Path) -> None:
         rig.for_side("middle")
 
 
-def test_the_send_id_map_is_the_one_the_arms_bus_registers(tmp_path: Path) -> None:
+@pytest.mark.parametrize("build", [spatula_build, gripper_build])
+def test_the_send_id_map_is_the_one_the_arms_bus_registers(tmp_path: Path, build: Any) -> None:
     """The rig crosses names to ids; a map that drifts from the bus addresses another joint.
 
     Read off a real arm's own bus rather than off the config default, because the registration is
     what a frame is addressed by. Nothing at runtime compares the two, so a re-ordered
     `motor_config` upstream would leave the engage enabling joint_4 while holding joint_3's angle.
+
+    Both builds are exercised because the registration is now the fitted set rather than the whole
+    layout: the bus handshakes what it registers, so a tool-less arm that still registered the
+    gripper would wait on a motor nothing answers for, and a gripper build that lost it would come
+    up unable to address the one motor the tool exists to drive.
     """
+    profile = build()
     arm = OaOpenArmFollower(
-        OaOpenArmFollowerConfig(side=Side.LEFT, id="wp105_ids", calibration_dir=tmp_path)
+        OaOpenArmFollowerConfig(side=Side.LEFT, id="wp105_ids", calibration_dir=tmp_path),
+        end_effector=profile,
     )
     registered = {motor: definition.id for motor, definition in arm.bus.motors.items()}
 
-    assert registered == SEND_ID_BY_MOTOR
+    assert registered == {motor: SEND_ID_BY_MOTOR[motor] for motor in fitted_motor_names(profile)}
 
 
 # --- The deferred hardware acceptance, and proof its judgment bites ---
