@@ -22,12 +22,14 @@
 //   - PG-CAM-001 / PG-DEPTH-001 rendered as-is (pending)   → camGate
 
 import "./screen.css";
+import { DeviceAssignmentPanel } from "./DeviceAssignmentPanel";
 import { FrustumStatus } from "./FrustumStatus";
 import { HandEyeCompareView } from "./HandEyeCompareView";
 import { PreviewIsolationPanel } from "./PreviewIsolationPanel";
 import { StreamStatsView } from "./StreamStatsView";
 import { TilePreviewGrid } from "./TilePreviewGrid";
 import { depthLayerEnabled, depthNote } from "./camGate";
+import { deriveTiles } from "./tiles";
 import {
   defaultCameraScreenSource,
   noopIntents,
@@ -46,6 +48,10 @@ export default function CameraScreen({
 }: CameraScreenProps) {
   const depthOn = depthLayerEnabled(source.gates);
   const depthReducedNote = depthNote(source.gates);
+  // The slots on offer are the registered ones, derived the same way the tiles
+  // are (CG-G-S06a). A hardcoded slot list here would let the panel offer a slot
+  // the robot does not have, and the assignment would fail at the backend.
+  const slots = deriveTiles(source.observationFeatures).map((tile) => tile.slot);
 
   return (
     <div className="oa-cam">
@@ -59,6 +65,14 @@ export default function CameraScreen({
           {depthReducedNote}
         </p>
       )}
+
+      <DeviceAssignmentPanel
+        discovered={source.discovered}
+        slots={slots}
+        onRescanDevices={intents.onRescanDevices}
+        onAssignDevice={intents.onAssignDevice}
+        onReleaseDevice={intents.onReleaseDevice}
+      />
 
       <TilePreviewGrid
         observationFeatures={source.observationFeatures}

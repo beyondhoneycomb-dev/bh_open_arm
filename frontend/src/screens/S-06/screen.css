@@ -421,3 +421,56 @@
   font-size: 0.85rem;
   color: var(--oa-cam-muted);
 }
+
+/* Device assignment: the port and the preview are the identity, so both are
+   given weight; the card name is deliberately not the prominent field, because
+   on this rig it is the same string on two different cameras. */
+.oa-cam-assign__list {
+  display: grid;
+  gap: 0.75rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.oa-cam-assign__row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 14rem) 1fr auto;
+  gap: 1rem;
+  align-items: center;
+}
+
+.oa-cam-assign__canvas {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background: #101014;
+}
+
+.oa-cam-assign__identity {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.oa-cam-assign__port {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.oa-cam-assign__card,
+.oa-cam-assign__node {
+  opacity: 0.75;
+  font-size: 0.9em;
+}
+
+.oa-cam-assign__ambiguous,
+.oa-cam-assign__refusal {
+  color: #d08b25;
+  font-size: 0.9em;
+}
+
+.oa-cam-assign__slot {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}

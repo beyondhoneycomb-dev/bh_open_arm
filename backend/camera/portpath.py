@@ -149,6 +149,31 @@ def enumerate_capture_nodes(root: Path = VIDEO_DEVICE_ROOT) -> tuple[CaptureNode
     return tuple(node for node in found if node is not None)
 
 
+def discovery_rows(nodes: Sequence[CaptureNode]) -> tuple[dict[str, str], ...]:
+    """Render the discovered cameras as the rows the camera screen assigns against.
+
+    The port leads and the card follows, because the card is the same string on both wrist
+    cameras and the port is the only field that separates them. The device node travels for
+    diagnosis and is never the identity: it renumbers between boots.
+
+    Args:
+        nodes: The capture nodes enumerated this scan.
+
+    Returns:
+        (tuple[dict[str, str], ...]) One row per camera, ordered by port so the screen's list
+        does not reshuffle between scans.
+
+    Raises:
+        AmbiguousCameraPortError: If two cameras report one port, so no row identifies one
+            camera and the operator would be assigning a slot to whichever answered first.
+    """
+    assert_ports_distinguish(nodes)
+    return tuple(
+        {"port_path": node.port_path, "card": node.card, "device_path": str(node.device)}
+        for node in sorted(nodes, key=lambda node: node.port_path)
+    )
+
+
 def assert_ports_distinguish(nodes: Sequence[CaptureNode]) -> None:
     """Refuse a camera set whose ports do not tell its cameras apart.
 

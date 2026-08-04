@@ -57,10 +57,34 @@ export interface CameraRuntime {
   depthSampleWidth: number;
 }
 
+// One capture device the backend found on the bus at the last scan.
+//
+// The wrist pair on this rig is two of one model reporting one serial, so `card`
+// is the SAME STRING for both and cannot be what the operator picks by. What
+// separates them is `portPath` — the port the kernel reports — and what tells the
+// operator which arm it is looking at is the preview. Both are rendered; a panel
+// that showed only the name would be unusable on exactly the hardware it is for.
+export interface DiscoveredCamera {
+  // The kernel's port path. Stable across reboot and across re-plugging into the
+  // same port; it moves when the operator moves the plug. The identity a slot is
+  // assigned against, and never the `/dev/videoN` number, which renumbers.
+  portPath: string;
+  // The driver's name for the device. Duplicated across identical hardware.
+  card: string;
+  // The node the backend would open. Shown for diagnosis, never the identity.
+  devicePath: string;
+  // The slot this device currently fills, or null when it is unassigned.
+  assignedSlot: string | null;
+}
+
 export interface CameraScreenSource {
   // The authoritative keyset the tile grid is derived from (CG-G-S06a). Adding a
   // camera adds its `observation.images.<slot>` (and optional `_depth`) key here.
   readonly observationFeatures: readonly string[];
+  // What is physically plugged in right now, from the backend's last scan. Not a
+  // configured list: a device appears here because it answered, and disappears
+  // when it is unplugged. The panel derives its rows from this and holds no count.
+  readonly discovered: readonly DiscoveredCamera[];
   // Per-slot runtime, keyed by the CTR-PRIM slot key.
   readonly cameras: Readonly<Record<string, CameraRuntime>>;
   // Per-camera hand-eye results (five methods each, no single adopted answer).
@@ -81,6 +105,14 @@ export interface CameraScreenIntents {
   onToggleMasterPreview: (enabled: boolean) => void;
   // Ask the backend to reconfigure a camera's resolution/fps (CTR-CAM validates).
   onConfigureCamera: (slot: string, width: number, height: number, fps: number) => void;
+  // Re-scan the bus. The device set is whatever answered, so a camera plugged in
+  // after the page loaded appears only once somebody asks again.
+  onRescanDevices: () => void;
+  // Put the device on `portPath` into `slot`. The backend registers it and the
+  // slot's tile follows from the feature keyset — the screen adds no tile itself.
+  onAssignDevice: (portPath: string, slot: string) => void;
+  // Take the device on `portPath` out of whatever slot it filled.
+  onReleaseDevice: (portPath: string) => void;
 }
 
 export function noopIntents(): CameraScreenIntents {
@@ -88,6 +120,9 @@ export function noopIntents(): CameraScreenIntents {
     onToggleCameraPreview: () => {},
     onToggleMasterPreview: () => {},
     onConfigureCamera: () => {},
+    onRescanDevices: () => {},
+    onAssignDevice: () => {},
+    onReleaseDevice: () => {},
   };
 }
 
@@ -219,8 +254,35 @@ export function defaultCameraScreenSource(): CameraScreenSource {
     },
   ];
 
+  // The three cameras this bench actually reports, measured. The two wrist rows
+  // carry the SAME `card` on purpose: it is the condition the panel exists for,
+  // and a fixture that gave them distinct names would let a name-only panel pass.
+  const discovered: DiscoveredCamera[] = [
+    {
+      portPath: "usb-0000:00:0d.0-1.1.3.3",
+      card: "Arducam B0495 (USB3 2.3MP)",
+      devicePath: "/dev/video0",
+      assignedSlot: leftWrist,
+    },
+    {
+      portPath: "usb-0000:00:0d.0-1.1.4",
+      card: "Arducam B0495 (USB3 2.3MP)",
+      devicePath: "/dev/video2",
+      assignedSlot: rightWrist,
+    },
+    {
+      portPath: "usb-0000:80:14.0-4.1",
+      card: "ZED-M: ZED-M",
+      devicePath: "/dev/video4",
+      // Plugged in and answering, filling no slot — the state the panel must
+      // render as assignable rather than hide.
+      assignedSlot: null,
+    },
+  ];
+
   return {
     observationFeatures,
+    discovered,
     cameras,
     handEye,
     gates: {

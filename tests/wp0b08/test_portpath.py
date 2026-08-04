@@ -21,6 +21,7 @@ from backend.camera.portpath import (
     CameraPortError,
     CaptureNode,
     assert_ports_distinguish,
+    discovery_rows,
     enumerate_capture_nodes,
     node_by_port,
     video_device_nodes,
@@ -137,3 +138,32 @@ def test_the_bench_cameras_are_told_apart_by_port() -> None:
         "the cards on this bench are all distinct, so this case is no longer covering the "
         "collision it was written for"
     )
+
+
+def test_discovery_rows_lead_with_the_port_the_screen_assigns_against() -> None:
+    """The card repeats across the wrist pair; the port is what a row is picked by."""
+    nodes = (_node("/dev/video2", WRIST_RIGHT_PORT), _node("/dev/video0", WRIST_LEFT_PORT))
+
+    rows = discovery_rows(nodes)
+
+    assert [row["port_path"] for row in rows] == [WRIST_LEFT_PORT, WRIST_RIGHT_PORT]
+    assert {row["card"] for row in rows} == {ARDUCAM_CARD}
+
+
+def test_discovery_rows_are_ordered_so_the_screen_list_does_not_reshuffle() -> None:
+    """Enumeration order follows the device numbers, which move; the rows must not."""
+    forward = discovery_rows(
+        (_node("/dev/video0", WRIST_LEFT_PORT), _node("/dev/video2", WRIST_RIGHT_PORT))
+    )
+    reversed_order = discovery_rows(
+        (_node("/dev/video2", WRIST_RIGHT_PORT), _node("/dev/video0", WRIST_LEFT_PORT))
+    )
+
+    assert forward == reversed_order
+
+
+def test_discovery_over_two_cameras_on_one_port_is_refused() -> None:
+    nodes = (_node("/dev/video0", WRIST_LEFT_PORT), _node("/dev/video2", WRIST_LEFT_PORT))
+
+    with pytest.raises(AmbiguousCameraPortError):
+        discovery_rows(nodes)
