@@ -3,8 +3,15 @@
 `send_action` is the only caller of `CollisionGuard.poll` on this path, so a poll it skips
 leaves `_latched` unset and the WORKSPACE_COLLISION stage reading a `collision_latched` that
 is False forever — a constant nothing downstream can tell from a healthy arm. Both directions
-are pinned here: a blind read reaches the guard, and a guard that never goes blind does not
-latch anyway.
+are pinned here: a drop reaches the guard, and a guard that never goes blind does not latch
+anyway.
+
+The two ways a motor fails to answer are separate cases and reach separate mechanisms. A motor
+that has answered before leaves a real if stale angle in the bus's cache, so the read is usable
+and the drop record is what latches the guard. A motor that has never answered leaves the zeroed
+cache, and there is no usable pose at all — that one is refused at the read, because the pose a
+latch holds at comes from the same read that failed, so a fabricated angle would make the stop a
+move to it.
 
 The direction of the failure is asserted, not assumed. This arm has no holding brake, so a
 latch that cut torque would drop it; every latch here is checked to leave the hold gains
@@ -21,7 +28,10 @@ from backend.actuation.gateway import positions_to_batch
 from backend.actuation.safety import SafetyReason
 from backend.calibration.schema import MOTOR_ORDER
 from contracts.units import Nm, Rad, deg_to_rad
-from packages.lerobot_robot_openarm.openarm_follower_oa import OaOpenArmFollower
+from packages.lerobot_robot_openarm.openarm_follower_oa import (
+    BusReadRefusedError,
+    OaOpenArmFollower,
+)
 
 # A fitted motor to fail the readback on. Any of the seven arm joints does; the first is the
 # one a build without a gripper still carries, so the case does not depend on the tool.
@@ -31,7 +41,11 @@ FAILING_MOTOR = MOTOR_ORDER[0]
 # threshold" cannot stay under the debounce and pass this by accident.
 HEALTHY_COMMAND_COUNT = 10
 
-REST_POSE_DEG = 0.0
+# Deliberately not zero. Zero is what the bus's cache reports for a motor that never answered,
+# so a fixture resting there makes a hold at the measured pose and a hold at a fabricated one
+# the same tuple, and every assertion drawn between them passes without checking anything.
+# Small enough to sit inside every URDF joint limit.
+REST_POSE_DEG = 3.0
 
 
 def _send(follower: OaOpenArmFollower) -> None:
@@ -48,29 +62,44 @@ def follower(
     return make_follower(position_deg=REST_POSE_DEG)
 
 
-def test_a_readback_missing_a_fitted_motor_latches_on_the_first_command(follower) -> None:
-    """A reply short of a fitted motor is a blind poll, and blind latches without debouncing.
+def test_a_motor_that_never_answered_is_refused_rather_than_read_as_zero(follower) -> None:
+    """The bus's zeroed cache is not a pose, and substituting it makes a stop into a move.
 
-    The first command is the assertion: fail-closed conditions do not debounce, so a guard
-    that only latched on the second read would already have admitted one command it could
-    not see the arm for.
+    `sync_read_all_states` returns an entry for every motor it was asked about, so a motor that
+    has never answered arrives as the cache the bus was built with — position 0.0, which on an
+    arm hanging at the URDF zero is the horizontal. Nothing downstream can tell that from a
+    measurement, and the same silence latches the guard, whose hold departs from this very
+    vector. So the read is refused here and no command is submitted at all.
+    """
+    follower.bus.cache_only_motors = {FAILING_MOTOR}
+
+    with pytest.raises(BusReadRefusedError, match=FAILING_MOTOR):
+        _send(follower)
+
+    assert follower.last_gate_result is None
+    assert follower.gateway.frames == ()
+
+
+def test_a_reply_short_of_a_fitted_motor_is_refused_the_same_way(follower) -> None:
+    """A missing key and the zeroed cache are one case: no answer for a motor that is fitted.
+
+    The real bus never returns a short reply, so this is the shape a fixture can produce and the
+    bench cannot. It is refused rather than widened for the same reason — the widening default
+    is 0.0 deg, and a default that only appears when something is wrong is the worst possible
+    time for it to look like a measurement.
     """
     follower.bus.omit_motors = {FAILING_MOTOR}
 
-    _send(follower)
+    with pytest.raises(BusReadRefusedError, match=FAILING_MOTOR):
+        _send(follower)
 
-    result = follower.last_gate_result
-    assert result is not None
-    assert result.rejected
-    assert result.reason is SafetyReason.COLLISION_LATCH
-    assert follower.gateway.guard.is_latched
-    assert follower.last_latch_reason is not None
-    assert follower.last_latch_reason.gate_id == "COLLISION_GUARD:observation_missing"
+    assert follower.last_gate_result is None
 
 
 def test_the_latched_command_is_recorded_once_and_accepted_as_the_present_pose(follower) -> None:
     """A latch is a rejection, and a rejection still records both audit channels."""
-    follower.bus.omit_motors = {FAILING_MOTOR}
+    follower.connect_readonly()
+    follower.bus.drop_motors = {FAILING_MOTOR}
 
     _send(follower)
 
@@ -87,8 +116,13 @@ def test_a_latch_holds_the_arm_under_power_rather_than_dropping_torque(follower)
     This arm has no mechanical brake. Zeroing the feed-forward torque is not the same act as
     disabling torque, and the two are indistinguishable from the returned action alone — so
     the emitted MIT frame's stiffness is checked, and the bus double's torque-drop counter.
+
+    The held angle is checked against the pose the bus reported rather than against zero: a
+    hold that had fabricated its vector would also be a tuple of equal values, and only a
+    non-zero reading tells the two apart.
     """
-    follower.bus.omit_motors = {FAILING_MOTOR}
+    follower.connect_readonly()
+    follower.bus.drop_motors = {FAILING_MOTOR}
 
     _send(follower)
 
@@ -105,7 +139,9 @@ def test_a_latch_holds_the_arm_under_power_rather_than_dropping_torque(follower)
     assert all(command.kp > 0.0 for command in emitted)
     assert all(command.kd > 0.0 for command in emitted)
     assert all(command.tau == Nm(0.0) for command in emitted)
-    assert [command.q for command in emitted] == [Rad(0.0)] * len(MOTOR_ORDER)
+    held = deg_to_rad(follower.gateway.frames[0].accepted[0])
+    assert held != Rad(0.0)
+    assert emitted[0].q == held
 
 
 def test_a_packet_drop_during_the_read_latches_as_a_failed_bus_read(follower) -> None:
@@ -183,7 +219,8 @@ def test_an_operator_ack_releases_the_latch_and_the_next_command_is_admitted(fol
     Nothing in the tick path clears it — that is the contract — so the ack is checked to be
     the thing that does, and to be inert until the underlying fault is gone.
     """
-    follower.bus.omit_motors = {FAILING_MOTOR}
+    follower.connect_readonly()
+    follower.bus.drop_motors = {FAILING_MOTOR}
     _send(follower)
     assert follower.gateway.guard.is_latched
 
@@ -191,7 +228,7 @@ def test_an_operator_ack_releases_the_latch_and_the_next_command_is_admitted(fol
     assert not follower.gateway.guard.is_latched
     assert follower.last_latch_reason is None
 
-    follower.bus.omit_motors = set()
+    follower.bus.drop_motors = set()
     _send(follower)
 
     result = follower.last_gate_result
@@ -201,7 +238,8 @@ def test_an_operator_ack_releases_the_latch_and_the_next_command_is_admitted(fol
 
 def test_an_ack_with_the_bus_still_blind_latches_again_on_the_next_command(follower) -> None:
     """The ack clears the latch, not the fault: a still-blind read latches on the next poll."""
-    follower.bus.omit_motors = {FAILING_MOTOR}
+    follower.connect_readonly()
+    follower.bus.drop_motors = {FAILING_MOTOR}
     _send(follower)
     follower.acknowledge_collision_latch()
 

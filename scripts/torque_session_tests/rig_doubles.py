@@ -24,15 +24,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from backend.actuation import ANSWERED_STATE_FIELDS
 from backend.calibration.schema import MOTOR_ORDER
 from backend.endeffector import SIDE_LEFT, SIDE_RIGHT, SIDES
 from ops.hw.canbind import ArmRole, ChannelBinding, binding_path, save_binding
 from ops.hw.canbind.discovery import CanChannel
-from scripts.rig_session import (
-    ANSWERED_STATE_FIELDS,
-    DAMIAO_BUS_LOGGER,
-    PACKET_DROP_PREFIX,
-)
+from scripts.rig_session import DAMIAO_BUS_LOGGER, PACKET_DROP_PREFIX
 
 # Present angles per arm, and the step between adjacent joints. Distinct across arms so a
 # swapped half shows in the emitted frame, and distinct across joints so a mis-slotted joint

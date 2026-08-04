@@ -23,6 +23,10 @@ from packages.lerobot_robot_openarm.openarm_follower_oa import OaOpenArmFollower
 # satisfiable by a bring-up that energised the arm anyway.
 HANDSHAKE_ENABLE = "handshake_enable(0xFC)"
 
+# A powered motor's reported MOS and rotor temperature. Any positive value does: it is what
+# separates an answer from the bus's zeroed cache, which is what a silent motor yields.
+AMBIENT_TEMP_C = 31.0
+
 
 class FakeDamiaoBus:
     """A CAN-free stand-in for `DamiaoMotorsBus` that records the commands it is sent.
@@ -98,12 +102,22 @@ class FakeDamiaoBus:
         The argument is recorded for the same reason `set_zero_position`'s is: `None` means
         "every motor on the bus" upstream, and on a build whose end effector has no gripper that
         reaches an id nothing answers on.
+
+        Every field a real reply fills is filled here, temperatures included: they are what
+        separates an answer from the zeroed cache, and this double reports position 0.0 after a
+        zeroing, which is the cache's own value.
         """
         self.commands.append("sync_read_all_states")
         self.read_calls.append(list(motors) if isinstance(motors, list) else motors)
         named = MOTOR_ORDER if motors is None else motors
         return {
-            motor: {"position": self._position_deg, "velocity": 0.0, "torque": 0.0}
+            motor: {
+                "position": self._position_deg,
+                "velocity": 0.0,
+                "torque": 0.0,
+                "temp_mos": AMBIENT_TEMP_C,
+                "temp_rotor": AMBIENT_TEMP_C,
+            }
             for motor in named
         }
 

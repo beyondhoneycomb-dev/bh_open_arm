@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from backend.actuation.assembly import AcceptedTargetPublisher
 from backend.actuation.bus_writer import (
+    ANSWERED_STATE_FIELDS,
     BIMANUAL_BATCH_WIDTH,
     ArmWriteSlots,
     BimanualCanWriter,
@@ -25,6 +26,7 @@ from backend.actuation.bus_writer import (
     DropCounter,
     MitBus,
     bus_command_tuple,
+    is_cache_initialiser,
 )
 from backend.actuation.can_writer import (
     MIT_BATCH_WIDTH,
@@ -90,6 +92,7 @@ from backend.actuation.transition import ModeTransition
 from backend.actuation.watchdog import FIRST_COMMAND_GAP_SEC, ActionStreamWatchdog
 
 __all__ = [
+    "ANSWERED_STATE_FIELDS",
     "BIMANUAL_BATCH_WIDTH",
     "CHECK_ORDER",
     "FIRST_COMMAND_GAP_SEC",
@@ -153,5 +156,6 @@ __all__ = [
     "decode_motor_err",
     "find_disable_torque",
     "find_producer_can_access",
+    "is_cache_initialiser",
     "positions_to_batch",
 ]

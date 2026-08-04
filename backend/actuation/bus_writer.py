@@ -46,7 +46,7 @@ from __future__ import annotations
 
 import logging
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -66,6 +66,33 @@ DROP_LOG_PREFIX = "Packet drop"
 # The logger name the Damiao bus writes to (`lerobot.motors.damiao.damiao`). Named
 # as a string so this module pulls in no robot stack in the light lane.
 DAMIAO_LOGGER_NAME = "lerobot.motors.damiao.damiao"
+
+# The state fields a motor reply fills. All of them zero together is the bus's cache initialiser
+# rather than a reading: a powered DM motor reports its MOS and rotor temperatures in degrees
+# Celsius, so ambient alone puts those above zero.
+ANSWERED_STATE_FIELDS = ("position", "velocity", "torque", "temp_mos", "temp_rotor")
+
+
+def is_cache_initialiser(state: Mapping[str, float]) -> bool:
+    """Report whether a state is the bus's zeroed cache entry rather than a reply.
+
+    `sync_read_all_states` returns an entry for every motor it was asked about whether or not a
+    frame came back, so the mapping's keys prove nothing about which motors answered. The drop
+    log is the primary signal and this is the backstop: the log is a contract the vendor can
+    reword without changing an API, the handler that reads it is attachable and detachable, and
+    neither of those failures touches the values. This test does.
+
+    It only catches a motor that has never answered, because the cache holds a real if stale
+    reading once one has. That is the case worth catching separately — the initialiser is
+    position zero, which on an arm hanging at the URDF zero is the horizontal.
+
+    Args:
+        state: One motor's state as the bus returned it.
+
+    Returns:
+        (bool) True when every field a reply fills is zero.
+    """
+    return all(float(state.get(field, 0.0)) == 0.0 for field in ANSWERED_STATE_FIELDS)
 
 
 class MitBus(Protocol):

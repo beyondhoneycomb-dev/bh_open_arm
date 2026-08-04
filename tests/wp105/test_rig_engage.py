@@ -84,6 +84,10 @@ JOINT_STEP_DEG = 0.25
 # bus's own state cache is what a caller reading it back gets.
 UNFITTED_SLOT_DEG = 0.0
 
+# A powered motor's reported MOS and rotor temperature. Any positive value does: it is what
+# separates an answer from the zeroed cache above, which is what a silent motor yields.
+AMBIENT_TEMP_C = 31.0
+
 # How far a drifted hold frame targets away from the pose that was read, degrees' worth in
 # radians. Any non-zero value is refused; this one is unmistakable in the message.
 DRIFT_RAD = 0.2
@@ -177,12 +181,22 @@ class RecordingArmBus:
         self._angles[MOTOR_ORDER[-1]] = UNFITTED_SLOT_DEG
 
     def sync_read_all_states(self, motors: list[str] | None = None) -> dict[str, dict[str, float]]:
-        """Return one state per named motor, or per registered motor when none are named."""
+        """Return one state per named motor, or per registered motor when none are named.
+
+        Every field a real reply fills is filled, temperatures included: they are what separates
+        an answer from the bus's zeroed cache, and the gripper slot's angle here is 0.0.
+        """
         self.log.append(f"{self._side}:read")
         self.read_motors.append(None if motors is None else list(motors))
         named = list(self.motors) if motors is None else motors
         return {
-            motor: {"position": self._angles[motor], "velocity": 0.0, "torque": 0.0}
+            motor: {
+                "position": self._angles[motor],
+                "velocity": 0.0,
+                "torque": 0.0,
+                "temp_mos": AMBIENT_TEMP_C,
+                "temp_rotor": AMBIENT_TEMP_C,
+            }
             for motor in named
             if motor not in self._unanswered
         }

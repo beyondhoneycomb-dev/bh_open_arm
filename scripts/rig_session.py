@@ -73,6 +73,7 @@ from backend.actuation import (
     TargetMailbox,
     TickTrace,
     WallClock,
+    is_cache_initialiser,
 )
 from backend.actuation.config import LEASE_DURATION_SEC
 from backend.calibration.schema import MOTOR_ORDER
@@ -148,11 +149,9 @@ class RigAssemblyError(RuntimeError):
 DAMIAO_BUS_LOGGER = "lerobot.motors.damiao.damiao"
 PACKET_DROP_PREFIX = "Packet drop:"
 
-# The state fields a motor reply fills. All of them zero together is the cache initialiser rather
-# than a reading: a powered DM motor reports its MOS and rotor temperatures in degrees Celsius,
-# so ambient alone puts those above zero. The backstop exists because the primary signal is a log
-# record, and a log record is a contract the vendor can change without changing an API.
-ANSWERED_STATE_FIELDS = ("position", "velocity", "torque", "temp_mos", "temp_rotor")
+# The cache-initialiser test and the field list it reads are `backend.actuation`'s, because the
+# follower's per-command read needs the same test and the two must not be able to disagree about
+# what counts as an answer.
 
 
 class _DroppedMotorRecorder(logging.Handler):
@@ -179,19 +178,6 @@ class _DroppedMotorRecorder(logging.Handler):
         if not message.startswith(PACKET_DROP_PREFIX):
             return
         self.dropped.update(name for name in self._watched if name in message)
-
-
-def _is_cache_initialiser(state: Mapping[str, float]) -> bool:
-    """Report whether a state is the bus's zeroed cache entry rather than a reply.
-
-    Args:
-        state: One motor's state as the bus returned it.
-
-    Returns:
-        (bool) True when every field a reply fills is zero, which no powered motor reports —
-        its temperatures are degrees Celsius and ambient alone puts them above zero.
-    """
-    return all(float(state.get(field, 0.0)) == 0.0 for field in ANSWERED_STATE_FIELDS)
 
 
 class RigArmBus:
@@ -247,7 +233,7 @@ class RigArmBus:
         return {
             name: state
             for name, state in states.items()
-            if name not in recorder.dropped and not _is_cache_initialiser(state)
+            if name not in recorder.dropped and not is_cache_initialiser(state)
         }
 
     def enable_torque(self, motors: list[str]) -> None:

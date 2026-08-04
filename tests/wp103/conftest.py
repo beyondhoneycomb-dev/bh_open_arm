@@ -23,7 +23,11 @@ from backend.actuation import (
     SafetyFilter,
     SafetyLimits,
 )
-from backend.actuation.bus_writer import DAMIAO_LOGGER_NAME, DROP_LOG_PREFIX
+from backend.actuation.bus_writer import (
+    ANSWERED_STATE_FIELDS,
+    DAMIAO_LOGGER_NAME,
+    DROP_LOG_PREFIX,
+)
 from backend.calibration.schema import MOTOR_ORDER
 from backend.endeffector import EndEffectorProfile
 from contracts.plugin.config import Side
@@ -115,6 +119,12 @@ def degs(*values: float) -> tuple[Deg, ...]:
     return tuple(Deg(value) for value in values)
 
 
+# A powered motor's reported MOS and rotor temperature. Any positive value does: what the read
+# refusal keys on is that an answer is not all-zero across every field a reply fills, and the
+# bus's zeroed cache is what a motor that never answered yields.
+AMBIENT_TEMP_C = 31.0
+
+
 class FakeArmBus:
     """A CAN-free 8-motor bus double: readable state, no socket, no MIT write.
 
@@ -134,12 +144,16 @@ class FakeArmBus:
         self.motors = list(MOTOR_ORDER)
         self.disable_calls = 0
         self.read_motors: list[list[str] | None] = []
-        # Motor names a readback leaves out of its reply, and motor names it instead reports as
-        # dropped on the vendor logger. The real bus expresses those two failures differently
-        # and only the second one happens on hardware, so a double that conflated them would
-        # let a guard sample pass a test it cannot pass on the bench.
+        # The three ways a motor fails to answer, kept apart because they reach three different
+        # mechanisms and only two of them happen on hardware. `omit_motors` leaves the motor out
+        # of the reply, which the real bus never does. `drop_motors` reports the vendor's drop
+        # record and answers from the cache anyway — a motor that has answered before, so the
+        # cached angle is real but stale. `cache_only_motors` answers with the zeroed cache the
+        # bus was constructed with, which is a motor that has never answered at all: the record
+        # may be long gone from the log, and the values are the only remaining evidence.
         self.omit_motors: set[str] = set()
         self.drop_motors: set[str] = set()
+        self.cache_only_motors: set[str] = set()
 
     def sync_read_all_states(self, motors: list[str] | None = None) -> dict[str, dict[str, float]]:
         """Return a readback frame for the named motors, or for every motor when none are named.
@@ -152,6 +166,11 @@ class FakeArmBus:
         A motor in `drop_motors` gets the vendor's own `Packet drop` warning and a reply anyway,
         which is what `DamiaoMotorsBus._batch_refresh` does: it copies out the last known state
         for a motor that never answered, so the log record is the whole of the evidence.
+
+        Every field a real reply fills is filled here, temperatures included. A three-field
+        answer is not a smaller version of the vendor's five-field one: the two temperatures are
+        what separate an answer from the zeroed cache, so omitting them makes every readback at
+        the default angle indistinguishable from a motor that never spoke.
         """
         self.read_motors.append(None if motors is None else list(motors))
         named = MOTOR_ORDER if motors is None else motors
@@ -161,7 +180,15 @@ class FakeArmBus:
                     "%s: %s. Using last known state.", DROP_LOG_PREFIX, motor
                 )
         return {
-            motor: {"position": self._position_deg, "velocity": 0.0, "torque": 0.0}
+            motor: dict.fromkeys(ANSWERED_STATE_FIELDS, 0.0)
+            if motor in self.cache_only_motors
+            else {
+                "position": self._position_deg,
+                "velocity": 0.0,
+                "torque": 0.0,
+                "temp_mos": AMBIENT_TEMP_C,
+                "temp_rotor": AMBIENT_TEMP_C,
+            }
             for motor in named
             if motor not in self.omit_motors
         }

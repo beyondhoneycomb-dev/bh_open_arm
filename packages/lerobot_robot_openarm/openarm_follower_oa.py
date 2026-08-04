@@ -53,6 +53,7 @@ from backend.actuation import (
     SafetyFilter,
     SafetyLimits,
     WallClock,
+    is_cache_initialiser,
 )
 from backend.actuation.config import FRESHNESS_WINDOW_SEC, MIT_HOLD_KD, MIT_HOLD_KP
 from backend.calibration.atomic_io import (
@@ -264,6 +265,18 @@ class PartialConnectionError(RuntimeError):
 
     The other arm's connection is torn down before this is raised: a half-connected
     pair must not be left running, and the surviving connection is not left orphaned.
+    """
+
+
+class BusReadRefusedError(RuntimeError):
+    """Raised when the bus answered no state for a fitted motor.
+
+    Refused and not substituted, because the substitute is not a missing key — it is 0.0 deg,
+    and on an arm hanging at the URDF zero that is the horizontal. The refusal has to happen
+    here rather than downstream: a rejected command holds at the pose this read produced, so a
+    fabricated angle turns a fail-closed stop into a move command to the fabricated pose. There
+    is no honest hold to fall back to at this level; the tick's own stale-source hold is the one
+    that knows where the arm was last legitimately commanded.
     """
 
 
@@ -1007,20 +1020,41 @@ class OaOpenArmFollower(OpenArmFollower):
         `send_action`, so the bare form was one unanswered frame per command, and the guard
         sample has to come out of the same single read rather than provoke a second one.
 
+        A fitted motor that answered nothing is refused rather than widened. The widening
+        default reads as a missing key and is not one: `sync_read_all_states` returns an entry
+        for every motor it was asked about, and the entry for a motor that has never answered is
+        the cache the bus was built with, whose position is 0.0. That 0.0 is not a bad reading,
+        it is the horizontal on an arm hanging at the URDF zero — and because the same silence
+        latches the guard, and a latch holds at the pose this read produced, it would leave as a
+        move command to the horizontal. The refusal keeps the default for the slots it is honest
+        for: a slot outside the fitted set has no motor behind it, so its zero is a fact.
+
         The two liveness fields are different facts and neither substitutes for the other:
 
-        - `bus_read_ok` is whether a motor answered. It has to be the drop records, because
-          `sync_read_all_states` copies out a cache entry for every motor it was asked about
-          whether or not a frame came back, so the returned mapping cannot tell an answer from
-          the zero the cache was initialised with (the vendor logs `Packet drop:` instead).
-        - `observation_present` is whether the read came back covering the fitted set at all —
-          structural, and the check that survives a bus whose reply is short a joint.
+        - `bus_read_ok` is whether every motor answered *this* read. It has to be the drop
+          records: the returned mapping cannot tell an answer from a cached one, and once a
+          motor has answered once its cache holds a real if stale angle, which no test on the
+          values can distinguish from a fresh one (the vendor logs `Packet drop:` instead).
+        - `observation_present` is whether the read covered the fitted set with answers. The
+          refusal above is what acts on it, so it is True wherever this constructor is reached;
+          the guard's own blind branch on this field is reached only by a caller that builds its
+          own sample. It is computed rather than passed as True so the two cannot drift.
         """
         drops_before = self._drop_counter.count
         fitted = self._fitted_motors()
         states = self.bus.sync_read_all_states(list(fitted))
+        unanswered = tuple(
+            motor for motor in fitted if motor not in states or is_cache_initialiser(states[motor])
+        )
+        if unanswered:
+            raise BusReadRefusedError(
+                f"the bus answered no state for fitted {list(unanswered)}; refused rather than "
+                "read as 0.0 deg, which is the horizontal on an arm hanging at the URDF zero. "
+                "A command built on this read holds at it when the guard latches, so the "
+                "substitute would leave as a move rather than as a stop"
+            )
         sample = GuardSample(
-            observation_present=all(motor in states for motor in fitted),
+            observation_present=not unanswered,
             bus_read_ok=self._drop_counter.count == drops_before,
             # No manager means this session never claimed a lock, so there is none to have
             # lost. Latching on that would stop every fixture and every manager-less caller
