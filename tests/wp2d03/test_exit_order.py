@@ -14,6 +14,7 @@ pytest.importorskip("mujoco")
 
 from backend.actuation.clock import ManualClock
 from backend.actuation.config import MIT_HOLD_KD, MIT_HOLD_KP
+from backend.actuation.guard import GuardSample
 from backend.freedrive import (
     FRICTION_PASSED_STATUS,
     FreedriveSession,
@@ -44,7 +45,7 @@ def _engaged_session(clock: ManualClock) -> FreedriveSession:
         lease_duration_sec=_LEASE_SEC,
     )
     session.hold_heartbeat()
-    session.enter(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
+    session.enter(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy())
     return session
 
 
@@ -68,9 +69,9 @@ def test_timeout_exit_restores_kd_before_position() -> None:
     clock = ManualClock()
     session = _engaged_session(clock)
     clock.advance(0.02)
-    session.tick(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
+    session.tick(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy())
     clock.advance(_LEASE_SEC * 5)
-    lapsed = session.tick(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
+    lapsed = session.tick(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy())
     assert lapsed.mode is TickMode.HOLD
     assert lapsed.exit is not None and lapsed.exit.cause is HoldCause.DEADMAN_TIMEOUT
     _assert_kd_restored_hold(lapsed.exit)
@@ -91,7 +92,7 @@ def test_safety_latch_exit_restores_kd_before_position() -> None:
             latched_at=clock.now(),
         )
     )
-    tick = session.tick(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
+    tick = session.tick(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy())
     assert tick.mode is TickMode.HOLD
     assert tick.exit is not None and tick.exit.cause is HoldCause.SAFETY_LATCH
     _assert_kd_restored_hold(tick.exit)

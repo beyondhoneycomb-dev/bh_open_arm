@@ -20,6 +20,7 @@ from typing import cast
 import pytest
 
 from backend.actuation import SafetyReason
+from backend.actuation.guard import GuardSample
 from backend.actuation.safety import clamp_reason_for
 from contracts.action import ClampReason
 from tests.wp103.conftest import degs, make_gateway, make_limits
@@ -62,7 +63,11 @@ def test_zero_damping_under_a_driving_stiffness_is_not_recorded_as_a_joint_limit
     gateway, _guard = make_gateway(make_limits())
 
     result = gateway.submit(
-        degs(1.0, 1.0), degs(0.0, 0.0), kp=(DRIVING_KP, DRIVING_KP), kd=(ZERO_KD, ZERO_KD)
+        degs(1.0, 1.0),
+        degs(0.0, 0.0),
+        kp=(DRIVING_KP, DRIVING_KP),
+        kd=(ZERO_KD, ZERO_KD),
+        guard_sample=GuardSample.healthy(),
     )
 
     assert result.reason is SafetyReason.KD_ZERO_POSITION_CONTROL
@@ -76,7 +81,12 @@ def test_an_over_range_stiffness_is_not_recorded_as_a_joint_limit() -> None:
     """A wrapped-stiffness refusal is on the torque axis; the arm never approached a limit."""
     gateway, _guard = make_gateway(make_limits())
 
-    result = gateway.submit(degs(1.0, 1.0), degs(0.0, 0.0), kp=(OVER_RANGE_KP, DRIVING_KP))
+    result = gateway.submit(
+        degs(1.0, 1.0),
+        degs(0.0, 0.0),
+        kp=(OVER_RANGE_KP, DRIVING_KP),
+        guard_sample=GuardSample.healthy(),
+    )
 
     assert result.reason is SafetyReason.KP_OUT_OF_RANGE
     assert result.override.clamp_reason is ClampReason.TORQUE_LIMIT
@@ -86,7 +96,9 @@ def test_an_over_range_damping_is_not_recorded_as_a_joint_limit() -> None:
     """The damping half of the encoder band records the same way its stiffness half does."""
     gateway, _guard = make_gateway(make_limits())
 
-    result = gateway.submit(degs(1.0, 1.0), degs(0.0, 0.0), kd=(OVER_RANGE_KD, 1.0))
+    result = gateway.submit(
+        degs(1.0, 1.0), degs(0.0, 0.0), kd=(OVER_RANGE_KD, 1.0), guard_sample=GuardSample.healthy()
+    )
 
     assert result.reason is SafetyReason.KD_OUT_OF_RANGE
     assert result.override.clamp_reason is ClampReason.TORQUE_LIMIT
@@ -102,7 +114,7 @@ def test_a_clean_pass_records_no_intervention() -> None:
     """
     gateway, _guard = make_gateway(make_limits())
 
-    result = gateway.submit(degs(1.0, 1.0), degs(0.0, 0.0))
+    result = gateway.submit(degs(1.0, 1.0), degs(0.0, 0.0), guard_sample=GuardSample.healthy())
 
     assert not result.rejected
     assert result.override.override_active is False
@@ -121,7 +133,9 @@ def test_a_clip_and_proceed_clamp_records_an_intervention() -> None:
     gateway, _guard = make_gateway(make_limits())
 
     result = gateway.submit(
-        degs(PAST_OPERATIONAL_LIMIT_DEG, 0.0), degs(AT_OPERATIONAL_LIMIT_DEG, 0.0)
+        degs(PAST_OPERATIONAL_LIMIT_DEG, 0.0),
+        degs(AT_OPERATIONAL_LIMIT_DEG, 0.0),
+        guard_sample=GuardSample.healthy(),
     )
 
     assert not result.rejected
@@ -138,7 +152,9 @@ def test_a_genuine_joint_limit_clamp_is_still_recorded_as_one() -> None:
     gateway, _guard = make_gateway(make_limits())
 
     result = gateway.submit(
-        degs(PAST_OPERATIONAL_LIMIT_DEG, 0.0), degs(AT_OPERATIONAL_LIMIT_DEG, 0.0)
+        degs(PAST_OPERATIONAL_LIMIT_DEG, 0.0),
+        degs(AT_OPERATIONAL_LIMIT_DEG, 0.0),
+        guard_sample=GuardSample.healthy(),
     )
 
     assert result.override.clamp_reason is ClampReason.JOINT_LIMIT

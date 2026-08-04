@@ -494,11 +494,13 @@ def build_rig_session(
     """Assemble the whole write path over both arms, with nothing energized.
 
     The order is the safety. Both channel locks are taken before any socket opens (`01`
-    FR-SYS-005); the arms come up torque-OFF (`connect_readonly` never enables); the pose the
-    scheduler will hold on is read from the arms rather than defaulted; the writer is built
-    from the fitted slot plan, so no frame is addressed to a motor nobody answers on; and the
-    deadman lease is renewed once at the end, because a first tick that reads an un-renewed
-    lease emits a hold instead of the target that was just published.
+    FR-SYS-005); the arms come up holding nothing, though not off — `connect_readonly`
+    commands no torque, but the handshake under it enables every fitted motor, so both arms
+    are live from the moment this returns and have to be supported from here rather than from
+    `engage`; the pose the scheduler will hold on is read from the arms rather than defaulted;
+    the writer is built from the fitted slot plan, so no frame is addressed to a motor nobody
+    answers on; and the deadman lease is renewed once at the end, because a first tick that
+    reads an un-renewed lease emits a hold instead of the target that was just published.
 
     Args:
         make_can_writer: Builds the single CAN writer from the per-arm slot plan. Supplied

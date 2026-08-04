@@ -2,51 +2,57 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { StopControls } from "./StopControls";
-import { HARD_ESTOP_DROP_WARNING } from "./stopControls";
+import { HARD_ESTOP_DROP_WARNING, PHYSICAL_ESTOP } from "./stopControls";
 
-describe("CG-G-03a the two stops are distinct controls with a standing drop warning", () => {
-  it("renders two separate stop buttons with distinct kinds and classes", () => {
-    render(<StopControls onSoftStop={() => {}} onHardEStop={() => {}} hasControl />);
+describe("CG-G-03a the two stops are distinct, and only one of them is a control", () => {
+  it("renders the soft stop as a button and the hard E-Stop as guidance, with distinct classes", () => {
+    render(<StopControls onSoftStop={() => {}} hasControl />);
     const soft = screen.getByRole("button", { name: /소프트 스톱/ });
-    const hard = screen.getByRole("button", { name: /하드 E-Stop/ });
     expect(soft).toHaveAttribute("data-stop-kind", "soft");
-    expect(hard).toHaveAttribute("data-stop-kind", "hard");
-    // Visually distinct: different modifier classes, so they never render alike.
     expect(soft.className).toContain("oa-stop--soft");
-    expect(hard.className).toContain("oa-stop--hard");
-    expect(soft.className).not.toBe(hard.className);
+
+    const hard = screen.getByText(PHYSICAL_ESTOP.label).closest(".oa-stop--hard");
+    expect(hard).not.toBeNull();
+    expect(hard).toHaveAttribute("data-stop-kind", "hard");
+    expect((hard as HTMLElement).className).not.toBe(soft.className);
   });
 
-  it("routes each stop to its own handler — the two paths never merge", () => {
-    const onSoftStop = vi.fn();
-    const onHardEStop = vi.fn();
-    render(<StopControls onSoftStop={onSoftStop} onHardEStop={onHardEStop} hasControl />);
+  it("offers no clickable hard E-Stop — this rig has no software power boundary", () => {
+    render(<StopControls onSoftStop={() => {}} hasControl />);
+    // The single button on this surface is the soft stop. A hard-stop button would be a
+    // control wired to nothing, which reads as a stop that works (NORM-007).
+    const buttons = screen.getAllByRole("button");
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveAttribute("data-stop-kind", "soft");
+  });
 
+  it("names where the physical button is, since no software path substitutes for it", () => {
+    render(<StopControls onSoftStop={() => {}} hasControl />);
+    expect(screen.getByText(PHYSICAL_ESTOP.actuation)).toBeInTheDocument();
+  });
+
+  it("routes the soft stop to its own handler", () => {
+    const onSoftStop = vi.fn();
+    render(<StopControls onSoftStop={onSoftStop} hasControl />);
     fireEvent.click(screen.getByRole("button", { name: /소프트 스톱/ }));
     expect(onSoftStop).toHaveBeenCalledTimes(1);
-    expect(onHardEStop).not.toHaveBeenCalled();
-
-    fireEvent.click(screen.getByRole("button", { name: /하드 E-Stop/ }));
-    expect(onHardEStop).toHaveBeenCalledTimes(1);
-    expect(onSoftStop).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the standing drop warning next to the hard E-Stop", () => {
-    render(<StopControls onSoftStop={() => {}} onHardEStop={() => {}} hasControl />);
+  it("keeps the standing drop warning beside the hard E-Stop panel", () => {
+    render(<StopControls onSoftStop={() => {}} hasControl />);
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent(HARD_ESTOP_DROP_WARNING);
-    // The warning sits inside the hard-stop group, adjacent to the hard button.
+    // Losing the button must not lose the hazard: the warning still sits in the hard group
+    // next to the panel that describes it (FR-GUI-064).
     const hardGroup = alert.closest(".oa-stop-hard");
     expect(hardGroup).not.toBeNull();
-    expect(within(hardGroup as HTMLElement).getByRole("button")).toHaveAttribute(
-      "data-stop-kind",
-      "hard",
-    );
+    expect(
+      within(hardGroup as HTMLElement).getByText(PHYSICAL_ESTOP.label),
+    ).toBeInTheDocument();
   });
 
-  it("keeps the hard E-Stop enabled even without control; only the soft stop is gated", () => {
-    render(<StopControls onSoftStop={() => {}} onHardEStop={() => {}} hasControl={false} />);
-    expect(screen.getByRole("button", { name: /하드 E-Stop/ })).toBeEnabled();
+  it("gates the soft stop on control authority", () => {
+    render(<StopControls onSoftStop={() => {}} hasControl={false} />);
     expect(screen.getByRole("button", { name: /소프트 스톱/ })).toBeDisabled();
   });
 });

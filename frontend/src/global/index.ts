@@ -8,9 +8,10 @@ export { StatusBadgeBar, type RobotBadgeState, type StatusBadgeBarProps } from "
 export { StopControls, type StopControlsProps } from "./StopControls";
 export {
   SOFT_STOP,
-  HARD_ESTOP,
+  PHYSICAL_ESTOP,
   HARD_ESTOP_DROP_WARNING,
   STOP_KINDS,
+  type PhysicalStopSpec,
   type StopKind,
 } from "./stopControls";
 export { CanBadge } from "./CanBadge";

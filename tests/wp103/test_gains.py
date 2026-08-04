@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from backend.actuation import SafetyReason
 from backend.actuation.config import MIT_HOLD_KD, MIT_HOLD_KP
+from backend.actuation.guard import GuardSample
 from tests.wp103.conftest import degs, make_gateway, make_limits
 
 # A stiffness that plainly drives a position, well inside [0,500].
@@ -46,7 +47,9 @@ NO_KP = 0.0
 def test_kp_above_500_is_rejected() -> None:
     """A stiffness above 500 is rejected, not wrapped (⑦)."""
     gateway, _guard = make_gateway(make_limits())
-    result = gateway.submit(degs(1.0, 1.0), degs(0.0, 0.0), kp=(600.0, 100.0))
+    result = gateway.submit(
+        degs(1.0, 1.0), degs(0.0, 0.0), kp=(600.0, 100.0), guard_sample=GuardSample.healthy()
+    )
     assert result.rejected
     assert result.reason is SafetyReason.KP_OUT_OF_RANGE
 
@@ -54,7 +57,9 @@ def test_kp_above_500_is_rejected() -> None:
 def test_kd_above_5_is_rejected() -> None:
     """A damping above 5 is rejected, not wrapped (⑦)."""
     gateway, _guard = make_gateway(make_limits())
-    result = gateway.submit(degs(1.0, 1.0), degs(0.0, 0.0), kd=(6.0, 1.0))
+    result = gateway.submit(
+        degs(1.0, 1.0), degs(0.0, 0.0), kd=(6.0, 1.0), guard_sample=GuardSample.healthy()
+    )
     assert result.rejected
     assert result.reason is SafetyReason.KD_OUT_OF_RANGE
 
@@ -68,7 +73,11 @@ def test_a_negative_stiffness_is_rejected() -> None:
     """
     gateway, _guard = make_gateway(make_limits())
     result = gateway.submit(
-        degs(1.0, 1.0), degs(0.0, 0.0), kp=(NEGATIVE_KP, DRIVING_KP), kd=(SMALL_KD, SMALL_KD)
+        degs(1.0, 1.0),
+        degs(0.0, 0.0),
+        kp=(NEGATIVE_KP, DRIVING_KP),
+        kd=(SMALL_KD, SMALL_KD),
+        guard_sample=GuardSample.healthy(),
     )
     assert result.rejected
     assert result.reason is SafetyReason.KP_OUT_OF_RANGE
@@ -83,7 +92,11 @@ def test_a_negative_damping_is_rejected() -> None:
     """
     gateway, _guard = make_gateway(make_limits())
     result = gateway.submit(
-        degs(1.0, 1.0), degs(0.0, 0.0), kp=(NO_KP, NO_KP), kd=(NEGATIVE_KD, NEGATIVE_KD)
+        degs(1.0, 1.0),
+        degs(0.0, 0.0),
+        kp=(NO_KP, NO_KP),
+        kd=(NEGATIVE_KD, NEGATIVE_KD),
+        guard_sample=GuardSample.healthy(),
     )
     assert result.rejected
     assert result.reason is SafetyReason.KD_OUT_OF_RANGE
@@ -92,7 +105,13 @@ def test_a_negative_damping_is_rejected() -> None:
 def test_in_range_gains_are_accepted() -> None:
     """Gains inside their ranges pass the gain check (⑦, no over-eager reject)."""
     gateway, _guard = make_gateway(make_limits())
-    result = gateway.submit(degs(1.0, 1.0), degs(0.0, 0.0), kp=(240.0, 240.0), kd=(5.0, 3.0))
+    result = gateway.submit(
+        degs(1.0, 1.0),
+        degs(0.0, 0.0),
+        kp=(240.0, 240.0),
+        kd=(5.0, 3.0),
+        guard_sample=GuardSample.healthy(),
+    )
     assert not result.rejected
     assert result.reason is SafetyReason.NONE
 
@@ -100,7 +119,13 @@ def test_in_range_gains_are_accepted() -> None:
 def test_boundary_gains_are_accepted() -> None:
     """The inclusive bounds (0 and the max) are in range (⑦)."""
     gateway, _guard = make_gateway(make_limits())
-    result = gateway.submit(degs(1.0, 1.0), degs(0.0, 0.0), kp=(0.0, 500.0), kd=(0.0, 5.0))
+    result = gateway.submit(
+        degs(1.0, 1.0),
+        degs(0.0, 0.0),
+        kp=(0.0, 500.0),
+        kd=(0.0, 5.0),
+        guard_sample=GuardSample.healthy(),
+    )
     assert not result.rejected
 
 
@@ -108,7 +133,11 @@ def test_zero_damping_under_a_driving_stiffness_is_rejected() -> None:
     """The pair Damiao says makes the motor run away is refused (`03` FR-MOT-021)."""
     gateway, _guard = make_gateway(make_limits())
     result = gateway.submit(
-        degs(1.0, 1.0), degs(0.0, 0.0), kp=(DRIVING_KP, DRIVING_KP), kd=(ZERO_KD, SMALL_KD)
+        degs(1.0, 1.0),
+        degs(0.0, 0.0),
+        kp=(DRIVING_KP, DRIVING_KP),
+        kd=(ZERO_KD, SMALL_KD),
+        guard_sample=GuardSample.healthy(),
     )
     assert result.rejected
     assert result.reason is SafetyReason.KD_ZERO_POSITION_CONTROL
@@ -121,7 +150,13 @@ def test_zero_damping_with_no_stiffness_is_admitted() -> None:
     output." Refusing this pair would forbid gravity-compensated Freedrive outright.
     """
     gateway, _guard = make_gateway(make_limits())
-    result = gateway.submit(degs(1.0, 1.0), degs(0.0, 0.0), kp=(0.0, 0.0), kd=(ZERO_KD, ZERO_KD))
+    result = gateway.submit(
+        degs(1.0, 1.0),
+        degs(0.0, 0.0),
+        kp=(0.0, 0.0),
+        kd=(ZERO_KD, ZERO_KD),
+        guard_sample=GuardSample.healthy(),
+    )
     assert not result.rejected
 
 
@@ -132,7 +167,9 @@ def test_omitting_the_stiffness_does_not_excuse_zero_damping() -> None:
     command that names only kd is a position command whether or not it said so.
     """
     gateway, _guard = make_gateway(make_limits())
-    result = gateway.submit(degs(1.0, 1.0), degs(0.0, 0.0), kd=(ZERO_KD, ZERO_KD))
+    result = gateway.submit(
+        degs(1.0, 1.0), degs(0.0, 0.0), kd=(ZERO_KD, ZERO_KD), guard_sample=GuardSample.healthy()
+    )
     assert result.rejected
     assert result.reason is SafetyReason.KD_ZERO_POSITION_CONTROL
 
@@ -147,7 +184,12 @@ def test_a_stiffness_named_without_a_damping_is_admitted_on_the_hold_damping() -
     nothing else supplies kp without kd.
     """
     gateway, _guard = make_gateway(make_limits())
-    result = gateway.submit(degs(1.0, 1.0), degs(0.0, 0.0), kp=(DRIVING_KP, DRIVING_KP))
+    result = gateway.submit(
+        degs(1.0, 1.0),
+        degs(0.0, 0.0),
+        kp=(DRIVING_KP, DRIVING_KP),
+        guard_sample=GuardSample.healthy(),
+    )
     assert not result.rejected
     assert result.reason is SafetyReason.NONE
 
@@ -160,6 +202,7 @@ def test_the_hold_damping_is_admitted() -> None:
         degs(0.0, 0.0),
         kp=(MIT_HOLD_KP, MIT_HOLD_KP),
         kd=(MIT_HOLD_KD, MIT_HOLD_KD),
+        guard_sample=GuardSample.healthy(),
     )
     assert not result.rejected
     assert result.reason is SafetyReason.NONE

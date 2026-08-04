@@ -14,6 +14,7 @@ import pytest
 pytest.importorskip("mujoco")
 
 from backend.actuation.clock import ManualClock, WallClock
+from backend.actuation.guard import GuardSample
 from backend.actuation.mailbox import TargetMailbox
 from backend.actuation.producer import MailboxProducer, Producer
 from backend.actuation.transition import ModeTransition
@@ -45,7 +46,7 @@ def _passed_session(**kwargs) -> FreedriveSession:
 
 def test_frame_has_zero_kp_and_freedrive_damping() -> None:
     session = _passed_session()
-    entry = session.enter(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
+    entry = session.enter(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy())
     assert entry.engaged is True
     frame = entry.frame
     assert frame is not None and frame.engaged is True
@@ -58,7 +59,7 @@ def test_frame_has_zero_kp_and_freedrive_damping() -> None:
 
 def test_feedforward_is_gravity_plus_friction() -> None:
     session = _passed_session()
-    frame = session.enter(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S).frame
+    frame = session.enter(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy()).frame
     assert frame is not None
     gravity = gravity_backend().tau_grav(ENTRY_POSE_RAD)
     friction = [
@@ -75,7 +76,7 @@ def test_feedforward_is_gravity_plus_friction() -> None:
 def test_per_joint_damping_is_honored() -> None:
     kd = (0.1, 0.15, 0.2, 0.25, 0.3, 0.12, 0.18)
     session = _passed_session(kd_freedrive=kd)
-    frame = session.enter(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S).frame
+    frame = session.enter(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy()).frame
     assert frame is not None
     assert tuple(command.kd for command in frame.commands) == kd
 
@@ -91,7 +92,7 @@ def test_torque_is_clamped_to_peak_by_the_gateway() -> None:
         tuple(DEFAULT_KD_FREEDRIVE for _ in ENTRY_POSE_RAD),
         ManualClock(),
     )
-    frame = producer.produce_frame(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
+    frame = producer.produce_frame(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy())
     peak = [value.value for value in limits.peak_torque_nm]
     for index, command in enumerate(frame.commands):
         assert abs(command.tau.value) <= abs(peak[index]) + 1e-9

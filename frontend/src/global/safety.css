@@ -105,7 +105,6 @@
   gap: 2px;
   padding: 8px 14px;
   border-radius: 8px;
-  cursor: pointer;
   font: inherit;
 }
 
@@ -118,11 +117,13 @@
   opacity: 0.85;
 }
 
-/* Soft stop: muted, secondary. Holds pose with torque — not an emergency look. */
+/* Soft stop: muted, secondary. Holds pose with torque — not an emergency look. It is
+   the only control on this surface, and the only element here that takes a pointer. */
 .oa-stop--soft {
   border: 1px solid var(--oa-soft-stop);
   background: var(--oa-surface);
   color: var(--oa-soft-stop);
+  cursor: pointer;
 }
 
 .oa-stop--soft:disabled {
@@ -130,12 +131,22 @@
   cursor: not-allowed;
 }
 
-/* Hard E-Stop: loud red, unmistakable. Cuts power -> the arm drops. */
+/* Hard E-Stop: a hazard notice, not a control. Deliberately unfilled — a filled danger
+   block reads as pressable next to the outlined soft stop, and the one thing this panel
+   must never suggest is that pressing the screen cuts power. */
 .oa-stop--hard {
-  border: 2px solid var(--oa-danger);
-  background: var(--oa-danger);
-  color: var(--oa-danger-fg);
+  border: 2px dashed var(--oa-danger);
+  background: transparent;
+  color: var(--oa-danger);
   font-size: 15px;
+  cursor: default;
+}
+
+/* Where the operator's hand actually has to go. */
+.oa-stop__actuation {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.9;
 }
 
 .oa-stop-hard {

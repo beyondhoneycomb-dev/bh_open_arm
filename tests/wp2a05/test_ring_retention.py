@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from backend.actuation.guard import GuardSample
 from backend.audit import DEFAULT_HORIZON_SEC, AuditRingBuffer
 from tests.wp2a05.conftest import filled, make_gateway, record_from
 
@@ -19,7 +20,14 @@ def _record_at(ring: AuditRingBuffer, index: int, at: float) -> None:
     """Record one clean decision stamped at a given monotonic time."""
     gateway, _guard = make_gateway()
     request = filled(2.0)
-    ring.record(record_from(gateway.submit(request, filled(2.0)), request, tick_index=index, at=at))
+    ring.record(
+        record_from(
+            gateway.submit(request, filled(2.0), guard_sample=GuardSample.healthy()),
+            request,
+            tick_index=index,
+            at=at,
+        )
+    )
 
 
 def test_default_horizon_is_ten_seconds() -> None:

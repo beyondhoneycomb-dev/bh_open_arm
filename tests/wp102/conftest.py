@@ -18,13 +18,22 @@ from packages.lerobot_robot_openarm import openarm_follower_oa
 from packages.lerobot_robot_openarm.config_oa import OaOpenArmFollowerConfig
 from packages.lerobot_robot_openarm.openarm_follower_oa import OaOpenArmFollower
 
+# What the bus's opening handshake puts in the command log. Distinct from any
+# `enable_torque` entry: a test that means "this code commanded no torque" must not be
+# satisfiable by a bring-up that energised the arm anyway.
+HANDSHAKE_ENABLE = "handshake_enable(0xFC)"
+
 
 class FakeDamiaoBus:
     """A CAN-free stand-in for `DamiaoMotorsBus` that records the commands it is sent.
 
     Ownership: holds only in-memory connection state, a command log, and a per-motor
-    position it reports back. It opens no socket and enables no torque — it exists so
-    the bring-up and zero flow can be driven with no hardware present.
+    position it reports back. It opens no socket — it exists so the bring-up and zero flow
+    can be driven with no hardware present.
+
+    It does reproduce the one thing about opening that is easy to get wrong: the handshake
+    enables the motors. A double that skipped it would let a test assert "the bring-up sent
+    no enable" and stay green against a bus that sends one to every motor.
     """
 
     def __init__(self, connect_fails: bool = False, position_deg: float = 0.0) -> None:
@@ -50,11 +59,19 @@ class FakeDamiaoBus:
         return self._connected
 
     def connect(self, handshake: bool = True) -> None:
-        """Open the bus (register motors); raise when armed to fail."""
+        """Open the bus, enabling every motor when the handshake runs; raise when armed to fail.
+
+        `DamiaoMotorsBus._handshake()` sends `CAN_CMD_ENABLE` (0xFC) to each registered motor
+        and waits for a reply, so a motor is in the enabled state after any default open. It is
+        logged apart from `enable_torque` because the two answer different questions: whether
+        this code commanded torque, and whether the arm is live. Only the first is false here.
+        """
         if self._connect_fails:
             raise RuntimeError("fake bus: CAN interface unavailable")
         self._connected = True
         self.commands.append("connect")
+        if handshake:
+            self.commands.append(HANDSHAKE_ENABLE)
 
     def disconnect(self, disable_torque: bool = False) -> None:
         """Close the bus."""

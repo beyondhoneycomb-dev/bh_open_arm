@@ -28,6 +28,7 @@ import numpy as np
 
 from backend.actuation.clock import Clock
 from backend.actuation.enforcement import ActuationGateway
+from backend.actuation.guard import GuardSample
 from backend.actuation.safety import KD_MAX, KD_MIN, SafetyReason
 from backend.actuation.watchdog import ActionStreamWatchdog
 from backend.freedrive.constants import FREEDRIVE_DQ, FREEDRIVE_KP, FREEDRIVE_PRODUCER_ID
@@ -138,13 +139,20 @@ class FreedriveProducer:
         return self._kd_freedrive
 
     def produce_frame(
-        self, q_rad: tuple[float, ...], dq_rad_s: tuple[float, ...]
+        self,
+        q_rad: tuple[float, ...],
+        dq_rad_s: tuple[float, ...],
+        guard_sample: GuardSample,
     ) -> FreedriveFrame:
         """Build one path-(C) frame at a joint state, routed through the single gateway.
 
         Args:
             q_rad: Present joint angles, v2 convention, radians, arm width.
             dq_rad_s: Present joint velocities, radians per second, arm width.
+            guard_sample: What the caller's read of this tick saw, passed straight to the
+                gateway. This producer holds no CAN handle, so it can neither observe nor
+                invent these facts; the joint state and the sample come from the same read
+                in the same hand.
 
         Returns:
             (FreedriveFrame) The engaged MIT command, or a held frame when the gateway stopped it.
@@ -168,6 +176,7 @@ class FreedriveProducer:
         result = self._gateway.submit(
             request_deg,
             request_deg,
+            guard_sample=guard_sample,
             calibrated=True,
             source_age_sec=self._watchdog.gap_sec(),
             feedforward_torque_nm=feedforward,

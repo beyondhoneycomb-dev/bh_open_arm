@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from backend.actuation.clock import ManualClock
+from backend.actuation.guard import GuardSample
 from backend.actuation.safety import SafetyLimits
 from backend.freedrive.constants import FREEDRIVE_FIXTURE_ENV_VAR
 from backend.freedrive.gate import FrictionGate, friction_gate_status
@@ -115,7 +116,10 @@ def _verify_one(
         clock=clock,
     )
     session.hold_heartbeat()
-    entry = session.enter(q_entry, dq_entry)
+    # The capture is a recorded pose replayed offline, so the guard's liveness fields describe
+    # the replay and not a bus: the record exists, nothing was read, no lock was claimed. What
+    # this re-verification renders is the entry decision against a real pose, not the guard.
+    entry = session.enter(q_entry, dq_entry, GuardSample.healthy())
     exit_hold = session.release(q_entry)
 
     return FreedriveRegistrationEvidence(

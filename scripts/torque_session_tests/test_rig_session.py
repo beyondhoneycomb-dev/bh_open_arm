@@ -390,10 +390,14 @@ def test_a_channel_lock_held_elsewhere_refuses_before_any_socket_opens(
 # --- Nothing is energized by assembling, and the deadman is live when it returns ---
 
 
-def test_assembling_energizes_nothing_and_arms_the_deadman(
+def test_assembling_commands_no_torque_and_arms_the_deadman(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`connect_readonly` never enables torque, and the first tick must not read a dead lease.
+    """Assembly asks for no torque, and the first tick must not read a dead lease.
+
+    Asks for none, but does not leave the arms dead: the bus handshake enables every fitted
+    motor, so what these assertions establish is that no command followed it, not that the
+    rig is safe to let go of.
 
     A first tick on an un-renewed lease emits the cached hold instead of the target the engage
     just published, and on a brakeless arm the cached frame is a pose from before this session.

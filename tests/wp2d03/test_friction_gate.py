@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import pytest
 
+from backend.actuation.guard import GuardSample
 from backend.freedrive import (
     FRICTION_PASSED_STATUS,
     GRAVITY_UNCOMPENSATED_BANNER,
@@ -66,7 +67,7 @@ def test_session_entry_blocked_when_not_passed() -> None:
         gravity_backend(), friction_seed(), arm_safety_limits(), gate, ManualClock()
     )
     session.hold_heartbeat()
-    entry = session.enter(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
+    entry = session.enter(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy())
 
     assert entry.engaged is False
     assert entry.refusal is EntryRefusal.FRICTION_GATE_BLOCKED

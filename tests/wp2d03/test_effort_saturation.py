@@ -13,6 +13,7 @@ import pytest
 pytest.importorskip("mujoco")
 
 from backend.actuation.clock import ManualClock
+from backend.actuation.guard import GuardSample
 from backend.freedrive import (
     FRICTION_PASSED_STATUS,
     EntryRefusal,
@@ -56,7 +57,7 @@ def test_normal_envelope_is_not_saturated() -> None:
 
 def test_shrunk_envelope_saturates_and_refuses_entry() -> None:
     session = _session(peak_scale=0.05)
-    entry = session.enter(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
+    entry = session.enter(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy())
     assert entry.engaged is False
     assert entry.refusal is EntryRefusal.EFFORT_SATURATED
     assert entry.effort is not None and entry.effort.saturated is True
@@ -65,7 +66,7 @@ def test_shrunk_envelope_saturates_and_refuses_entry() -> None:
 
 def test_normal_envelope_passes_the_effort_gate() -> None:
     session = _session(peak_scale=1.0)
-    entry = session.enter(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
+    entry = session.enter(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy())
     # A held deadman plus an unsaturated pose engages; the effort gate did not block.
     assert entry.effort is not None and entry.effort.saturated is False
     assert entry.engaged is True

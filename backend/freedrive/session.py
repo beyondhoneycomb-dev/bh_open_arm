@@ -16,6 +16,13 @@ It reuses rather than re-implements: the deadman lease and its expiry-as-latch
 gateway (``backend.actuation``), and the Cat-2 hold frame builder (``positions_to_batch``). The
 one latch it holds is driven by both the deadman expiry and the gateway's collision guard, so
 Freedrive has a single definition of "held", not two.
+
+The `GuardSample` a caller passes in must carry ``residual_exceeded=False`` on this path, and
+that is a requirement rather than a gap: FR-MAN-037 says the operator's hand force on the arm
+*is* an external-torque residual, so a residual trip here fires on every guide
+(``backend/freedrive_walls/detection.py`` switches it off for exactly this reason while keeping
+the fault trips). The three fail-closed fields are unaffected — a Freedrive session that cannot
+see the arm is still blind, and blind still latches.
 """
 
 from __future__ import annotations
@@ -26,7 +33,7 @@ from enum import Enum
 from backend.actuation.clock import Clock
 from backend.actuation.enforcement import ActuationGateway
 from backend.actuation.gateway import positions_to_batch
-from backend.actuation.guard import CollisionGuard
+from backend.actuation.guard import CollisionGuard, GuardSample
 from backend.actuation.latch import SafetyLatch
 from backend.actuation.lease import LeaseManager
 from backend.actuation.safety import SafetyFilter, SafetyLimits
@@ -207,10 +214,10 @@ class FreedriveSession:
         self._clock = clock
         self._latch = SafetyLatch()
         self._last_guard_reason: LatchReason | None = None
-        guard = CollisionGuard(on_latch=self._on_guard_latch, clock=clock)
+        self._guard = CollisionGuard(on_latch=self._on_guard_latch, clock=clock)
         gateway = ActuationGateway(
             safety_filter=SafetyFilter(safety_limits),
-            guard=guard,
+            guard=self._guard,
             dt_sec=FREEDRIVE_CONTROL_PERIOD_SEC,
             freshness_window_sec=FREEDRIVE_FRESHNESS_WINDOW_SEC,
         )
@@ -243,7 +250,13 @@ class FreedriveSession:
         self._latch.engage(reason)
 
     def acknowledge_latch(self) -> None:
-        """Clear the safety latch — an operator ack, the sole release of a latched hold."""
+        """Clear the safety latch — an operator ack, the sole release of a latched hold.
+
+        The guard keeps its own copy of "latched" and the gateway reads that copy, not this
+        latch, so clearing only one of the two leaves every command holding on COLLISION_LATCH
+        while `latch_active` reports released.
+        """
+        self._guard.acknowledge()
         self._latch.acknowledge()
 
     @property
@@ -324,7 +337,12 @@ class FreedriveSession:
 
     # -- entry ------------------------------------------------------------------------------
 
-    def enter(self, q_entry: tuple[float, ...], dq_entry: tuple[float, ...]) -> FreedriveEntry:
+    def enter(
+        self,
+        q_entry: tuple[float, ...],
+        dq_entry: tuple[float, ...],
+        guard_sample: GuardSample,
+    ) -> FreedriveEntry:
         """Attempt to start gravity-comp Freedrive at an entry pose (acceptance I/IV).
 
         Entry is admitted only when, in order: the friction gate offers path (C); the gravity
@@ -335,6 +353,8 @@ class FreedriveSession:
         Args:
             q_entry: The entry joint angles, radians, arm width.
             dq_entry: The entry joint velocities, radians per second, arm width.
+            guard_sample: What the caller's read of the entry tick saw, for the collision
+                guard the gateway polls.
 
         Returns:
             (FreedriveEntry) Engaged with the first frame, or a refusal with the reason.
@@ -371,7 +391,7 @@ class FreedriveSession:
             )
 
         self._active = True
-        frame = self._producer.produce_frame(q_entry, dq_entry)
+        frame = self._producer.produce_frame(q_entry, dq_entry, guard_sample)
         return FreedriveEntry(
             engaged=True,
             refusal=None,
@@ -383,7 +403,12 @@ class FreedriveSession:
 
     # -- tick / exit ------------------------------------------------------------------------
 
-    def tick(self, q: tuple[float, ...], dq: tuple[float, ...]) -> FreedriveTick:
+    def tick(
+        self,
+        q: tuple[float, ...],
+        dq: tuple[float, ...],
+        guard_sample: GuardSample,
+    ) -> FreedriveTick:
         """Run one Freedrive tick: drive path (C), or exit to a Cat-2 hold (acceptance II/III).
 
         The deadman is polled first, so a lease that lapsed this tick latches before anything
@@ -393,6 +418,9 @@ class FreedriveSession:
         Args:
             q: Present joint angles, radians, arm width.
             dq: Present joint velocities, radians per second, arm width.
+            guard_sample: What the caller's read of this tick saw, for the collision guard
+                the gateway polls. `residual_exceeded` must be False here — see the module
+                docstring.
 
         Returns:
             (FreedriveTick) The engaged frame, or the position hold the exit produced.
@@ -409,7 +437,7 @@ class FreedriveSession:
         if not self._active:
             return self._hold_tick(q, HoldCause.IDLE, was_active)
 
-        frame = self._producer.produce_frame(q, dq)
+        frame = self._producer.produce_frame(q, dq, guard_sample)
         if not frame.engaged:
             self._active = False
             return FreedriveTick(

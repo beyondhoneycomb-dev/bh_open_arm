@@ -8,6 +8,7 @@ hardware present.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from backend.actuation import (
     SafetyFilter,
     SafetyLimits,
 )
+from backend.actuation.bus_writer import DAMIAO_LOGGER_NAME, DROP_LOG_PREFIX
 from backend.calibration.schema import MOTOR_ORDER
 from backend.endeffector import EndEffectorProfile
 from contracts.plugin.config import Side
@@ -132,6 +134,12 @@ class FakeArmBus:
         self.motors = list(MOTOR_ORDER)
         self.disable_calls = 0
         self.read_motors: list[list[str] | None] = []
+        # Motor names a readback leaves out of its reply, and motor names it instead reports as
+        # dropped on the vendor logger. The real bus expresses those two failures differently
+        # and only the second one happens on hardware, so a double that conflated them would
+        # let a guard sample pass a test it cannot pass on the bench.
+        self.omit_motors: set[str] = set()
+        self.drop_motors: set[str] = set()
 
     def sync_read_all_states(self, motors: list[str] | None = None) -> dict[str, dict[str, float]]:
         """Return a readback frame for the named motors, or for every motor when none are named.
@@ -140,13 +148,27 @@ class FakeArmBus:
         bus" upstream, and on a build whose end effector has no gripper that reaches an id
         nothing answers on. A double that swallowed the argument would answer for the absent
         motor and hide the caller that asked for it.
+
+        A motor in `drop_motors` gets the vendor's own `Packet drop` warning and a reply anyway,
+        which is what `DamiaoMotorsBus._batch_refresh` does: it copies out the last known state
+        for a motor that never answered, so the log record is the whole of the evidence.
         """
         self.read_motors.append(None if motors is None else list(motors))
         named = MOTOR_ORDER if motors is None else motors
+        for motor in named:
+            if motor in self.drop_motors:
+                logging.getLogger(DAMIAO_LOGGER_NAME).warning(
+                    "%s: %s. Using last known state.", DROP_LOG_PREFIX, motor
+                )
         return {
             motor: {"position": self._position_deg, "velocity": 0.0, "torque": 0.0}
             for motor in named
+            if motor not in self.omit_motors
         }
+
+    def connect(self) -> None:
+        """Open the bus (no socket exists); the follower's bring-up calls this."""
+        self.is_connected = True
 
     def disable_torque(self) -> None:
         """Count a torque drop.

@@ -31,7 +31,7 @@ from backend.actuation.bus_writer import BusCanWriter
 from backend.actuation.clock import ManualClock
 from backend.actuation.config import MIT_HOLD_KD, MIT_HOLD_KP
 from backend.actuation.enforcement import ActuationGateway
-from backend.actuation.guard import CollisionGuard
+from backend.actuation.guard import CollisionGuard, GuardSample
 from backend.actuation.safety import SafetyFilter, SafetyReason
 from backend.deadman.constants import DEADMAN_LEASE_DURATION_SEC
 from backend.freedrive import (
@@ -129,7 +129,7 @@ def _engaged_session(clock: ManualClock) -> FreedriveSession:
     gate = FrictionGate(friction_gate_status(FRICTION_PASSED_STATUS))
     session = FreedriveSession(gravity_backend(), friction_seed(), arm_safety_limits(), gate, clock)
     session.hold_heartbeat()
-    session.enter(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
+    session.enter(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy())
     return session
 
 
@@ -139,7 +139,7 @@ def _ignore_latch(reason) -> None:  # noqa: ANN001
 
 def _frame(producer: FreedriveProducer):  # noqa: ANN202
     """Produce one frame at the entry pose."""
-    return producer.produce_frame(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
+    return producer.produce_frame(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy())
 
 
 def _motor_names() -> tuple[str, ...]:
@@ -250,7 +250,7 @@ def test_a_stalled_session_exits_to_a_powered_hold_rather_than_dropping_torque()
     session = _engaged_session(clock)
     clock.advance(LONG_STALL_SEC)
 
-    tick = session.tick(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
+    tick = session.tick(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy())
 
     assert tick.mode is TickMode.HOLD
     assert tick.exit is not None

@@ -10,6 +10,7 @@ two windows sharing one trigger rather than by inspecting the ring's internals.
 
 from __future__ import annotations
 
+from backend.actuation.guard import GuardSample
 from backend.audit import AuditRingBuffer
 from backend.event_ring import EventRingBuffer
 from ops.cancel.scheduler import LatchReason
@@ -27,7 +28,7 @@ def _fill_audit(audit: AuditRingBuffer, ticks: int) -> None:
     gateway, _guard = make_gateway()
     request = filled(120.0)  # beyond the 90° operational bound, so the clamp genuinely fires
     for index in range(ticks):
-        result = gateway.submit(request, filled(120.0))
+        result = gateway.submit(request, filled(120.0), guard_sample=GuardSample.healthy())
         audit.record(record_from(result, request, tick_index=index, at=index * DT_SEC))
 
 

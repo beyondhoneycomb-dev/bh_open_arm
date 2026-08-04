@@ -13,6 +13,7 @@ import pytest
 pytest.importorskip("mujoco")
 
 from backend.actuation.enforcement import ActuationGateway
+from backend.actuation.guard import GuardSample
 from backend.deadman import DeadmanController
 from backend.freedrive.producer import FreedriveProducer
 from backend.freedrive.session import FreedriveSession
@@ -60,7 +61,7 @@ def test_producer_uses_the_injected_gravity_source() -> None:
         tuple(DEFAULT_KD_FREEDRIVE for _ in ENTRY_POSE_RAD),
         ManualClock(),
     )
-    frame = producer.produce_frame(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
+    frame = producer.produce_frame(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy())
     # The frame's gravity term equals the injected backend's tau_grav, not a re-derived one.
     expected = gravity.tau_grav(ENTRY_POSE_RAD)
     assert frame.tau_grav_nm == pytest.approx(tuple(float(v) for v in expected), abs=1e-9)

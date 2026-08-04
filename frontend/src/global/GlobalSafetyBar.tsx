@@ -1,10 +1,9 @@
 // The always-on safety surface WP-G-03 delivers, mounted by the shell on every
-// screen. It composes the dummy-mode banner, the status badge bar, and the two
-// stop controls. Its defining property (CG-G-03b): the stop controls — the hard
-// E-Stop in particular — are rendered unconditionally, independent of screen,
-// mode, and whether this client holds control. The soft stop is gated on control
-// authority (it is a control-authority action); the hard E-Stop is never gated,
-// because cutting power must work for an observer too (FR-GUI-065).
+// screen. It composes the dummy-mode banner, the status badge bar, and the stop
+// pair. Its defining property (CG-G-03b): the pair is rendered unconditionally,
+// independent of screen, mode, and whether this client holds control, so the
+// STOP_HOLD control and the physical-E-Stop guidance are on screen in all 208
+// cells of the matrix (FR-GUI-065, subject fixed to STOP_HOLD by NORM-006).
 
 import "./safety.css";
 
@@ -18,7 +17,7 @@ import type { Notification } from "./notifications";
 
 export interface GlobalSafetyBarProps {
   // The screen/mode/role the operator is currently in. Used for display only —
-  // it never gates the hard E-Stop.
+  // it never gates whether the stop pair renders.
   context: SafetyContext;
   robot: RobotBadgeState;
   canInterfaces: readonly CanInterfaceStatus[];
@@ -27,7 +26,6 @@ export interface GlobalSafetyBarProps {
   notifications: readonly Notification[];
   dummyMode: boolean;
   onSoftStop: () => void;
-  onHardEStop: () => void;
   onToggleVelocityTorque: (enabled: boolean) => void;
 }
 
@@ -40,7 +38,6 @@ export function GlobalSafetyBar({
   notifications,
   dummyMode,
   onSoftStop,
-  onHardEStop,
   onToggleVelocityTorque,
 }: GlobalSafetyBarProps) {
   const hasControl = context.role === "controller";
@@ -55,11 +52,7 @@ export function GlobalSafetyBar({
         notifications={notifications}
         onToggleVelocityTorque={onToggleVelocityTorque}
       />
-      <StopControls
-        onSoftStop={onSoftStop}
-        onHardEStop={onHardEStop}
-        hasControl={hasControl}
-      />
+      <StopControls onSoftStop={onSoftStop} hasControl={hasControl} />
     </div>
   );
 }

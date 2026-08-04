@@ -73,13 +73,16 @@ describe("CG-G-03c: no individual-setting path for use_velocity_and_torque", () 
   });
 });
 
-describe("CG-G-03a: the two stops never merge into one control", () => {
-  it("keeps two distinct handler props, never a single merged stop dispatcher", () => {
+describe("CG-G-03a: the two stops never merge, and only the soft one is a control", () => {
+  it("carries a soft-stop handler and no hard-stop handler at all", () => {
     const stopControls = SOURCES.find(({ path }) => path.endsWith("StopControls.tsx"));
     expect(stopControls).toBeDefined();
     const code = stopControls?.code ?? "";
     expect(code).toMatch(/onSoftStop/);
-    expect(code).toMatch(/onHardEStop/);
+    // A hard-stop handler is the shape of the defect NORM-007 removed: a prop invites a
+    // caller to wire it, and there is nothing on this rig for it to reach.
+    expect(code).not.toMatch(/onHardEStop/);
+    expect(code).not.toMatch(/onPowerCut/);
     // No combined dispatcher that takes a stop kind and branches to both outcomes.
     expect(code).not.toMatch(/onStop\s*\(\s*kind/);
     expect(code).not.toMatch(/function\s+stop\s*\(\s*kind/);
@@ -91,5 +94,13 @@ describe("CG-G-03a: the two stops never merge into one control", () => {
     expect(code).toMatch(/oa-stop--soft/);
     expect(code).toMatch(/oa-stop--hard/);
     expect(code).toMatch(/HARD_ESTOP_DROP_WARNING/);
+  });
+
+  it("puts the hard E-Stop on a non-interactive element", () => {
+    const stopControls = SOURCES.find(({ path }) => path.endsWith("StopControls.tsx"));
+    const code = stopControls?.code ?? "";
+    const hardBlock = code.slice(code.indexOf("oa-stop--hard"));
+    expect(hardBlock).not.toMatch(/onClick/);
+    expect(hardBlock).not.toMatch(/<button/);
   });
 });

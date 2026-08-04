@@ -32,6 +32,7 @@ from backend.actuation import (
     TargetMailbox,
     TickTrace,
 )
+from backend.actuation.guard import GuardSample
 from backend.audit import (
     AuditRingBuffer,
     JointTransform,
@@ -60,7 +61,7 @@ def _clean_decision() -> tuple[GateResult, tuple[Deg, ...]]:
     """Run one clean gateway decision and return (result, requested)."""
     gateway, _guard = make_gateway()
     request = filled(10.0)
-    return gateway.submit(request, filled(10.0)), request
+    return gateway.submit(request, filled(10.0), guard_sample=GuardSample.healthy()), request
 
 
 def test_clean_chain_records_without_blocking() -> None:

@@ -153,6 +153,18 @@ class CollisionGuard:
         self._paused = False
         self._consecutive_residual = 0
 
+    def acknowledge(self) -> None:
+        """Clear the guard's own latched state — the operator ack, mirrored here.
+
+        The `SafetyLatch` this guard engages is released by an operator ack alone, and
+        `_latched` is the copy the gateway reads on every command; without this the copy
+        has no writer back to False and one dropped CAN reply stops the arm until the
+        process restarts. The latch callback is deliberately not re-entered: whoever acks
+        owns the `SafetyLatch` and calls `acknowledge()` on it themselves.
+        """
+        self._latched = False
+        self._consecutive_residual = 0
+
     def poll(self, sample: GuardSample) -> GuardVerdict:
         """Evaluate one detection poll, latching fail-closed on a blind condition.
 

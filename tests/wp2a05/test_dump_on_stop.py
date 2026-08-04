@@ -46,7 +46,7 @@ def _fill_ring(ring: AuditRingBuffer, ticks: int) -> None:
     gateway, _guard = make_gateway()
     request = filled(3.0)
     for index in range(ticks):
-        result = gateway.submit(request, filled(3.0))
+        result = gateway.submit(request, filled(3.0), guard_sample=GuardSample.healthy())
         ring.record(record_from(result, request, tick_index=index, at=index * 0.02))
 
 
@@ -115,7 +115,14 @@ def test_dump_is_non_destructive() -> None:
     # Recording continues after the dump.
     gateway, _guard = make_gateway()
     request = filled(3.0)
-    ring.record(record_from(gateway.submit(request, filled(3.0)), request, tick_index=2, at=0.04))
+    ring.record(
+        record_from(
+            gateway.submit(request, filled(3.0), guard_sample=GuardSample.healthy()),
+            request,
+            tick_index=2,
+            at=0.04,
+        )
+    )
     second = ring.on_safety_event(reason)
 
     assert len(first.records) == 2

@@ -49,6 +49,7 @@ from backend.actuation import (
     CollisionGuard,
     DropCounter,
     GateResult,
+    GuardSample,
     SafetyFilter,
     SafetyLimits,
     WallClock,
@@ -130,6 +131,19 @@ FEEDFORWARD_TORQUE_LIMIT_NM: tuple[float | None, ...] = (*JOINT_EFFORT_LIMITS_NM
 
 # What a slot carries when the caller asked for no feed-forward torque on it.
 NO_FEEDFORWARD_TORQUE_NM = 0.0
+
+# What the collision guard's residual channel carries on this host, and why it is a true
+# statement rather than a blind spot dressed up as one. Residual detection is not armed:
+# `backend/detection_gate/activation.py` resolves DISABLED for every PG-FRIC-001 status that
+# is not PASS, and that gate is hardware-deferred here; underneath it the FR-SAF-014
+# acceleration-limit precondition (`backend/threshold/activation.py`) refuses on stock v2.0
+# `joint_limits.yaml`, which ships every joint with `max_acceleration: 0.0`; and the
+# `MomentumObserver` that would compute a residual is constructed nowhere outside tests. So
+# "nothing reported a residual over threshold" is a fact, not silence being read as consent.
+# The three fail-closed fields beside it are the opposite case and are sampled for real —
+# a guard that cannot see must latch, but a detector that was never armed has seen nothing
+# to report, and latching on that would stop the arm on its first command with no way back.
+NO_RESIDUAL_DETECTION = False
 
 # Per-joint velocity ceiling, rad/s (12 §2.5 ARM_JOINT_VELOCITY_LIMITS_RAD_S for the
 # seven arm joints; the gripper reuses the wrist ceiling as a conservative bootstrap
@@ -330,6 +344,10 @@ class OaOpenArmFollower(OpenArmFollower):
         self._last_latch_reason: LatchReason | None = None
         self._watchdog = ActionStreamWatchdog(self._clock)
         self._publisher = publisher
+        # Kept from `connect_readonly` so the guard's lock-held sample is answerable. None
+        # means no manager was ever given, which is a session that never claimed the lock —
+        # not a session that lost it.
+        self._lock_manager: LockManager | None = None
 
     def _build_hardware_config(
         self, config: OaOpenArmFollowerConfig, port: str | None
@@ -433,12 +451,19 @@ class OaOpenArmFollower(OpenArmFollower):
         return self._calibration
 
     def connect_readonly(self, lock_manager: LockManager | None = None) -> None:
-        """Open the bus torque-OFF: bus open + motor register + feedback warmup only.
+        """Open the bus without commanding torque: bus open + motor register + warmup.
 
-        Never calls `enable_torque`/`enable_all` and never zeroes — after this returns,
-        torque is OFF (02 FR-CON-062, 12 FR-SAF-075). Enforces one connect per session
-        (01 FR-SYS-001): a second call raises rather than re-opening (which would
-        destroy the established zero).
+        Never calls `enable_torque`/`enable_all` and never zeroes, so nothing here puts a
+        gain or a target on the wire (02 FR-CON-062, 12 FR-SAF-075). That is not the same
+        as leaving the motors off: `DamiaoMotorsBus.connect()` handshakes every registered
+        motor with `CAN_CMD_ENABLE` (0xFC) and requires a reply, so each fitted motor is in
+        the enabled state once this returns. It holds nothing only because kp, kd and tau
+        stay zero until something commands otherwise — which puts the arm one frame away
+        from moving, and makes assembly, not `engage`, the point from which an operator
+        has to support it.
+
+        Enforces one connect per session (01 FR-SYS-001): a second call raises rather than
+        re-opening (which would destroy the established zero).
 
         The CAN channel lock must be held before any socket opens (01 FR-SYS-005, the
         exclusivity SocketCAN RAW cannot provide itself, 16 §10.1). When a `lock_manager`
@@ -467,12 +492,19 @@ class OaOpenArmFollower(OpenArmFollower):
         else:
             self.bus.connect()
         self._connect_count += 1
+        self._lock_manager = lock_manager
+        # The drop records are the only evidence a motor failed to answer — the bus hands
+        # back a cache entry either way — so the counter has to be live before the first
+        # read, not switched on by a caller who might not.
+        self._drop_counter.attach()
         self._warmup_feedback()
+        # Tracks what this class commanded, not what the motors are: the handshake above
+        # already enabled them. Nothing may read this as evidence the bus is quiet.
         self._torque_enabled = False
         self._connected_readonly = True
 
     def connect(self, calibrate: bool = False) -> None:  # noqa: ARG002
-        """Bring up the arm torque-OFF; never auto-zero and never enable torque.
+        """Bring up the arm without commanding torque; never auto-zero, never enable.
 
         Overrides the stock `connect()` to drop its auto `set_zero_position()` and
         `enable_torque()` (02 FR-CON-061): zeroing is the explicit `set_zero()` flow and
@@ -669,7 +701,8 @@ class OaOpenArmFollower(OpenArmFollower):
                 tool has no motor 0x08.
         """
         _refuse_unknown_position_keys(action)
-        present = tuple(Deg(angle) for angle in self._read_joint_deg())
+        angles, guard_sample = self._poll_states()
+        present = tuple(Deg(angle) for angle in angles)
         request = tuple(
             Deg(float(action.get(f"{motor}.pos", present[index].value)))
             for index, motor in enumerate(MOTOR_ORDER)
@@ -678,6 +711,7 @@ class OaOpenArmFollower(OpenArmFollower):
         result = self._ensure_gateway().submit(
             request,
             present,
+            guard_sample=guard_sample,
             calibrated=self.is_calibrated,
             source_age_sec=self._watchdog.gap_sec(),
             feedforward_torque_nm=torque,
@@ -842,6 +876,22 @@ class OaOpenArmFollower(OpenArmFollower):
         """The CAN packet-drop counter surfaced in the observation."""
         return self._drop_counter
 
+    def acknowledge_collision_latch(self) -> None:
+        """Release a collision-guard latch — the operator act, and the only way out of one.
+
+        A fail-closed latch is set by a single blind poll and no tick clears it, so without
+        this the first dropped reply ends the session. This arm holds no `SafetyLatch` of its
+        own: the guard's mirrored state is the whole of what a latch means on this path, and
+        the recorded cause is dropped with it so a stale reason cannot outlive the latch.
+        """
+        self._ensure_gateway().guard.acknowledge()
+        self._last_latch_reason = None
+
+    @property
+    def last_latch_reason(self) -> LatchReason | None:
+        """The collision-guard latch cause from the most recent latch, or None."""
+        return self._last_latch_reason
+
     @property
     def last_gate_result(self) -> GateResult | None:
         """The gateway decision from the most recent `send_action`, or None."""
@@ -877,6 +927,7 @@ class OaOpenArmFollower(OpenArmFollower):
             self.bus.disconnect(True)
         for cam in self.cameras.values():
             cam.disconnect()
+        self._drop_counter.detach()
         self._torque_enabled = False
         self._connected_readonly = False
 
@@ -942,17 +993,44 @@ class OaOpenArmFollower(OpenArmFollower):
         return tuple(name for name in MOTOR_ORDER if name != GRIPPER_MOTOR_NAME)
 
     def _read_joint_deg(self) -> list[float]:
-        """Read the current raw joint angles (degrees) in MOTOR_ORDER.
+        """Read the current raw joint angles (degrees) in MOTOR_ORDER."""
+        return self._poll_states()[0]
+
+    def _poll_states(self) -> tuple[list[float], GuardSample]:
+        """Read the joint angles once, and report what that read saw to the collision guard.
 
         The poll names the fitted motors and the answer is widened back to the frozen layout, so
         a slot with no motor behind it reports the same zero it always did without a frame being
         addressed to it. `sync_read_all_states()` with no argument walks every motor the bus was
         constructed with, and on this bench that includes an id that answered 0 of 20 polls —
         sixteen unanswered frames took both channels to ERROR-PASSIVE. This read runs once per
-        `send_action`, so the bare form was one unanswered frame per command.
+        `send_action`, so the bare form was one unanswered frame per command, and the guard
+        sample has to come out of the same single read rather than provoke a second one.
+
+        The two liveness fields are different facts and neither substitutes for the other:
+
+        - `bus_read_ok` is whether a motor answered. It has to be the drop records, because
+          `sync_read_all_states` copies out a cache entry for every motor it was asked about
+          whether or not a frame came back, so the returned mapping cannot tell an answer from
+          the zero the cache was initialised with (the vendor logs `Packet drop:` instead).
+        - `observation_present` is whether the read came back covering the fitted set at all —
+          structural, and the check that survives a bus whose reply is short a joint.
         """
-        states = self.bus.sync_read_all_states(list(self._fitted_motors()))
-        return [float(states.get(motor, {}).get("position", 0.0)) for motor in MOTOR_ORDER]
+        drops_before = self._drop_counter.count
+        fitted = self._fitted_motors()
+        states = self.bus.sync_read_all_states(list(fitted))
+        sample = GuardSample(
+            observation_present=all(motor in states for motor in fitted),
+            bus_read_ok=self._drop_counter.count == drops_before,
+            # No manager means this session never claimed a lock, so there is none to have
+            # lost. Latching on that would stop every fixture and every manager-less caller
+            # on its first command.
+            lock_acquired=self._lock_manager is None
+            or self._lock_manager.is_held(self.config.port),
+            residual_exceeded=NO_RESIDUAL_DETECTION,
+        )
+        widened = [float(states.get(motor, {}).get("position", 0.0)) for motor in MOTOR_ORDER]
+        return widened, sample
 
 
 def _refuse_unknown_position_keys(action: RobotAction) -> None:

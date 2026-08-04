@@ -14,6 +14,7 @@ import pytest
 pytest.importorskip("mujoco")
 
 from backend.actuation.clock import ManualClock
+from backend.actuation.guard import GuardSample
 from backend.deadman.messages import RenewalDecision
 from backend.freedrive import (
     FRICTION_PASSED_STATUS,
@@ -46,7 +47,7 @@ def _engaged_session(clock: ManualClock) -> FreedriveSession:
         lease_duration_sec=_LEASE_SEC,
     )
     session.hold_heartbeat()
-    session.enter(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
+    session.enter(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy())
     return session
 
 
@@ -69,10 +70,13 @@ def test_lapsed_lease_latches_on_the_falling_edge() -> None:
     for _ in range(3):
         clock.advance(0.02)
         session.hold_heartbeat()
-        assert session.tick(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S).mode is TickMode.FREEDRIVE
+        assert (
+            session.tick(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy()).mode
+            is TickMode.FREEDRIVE
+        )
 
     clock.advance(_LEASE_SEC * 5)
-    lapsed = session.tick(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
+    lapsed = session.tick(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy())
 
     assert lapsed.mode is TickMode.HOLD
     assert lapsed.exit is not None and lapsed.exit.cause is HoldCause.DEADMAN_TIMEOUT
@@ -84,9 +88,11 @@ def test_no_auto_resume_after_expiry() -> None:
     clock = ManualClock()
     session = _engaged_session(clock)
     clock.advance(0.02)
-    session.tick(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)  # a live tick to arm the edge
+    session.tick(
+        ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy()
+    )  # a live tick to arm the edge
     clock.advance(_LEASE_SEC * 5)
-    session.tick(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)  # latches
+    session.tick(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy())  # latches
 
     late = session.hold_heartbeat()
 

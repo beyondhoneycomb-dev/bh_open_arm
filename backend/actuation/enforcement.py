@@ -33,7 +33,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from backend.actuation.config import MIT_HOLD_KD, MIT_HOLD_KP
-from backend.actuation.guard import CollisionGuard
+from backend.actuation.guard import CollisionGuard, GuardSample
 from backend.actuation.safety import (
     KD_MAX,
     KD_MIN,
@@ -97,11 +97,15 @@ class GateResult:
 class ActuationGateway:
     """The single enforcement point: filter + guard + drop counter, no CAN handle.
 
-    Ownership: holds the ordered `SafetyFilter`, the `CollisionGuard` whose latch it
-    reads, and the motion history the rate checks difference against. It holds no
-    `CanWriter` and no bus — a decision it reaches is written by the scheduler tick,
-    never here (`02a` §3.1 ①). The gains it validates and the limits the filter
+    Ownership: holds the ordered `SafetyFilter`, the `CollisionGuard` it polls and whose
+    latch it then reads, and the motion history the rate checks difference against. It
+    holds no `CanWriter` and no bus — a decision it reaches is written by the scheduler
+    tick, never here (`02a` §3.1 ①). The gains it validates and the limits the filter
     enforces are passed in; the gateway owns neither threshold.
+
+    The guard is polled here, inside `submit`, rather than by a caller: the WORKSPACE_COLLISION
+    stage reads `guard.is_latched` in this same call, so a poll anywhere else is a latch one
+    command late, and a poll nobody makes is a `collision_latched` that is False forever.
     """
 
     def __init__(
@@ -143,6 +147,7 @@ class ActuationGateway:
         request: tuple[Deg, ...],
         present: tuple[Deg, ...],
         *,
+        guard_sample: GuardSample,
         calibrated: bool = True,
         source_age_sec: float = 0.0,
         require_stopped: bool = False,
@@ -156,6 +161,11 @@ class ActuationGateway:
             request: The producer's pre-clamp position request, degrees.
             present: The arm's present joint positions, degrees, the command departs
                 from.
+            guard_sample: What the caller's own read of this tick saw — observation,
+                bus, lock, residual. Mandatory and undefaulted: a default would let a
+                caller that never looked at the bus be indistinguishable from one that
+                looked and found the arm healthy, which is the shape of a guard nobody
+                polls.
             calibrated: Whether the arm has an established zero this command
                 (`WP-1-02`); passed per-command because it changes when the operator
                 zeroes, and the zero check reads the live state, not a build-time one.
@@ -171,6 +181,12 @@ class ActuationGateway:
             (GateResult) The single decision, with a distinct reason on a stop and
             the recorded request/accepted pair either way.
         """
+        # Ahead of the gain check: the sample states whether the arm was visible this tick,
+        # which is true or false regardless of whether the command that came with it was
+        # well-formed. A gain rejection returns early, and a tick skipped there is a tick
+        # the guard never saw.
+        self._guard.poll(guard_sample)
+
         gain_reason = self._validate_gains(kp, kd)
         if gain_reason is not None:
             return self._reject(request, present, gain_reason, None)

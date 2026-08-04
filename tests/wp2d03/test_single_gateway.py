@@ -112,7 +112,7 @@ def test_producer_holds_when_the_gateway_blocks() -> None:
         tuple(DEFAULT_KD_FREEDRIVE for _ in ENTRY_POSE_RAD),
         ManualClock(),
     )
-    frame = producer.produce_frame(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S)
+    frame = producer.produce_frame(ENTRY_POSE_RAD, ENTRY_VELOCITY_RAD_S, GuardSample.healthy())
     assert frame.engaged is False
     assert frame.commands == ()
     assert frame.hold_reason is not None

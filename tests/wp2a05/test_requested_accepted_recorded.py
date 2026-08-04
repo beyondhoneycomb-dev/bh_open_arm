@@ -10,6 +10,7 @@ equal; a joint-limit clamp records them different, with the clamp reason.
 from __future__ import annotations
 
 from backend.actuation import GateFrame
+from backend.actuation.guard import GuardSample
 from backend.audit import AuditRecord, AuditRingBuffer
 from contracts.action import ClampReason, validate_frame
 from contracts.units import Deg
@@ -32,7 +33,7 @@ def test_clamp_records_request_and_accepted_and_they_differ() -> None:
     # limit, so the clamp is the only decisive check and the accepted angle is 90, not 120.
     request = _with_joint(filled(0.0), 0, 120.0)
     present = _with_joint(filled(0.0), 0, 90.0)
-    result = gateway.submit(request, present)
+    result = gateway.submit(request, present, guard_sample=GuardSample.healthy())
 
     ring.record(record_from(result, request, tick_index=0, at=0.0))
     entry = ring.records[-1]
@@ -52,7 +53,7 @@ def test_clean_pass_records_both_channels_equal() -> None:
     ring = AuditRingBuffer()
 
     request = filled(10.0)
-    result = gateway.submit(request, filled(10.0))
+    result = gateway.submit(request, filled(10.0), guard_sample=GuardSample.healthy())
 
     ring.record(record_from(result, request, tick_index=0, at=0.0))
     entry = ring.records[-1]
@@ -67,7 +68,7 @@ def test_recorded_pair_satisfies_the_ctr_act_both_channels_rule() -> None:
     gateway, _guard = make_gateway()
     ring = AuditRingBuffer()
     request = filled(5.0)
-    result = gateway.submit(request, filled(5.0))
+    result = gateway.submit(request, filled(5.0), guard_sample=GuardSample.healthy())
 
     ring.record(record_from(result, request, tick_index=0, at=0.0))
     entry = ring.records[-1]

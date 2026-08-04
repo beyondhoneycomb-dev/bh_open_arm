@@ -116,7 +116,12 @@ class FakeDamiaoBus:
         self._angles[MOTOR_ORDER[-1]] = UNFITTED_SLOT_DEG
 
     def connect(self, handshake: bool = True) -> None:  # noqa: ARG002 — bus signature
-        """Open the channel; no torque is enabled by opening one."""
+        """Open the channel, which on the real bus also enables every registered motor.
+
+        Not recorded in `enabled_motors`: that list means "what asked for torque", and the
+        assembly assertions that read it as empty are about this code, not about the arm.
+        The arm is live once a channel is open — `_assemble_rig` carries that contract.
+        """
         self.is_connected = True
 
     def disconnect(self, disable_torque: bool = True) -> None:

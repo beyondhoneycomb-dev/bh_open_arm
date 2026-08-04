@@ -15,26 +15,46 @@ from backend.calibration.schema import ZeroMethod
 from backend.can.lock import LockManager
 from backend.can.lock.connect_guard import LockOrderingError
 from packages.lerobot_robot_openarm.openarm_follower_oa import SessionError
+from tests.wp102.conftest import HANDSHAKE_ENABLE
 
 
-def test_connect_readonly_leaves_torque_off(make_follower) -> None:
-    """After `connect_readonly()` the bus is open and torque is OFF (FR-CON-062)."""
+def commanded_enables(bus) -> list[str]:
+    """Every enable the bring-up put in the log that was not the bus handshake.
+
+    Matched on substring, not equality: the log carries arguments alongside the name
+    (`enable_all(0xFC)`), so an equality test has no writer and passes against a bring-up
+    that energises the arm — which is the exact failure this file exists to catch.
+    """
+    return [
+        command for command in bus.commands if "enable" in command and command != HANDSHAKE_ENABLE
+    ]
+
+
+def test_connect_readonly_commands_no_torque(make_follower) -> None:
+    """`connect_readonly()` opens the bus and commands no torque (FR-CON-062).
+
+    The motors end up enabled regardless, because the bus handshake enables them. So the
+    claim under test is the narrow one — nothing here asked for torque — and the handshake
+    is asserted rather than ignored: an arm that is live after a "read-only" bring-up is
+    the fact an operator needs, and a suite that stayed silent about it once already
+    described a rig nobody has.
+    """
     follower, bus = make_follower()
     follower.connect_readonly()
     assert follower.is_connected
     assert follower.is_torque_enabled is False
-    # The bring-up sent no torque-enable command of any kind.
-    assert not any("enable" in command for command in bus.commands)
+    assert commanded_enables(bus) == []
+    assert HANDSHAKE_ENABLE in bus.commands
 
 
-def test_connect_does_not_autozero_or_enable(make_follower) -> None:
-    """`connect()` brings up torque-OFF and never emits a set-zero (FR-CON-061)."""
+def test_connect_does_not_autozero_or_command_torque(make_follower) -> None:
+    """`connect()` commands no torque and never emits a set-zero (FR-CON-061)."""
     follower, bus = make_follower()
     follower.connect(calibrate=True)  # even asked to calibrate, it must not zero
     assert follower.is_torque_enabled is False
     assert follower.is_calibrated is False
     assert "set_zero_position" not in bus.commands
-    assert not any("enable" in command for command in bus.commands)
+    assert commanded_enables(bus) == []
 
 
 def test_rest_modal_is_at_set_zero_not_connect(make_follower) -> None:
