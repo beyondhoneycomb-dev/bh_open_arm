@@ -1,31 +1,40 @@
 """Exposure and white balance: that the declaration is ordered by the device's rules, not ours.
 
-Every case runs against `FakeCameraControls`, which reproduces the two silent behaviours the
-readback check exists to catch — a value clamped into range without complaint, and a write
-discarded because the control's automatic mode still guards it. Those two behaviours carry the
-weight here: a fake that accepted every write would let the whole comparison pass while
-verifying nothing, so two of the cases below are written to die if the fake ever softens.
+Every case runs against `FakeCameraControls`, which answers a write the three ways the driver
+does — a value clamped into an integer control's bounds and reported as success, an EACCES for a
+control an automatic mode still holds inactive, and an EINVAL for a menu entry the device does
+not offer. Only the first is silent, and it is the one the readback check exists to catch; the
+other two are what a caller needs an error branch for. A fake that accepted every write would
+let the whole comparison pass while verifying nothing, so the cases below are written to die if
+the fake ever softens.
 
-Nothing here needs a camera. What still needs one is the declaration itself — 60 / 200 / 4000 K
-were measured on a sibling rig under its lighting, and `PG-CAM-001` re-measures them on this
-bench. There is no hardware case in this file because there is no captured `v4l2-ctl -L` output
-to check a reader against yet; writing one against imagined output would prove only that the
-guess is self-consistent.
+The bounds and power-up values the fake is built from were read off both wrist units and the
+ZED-M with `VIDIOC_QUERYCTRL`. What still needs a camera is the declaration itself — 60 / 200 /
+4000 K were measured on a sibling rig under its lighting, and `PG-CAM-001` re-measures them on
+this bench.
 """
 
 from __future__ import annotations
 
+import errno
+
 import pytest
 
 from backend.camera.constants import (
+    ARDUCAM_AUTO_EXPOSURE_AUTO_MODE,
+    ARDUCAM_AUTO_EXPOSURE_MANUAL,
+    ARDUCAM_AUTO_EXPOSURE_MENU_ENTRIES,
     ARDUCAM_EXPOSURE_TIME_ABSOLUTE,
+    ARDUCAM_EXPOSURE_TIME_MAXIMUM,
+    ARDUCAM_EXPOSURE_TIME_MINIMUM,
     ARDUCAM_GAIN,
+    ARDUCAM_GAIN_MAXIMUM,
+    ARDUCAM_GAIN_MINIMUM,
     ARDUCAM_PIXEL_FORMAT,
-    ARDUCAM_STOCK_EXPOSURE_TIME_ABSOLUTE,
-    ARDUCAM_STOCK_GAIN,
     ARDUCAM_WHITE_BALANCE_AUTOMATIC_OFF,
+    ARDUCAM_WHITE_BALANCE_AUTOMATIC_ON,
+    ARDUCAM_WHITE_BALANCE_TEMPERATURE_DEFAULT,
     ARDUCAM_WHITE_BALANCE_TEMPERATURE_K,
-    AUTO_EXPOSURE_APERTURE_PRIORITY,
     CONTROL_AUTO_EXPOSURE,
     CONTROL_EXPOSURE_TIME_ABSOLUTE,
     CONTROL_GAIN,
@@ -51,10 +60,10 @@ MJPG_FOURCC = 0x47504A4D
 CAMERA_LABEL = "wrist_right"
 
 # A declaration written in the order a person would say it out loud, with each automatic switch
-# after the control it guards — the order the device silently discards.
+# after the control it guards — the order the device refuses.
 BADLY_ORDERED_DECLARATION = (
     CameraControl(CONTROL_EXPOSURE_TIME_ABSOLUTE, ARDUCAM_EXPOSURE_TIME_ABSOLUTE),
-    CameraControl(CONTROL_AUTO_EXPOSURE, 1),
+    CameraControl(CONTROL_AUTO_EXPOSURE, ARDUCAM_AUTO_EXPOSURE_MANUAL),
     CameraControl(CONTROL_WHITE_BALANCE_TEMPERATURE, ARDUCAM_WHITE_BALANCE_TEMPERATURE_K),
     CameraControl(CONTROL_WHITE_BALANCE_AUTOMATIC, ARDUCAM_WHITE_BALANCE_AUTOMATIC_OFF),
 )
@@ -104,23 +113,23 @@ def test_the_shipped_declaration_is_not_ordered_by_its_own_line_order() -> None:
     assert CONTROL_EXPOSURE_TIME_ABSOLUTE not in reversed_switches
 
 
-def test_a_write_made_while_its_auto_switch_is_on_is_caught_as_a_mismatch() -> None:
-    """Written in the bad order, exposure never lands — and the device says nothing about it."""
+def test_a_write_made_while_its_auto_switch_is_on_is_refused_by_the_device() -> None:
+    """Written in the bad order, the exposure write never lands — and it is not quiet about it.
+
+    This is the branch a caller most needs to have somewhere to put: the failure arrives as an
+    exception from the write, not as a wrong value the readback comparison later notices.
+    """
     device = arducam_control_set()
-    plan = plan_control_writes(BADLY_ORDERED_DECLARATION, device.read())
 
-    _apply(device, BADLY_ORDERED_DECLARATION)
-    mismatches = verify_control_readback(plan, device.read())
+    with pytest.raises(PermissionError) as refusal:
+        _apply(device, BADLY_ORDERED_DECLARATION)
 
-    assert [m.name for m in mismatches] == [CONTROL_EXPOSURE_TIME_ABSOLUTE]
-    assert mismatches[0].declared == ARDUCAM_EXPOSURE_TIME_ABSOLUTE
-    assert mismatches[0].actual == ARDUCAM_STOCK_EXPOSURE_TIME_ABSOLUTE
-    with pytest.raises(CameraControlError, match=CONTROL_EXPOSURE_TIME_ABSOLUTE):
-        assert_controls_locked(mismatches, CAMERA_LABEL)
+    assert refusal.value.errno == errno.EACCES
+    assert device.read()[CONTROL_EXPOSURE_TIME_ABSOLUTE] == ARDUCAM_EXPOSURE_TIME_MINIMUM
 
 
 def test_the_same_writes_in_the_planned_order_all_land() -> None:
-    """The counterpart to the case above: the reordering is what makes the writes take."""
+    """The counterpart to the case above: the reordering is what keeps the writes from refusal."""
     device = arducam_control_set()
     plan = plan_control_writes(BADLY_ORDERED_DECLARATION, device.read())
 
@@ -129,11 +138,27 @@ def test_the_same_writes_in_the_planned_order_all_land() -> None:
     assert verify_control_readback(plan, device.read()) == ()
 
 
+def test_a_menu_entry_this_device_does_not_offer_is_refused_rather_than_clamped() -> None:
+    """`auto_exposure` reports 0..3 and answers to 0 and 1, so 3 is in range and still not real.
+
+    An integer control would have clamped 3 down to its ceiling and reported success. A menu
+    does not, which is why the entry list is carried rather than derived from the bounds.
+    """
+    device = arducam_control_set()
+    absent_entry = max(ARDUCAM_AUTO_EXPOSURE_MENU_ENTRIES) + 2
+
+    with pytest.raises(OSError) as refusal:
+        device.write(CONTROL_AUTO_EXPOSURE, absent_entry)
+
+    assert refusal.value.errno == errno.EINVAL
+    assert device.read()[CONTROL_AUTO_EXPOSURE] == ARDUCAM_AUTO_EXPOSURE_AUTO_MODE
+
+
 def test_a_value_v4l2_clamps_is_refused_rather_than_run_silently() -> None:
-    """9999 becomes 660 on this model, and 660 is the maximum that clips frames to white."""
+    """9999 becomes 660 on this model, and the write that landed elsewhere reported success."""
     device = arducam_control_set()
     declared = (
-        CameraControl(CONTROL_AUTO_EXPOSURE, 1),
+        CameraControl(CONTROL_AUTO_EXPOSURE, ARDUCAM_AUTO_EXPOSURE_MANUAL),
         CameraControl(CONTROL_EXPOSURE_TIME_ABSOLUTE, 9999),
     )
     plan = plan_control_writes(declared, device.read())
@@ -142,7 +167,7 @@ def test_a_value_v4l2_clamps_is_refused_rather_than_run_silently() -> None:
     mismatches = verify_control_readback(plan, device.read())
 
     assert [m.name for m in mismatches] == [CONTROL_EXPOSURE_TIME_ABSOLUTE]
-    assert mismatches[0].actual == ARDUCAM_STOCK_EXPOSURE_TIME_ABSOLUTE
+    assert mismatches[0].actual == ARDUCAM_EXPOSURE_TIME_MAXIMUM
     with pytest.raises(CameraControlError, match="9999"):
         assert_controls_locked(mismatches, CAMERA_LABEL)
 
@@ -168,23 +193,43 @@ def test_a_device_that_answered_with_no_controls_is_refused_rather_than_called_c
         plan_control_writes(WRIST_CAMERA_CONTROLS, {})
 
 
-def test_the_declared_values_sit_off_the_clipping_edge() -> None:
-    """Guards the declaration itself against being reset to the maxima a camera powers up at."""
+def test_the_declared_values_sit_inside_the_bounds_and_away_from_both_edges() -> None:
+    """Guards the declaration against drifting onto an edge, at either end.
+
+    The floor is where an unconfigured camera already sits, so a declaration that reached it
+    would be indistinguishable from one that never landed; the ceiling is where a clamped write
+    ends up. Both switches must also be off, or the two values above are held inactive and
+    describe nothing the sensor is running at.
+    """
     declared = {control.name: control.value for control in WRIST_CAMERA_CONTROLS}
 
-    assert declared[CONTROL_EXPOSURE_TIME_ABSOLUTE] < ARDUCAM_STOCK_EXPOSURE_TIME_ABSOLUTE
-    assert declared[CONTROL_GAIN] < ARDUCAM_STOCK_GAIN
-    assert declared[CONTROL_AUTO_EXPOSURE] != AUTO_EXPOSURE_APERTURE_PRIORITY
+    assert (
+        ARDUCAM_EXPOSURE_TIME_MINIMUM
+        < declared[CONTROL_EXPOSURE_TIME_ABSOLUTE]
+        < ARDUCAM_EXPOSURE_TIME_MAXIMUM
+    )
+    assert ARDUCAM_GAIN_MINIMUM < declared[CONTROL_GAIN] < ARDUCAM_GAIN_MAXIMUM
+    assert declared[CONTROL_AUTO_EXPOSURE] in ARDUCAM_AUTO_EXPOSURE_MENU_ENTRIES
+    assert declared[CONTROL_AUTO_EXPOSURE] != ARDUCAM_AUTO_EXPOSURE_AUTO_MODE
     assert declared[CONTROL_WHITE_BALANCE_AUTOMATIC] == ARDUCAM_WHITE_BALANCE_AUTOMATIC_OFF
 
 
-def test_the_stock_state_is_the_clipping_one_the_declaration_is_written_against() -> None:
-    """If the fake ever powers up already configured, every case above stops proving anything."""
+def test_the_fake_powers_up_holding_none_of_the_values_it_will_be_asked_for() -> None:
+    """If the fake ever powers up already configured, every case above stops proving anything.
+
+    Stated as a difference from the declaration rather than as a list of expected numbers,
+    because the way this goes wrong is a stock value quietly being set to the declared one —
+    which a per-control equality check would go on passing.
+    """
     stock = arducam_control_set().read()
 
-    assert stock[CONTROL_EXPOSURE_TIME_ABSOLUTE] == ARDUCAM_STOCK_EXPOSURE_TIME_ABSOLUTE
-    assert stock[CONTROL_GAIN] == ARDUCAM_STOCK_GAIN
-    assert stock[CONTROL_AUTO_EXPOSURE] == AUTO_EXPOSURE_APERTURE_PRIORITY
+    for control in WRIST_CAMERA_CONTROLS:
+        assert stock[control.name] != control.value, control.name
+    assert stock[CONTROL_EXPOSURE_TIME_ABSOLUTE] == ARDUCAM_EXPOSURE_TIME_MINIMUM
+    assert stock[CONTROL_GAIN] == ARDUCAM_GAIN_MINIMUM
+    assert stock[CONTROL_AUTO_EXPOSURE] == ARDUCAM_AUTO_EXPOSURE_AUTO_MODE
+    assert stock[CONTROL_WHITE_BALANCE_AUTOMATIC] == ARDUCAM_WHITE_BALANCE_AUTOMATIC_ON
+    assert stock[CONTROL_WHITE_BALANCE_TEMPERATURE] == ARDUCAM_WHITE_BALANCE_TEMPERATURE_DEFAULT
 
 
 def test_a_reading_taken_before_the_writes_is_not_rewritten_by_them() -> None:
@@ -198,7 +243,7 @@ def test_a_reading_taken_before_the_writes_is_not_rewritten_by_them() -> None:
 
     _apply(device, plan_control_writes(WRIST_CAMERA_CONTROLS, before).ordered)
 
-    assert before[CONTROL_EXPOSURE_TIME_ABSOLUTE] == ARDUCAM_STOCK_EXPOSURE_TIME_ABSOLUTE
+    assert before[CONTROL_EXPOSURE_TIME_ABSOLUTE] == ARDUCAM_EXPOSURE_TIME_MINIMUM
     assert device.read()[CONTROL_EXPOSURE_TIME_ABSOLUTE] == ARDUCAM_EXPOSURE_TIME_ABSOLUTE
 
 

@@ -13,20 +13,22 @@ examples to verify the formula and the block comparison, not to pin a pass line
 
 from __future__ import annotations
 
+import errno
 from dataclasses import dataclass
 
 from backend.camera.constants import (
+    ARDUCAM_AUTO_EXPOSURE_AUTO_MODE,
     ARDUCAM_AUTO_EXPOSURE_MANUAL,
+    ARDUCAM_AUTO_EXPOSURE_MENU_ENTRIES,
+    ARDUCAM_EXPOSURE_TIME_MAXIMUM,
     ARDUCAM_EXPOSURE_TIME_MINIMUM,
+    ARDUCAM_GAIN_MAXIMUM,
     ARDUCAM_GAIN_MINIMUM,
-    ARDUCAM_STOCK_EXPOSURE_TIME_ABSOLUTE,
-    ARDUCAM_STOCK_GAIN,
     ARDUCAM_WHITE_BALANCE_AUTOMATIC_OFF,
     ARDUCAM_WHITE_BALANCE_AUTOMATIC_ON,
-    ARDUCAM_WHITE_BALANCE_TEMPERATURE_K,
+    ARDUCAM_WHITE_BALANCE_TEMPERATURE_DEFAULT,
     ARDUCAM_WHITE_BALANCE_TEMPERATURE_MAXIMUM,
     ARDUCAM_WHITE_BALANCE_TEMPERATURE_MINIMUM,
-    AUTO_EXPOSURE_APERTURE_PRIORITY,
     BPP_RGB888,
     BPP_YUYV,
     BPP_Z16_DEPTH,
@@ -36,6 +38,9 @@ from backend.camera.constants import (
     CONTROL_WHITE_BALANCE_AUTOMATIC,
     CONTROL_WHITE_BALANCE_TEMPERATURE,
     NANOSECONDS_PER_MILLISECOND,
+    ZED_WHITE_BALANCE_TEMPERATURE_DEFAULT,
+    ZED_WHITE_BALANCE_TEMPERATURE_MAXIMUM,
+    ZED_WHITE_BALANCE_TEMPERATURE_MINIMUM,
 )
 from backend.camera.descriptor import (
     CameraDescriptor,
@@ -201,23 +206,31 @@ class ControlRange:
             this model open in opposite directions — `auto_exposure` frees exposure at 1
             (Manual) while `white_balance_automatic` frees white balance at 0 (Off) — so the
             unlocking value is carried per control rather than assumed.
+        legal_values: The entries a menu control offers, or None for an integer control.
+            A menu's bounds do not enumerate it: `auto_exposure` reports 0..3 and answers to
+            0 and 1 only, so the set is carried rather than derived. It also selects the
+            failure: a menu refuses an entry it does not have, where an integer clamps.
     """
 
     minimum: int
     maximum: int
     gate: tuple[str, int] | None
+    legal_values: tuple[int, ...] | None = None
 
 
 class FakeCameraControls:
-    """A stand-in device that reproduces the two ways a V4L2 write does not do what it says.
+    """A stand-in device that reproduces the three answers a V4L2 write gives.
 
-    Both behaviours are silent on the real hardware, which is the reason the readback check
-    exists at all; a fake that accepted every write would make that check untestable and would
-    model this module's beliefs instead of the vendor's behaviour.
+    Only one of the three is silent, and that one is why the readback check exists: an
+    out-of-range value on an integer control is clamped to the nearest legal one and reported
+    as success. The other two are refusals — EACCES for a write to a control its automatic mode
+    still holds inactive, EINVAL for a menu entry the device does not have — and they are
+    modelled because a caller written against a fake that never raises has no error branch for
+    them, which is the same as not handling them.
 
-    An unknown control name raises instead of being absorbed — deciding what a device does not
-    have belongs to the planning step, and a fake that quietly swallowed it would hide a plan
-    that skipped nothing.
+    An unknown control name raises `KeyError` instead of being absorbed — deciding what a device
+    does not have belongs to the planning step, and a fake that quietly swallowed it would hide
+    a plan that skipped nothing.
     """
 
     def __init__(self, ranges: dict[str, ControlRange], values: dict[str, int]) -> None:
@@ -229,38 +242,61 @@ class FakeCameraControls:
         return dict(self._values)
 
     def write(self, name: str, value: int) -> None:
-        """Apply a write the way the driver would, clamping or discarding without complaint.
+        """Apply a write the way the driver answers it.
+
+        Args:
+            name: The control name.
+            value: The value to write, in the control's own units.
 
         Raises:
             KeyError: If this device has no such control.
+            PermissionError: EACCES — the control is held inactive by its automatic mode.
+            OSError: EINVAL — the value names a menu entry this device does not offer.
         """
         control = self._ranges[name]
         if control.gate is not None:
             switch_name, unlocking_value = control.gate
             if self._values[switch_name] != unlocking_value:
-                return
+                raise PermissionError(
+                    errno.EACCES,
+                    f"{name} is inactive while {switch_name} holds "
+                    f"{self._values[switch_name]}, not {unlocking_value}",
+                )
+        if control.legal_values is not None:
+            if value not in control.legal_values:
+                raise OSError(
+                    errno.EINVAL,
+                    f"{name} has no entry {value}; it offers {list(control.legal_values)}",
+                )
+            self._values[name] = value
+            return
         self._values[name] = max(control.minimum, min(control.maximum, value))
 
 
 def arducam_control_set() -> FakeCameraControls:
-    """A B0495 in the state it powers up in: both automatic modes on, both drivers at maximum.
+    """A B0495 in the state it powers up in: both automatic modes on, both drivers at minimum.
 
-    The exposure and gain bounds are the sibling rig's measured ones. No focus control appears,
-    because this model has none (fixed M12 lens).
+    Powering up at the minimum is what makes the fake worth running: exposure and gain each
+    report their floor as the current value, so a declaration that failed to land leaves the
+    camera darker than declared rather than at the value someone meant to set. No focus control
+    appears, because this model has none (fixed M12 lens).
     """
     ranges = {
         CONTROL_AUTO_EXPOSURE: ControlRange(
-            ARDUCAM_AUTO_EXPOSURE_MANUAL, AUTO_EXPOSURE_APERTURE_PRIORITY, None
+            ARDUCAM_AUTO_EXPOSURE_AUTO_MODE,
+            max(ARDUCAM_AUTO_EXPOSURE_MENU_ENTRIES),
+            None,
+            ARDUCAM_AUTO_EXPOSURE_MENU_ENTRIES,
         ),
         CONTROL_WHITE_BALANCE_AUTOMATIC: ControlRange(
             ARDUCAM_WHITE_BALANCE_AUTOMATIC_OFF, ARDUCAM_WHITE_BALANCE_AUTOMATIC_ON, None
         ),
         CONTROL_EXPOSURE_TIME_ABSOLUTE: ControlRange(
             ARDUCAM_EXPOSURE_TIME_MINIMUM,
-            ARDUCAM_STOCK_EXPOSURE_TIME_ABSOLUTE,
+            ARDUCAM_EXPOSURE_TIME_MAXIMUM,
             (CONTROL_AUTO_EXPOSURE, ARDUCAM_AUTO_EXPOSURE_MANUAL),
         ),
-        CONTROL_GAIN: ControlRange(ARDUCAM_GAIN_MINIMUM, ARDUCAM_STOCK_GAIN, None),
+        CONTROL_GAIN: ControlRange(ARDUCAM_GAIN_MINIMUM, ARDUCAM_GAIN_MAXIMUM, None),
         CONTROL_WHITE_BALANCE_TEMPERATURE: ControlRange(
             ARDUCAM_WHITE_BALANCE_TEMPERATURE_MINIMUM,
             ARDUCAM_WHITE_BALANCE_TEMPERATURE_MAXIMUM,
@@ -268,29 +304,34 @@ def arducam_control_set() -> FakeCameraControls:
         ),
     }
     values = {
-        CONTROL_AUTO_EXPOSURE: AUTO_EXPOSURE_APERTURE_PRIORITY,
+        CONTROL_AUTO_EXPOSURE: ARDUCAM_AUTO_EXPOSURE_AUTO_MODE,
         CONTROL_WHITE_BALANCE_AUTOMATIC: ARDUCAM_WHITE_BALANCE_AUTOMATIC_ON,
-        CONTROL_EXPOSURE_TIME_ABSOLUTE: ARDUCAM_STOCK_EXPOSURE_TIME_ABSOLUTE,
-        CONTROL_GAIN: ARDUCAM_STOCK_GAIN,
-        CONTROL_WHITE_BALANCE_TEMPERATURE: ARDUCAM_WHITE_BALANCE_TEMPERATURE_K,
+        CONTROL_EXPOSURE_TIME_ABSOLUTE: ARDUCAM_EXPOSURE_TIME_MINIMUM,
+        CONTROL_GAIN: ARDUCAM_GAIN_MINIMUM,
+        CONTROL_WHITE_BALANCE_TEMPERATURE: ARDUCAM_WHITE_BALANCE_TEMPERATURE_DEFAULT,
     }
     return FakeCameraControls(ranges, values)
 
 
 def zed_uvc_control_set() -> FakeCameraControls:
-    """A ZED-M over UVC, which exposes no exposure controls at all — those live in its SDK."""
+    """A ZED-M over UVC, which exposes no exposure controls at all — those live in its SDK.
+
+    Its white balance floor is not the wrist pair's, so the bounds come from its own constants;
+    sharing them would let a declaration that is legal on one camera and not on the other pass
+    every case here.
+    """
     ranges = {
         CONTROL_WHITE_BALANCE_AUTOMATIC: ControlRange(
             ARDUCAM_WHITE_BALANCE_AUTOMATIC_OFF, ARDUCAM_WHITE_BALANCE_AUTOMATIC_ON, None
         ),
         CONTROL_WHITE_BALANCE_TEMPERATURE: ControlRange(
-            ARDUCAM_WHITE_BALANCE_TEMPERATURE_MINIMUM,
-            ARDUCAM_WHITE_BALANCE_TEMPERATURE_MAXIMUM,
+            ZED_WHITE_BALANCE_TEMPERATURE_MINIMUM,
+            ZED_WHITE_BALANCE_TEMPERATURE_MAXIMUM,
             (CONTROL_WHITE_BALANCE_AUTOMATIC, ARDUCAM_WHITE_BALANCE_AUTOMATIC_OFF),
         ),
     }
     values = {
         CONTROL_WHITE_BALANCE_AUTOMATIC: ARDUCAM_WHITE_BALANCE_AUTOMATIC_ON,
-        CONTROL_WHITE_BALANCE_TEMPERATURE: ARDUCAM_WHITE_BALANCE_TEMPERATURE_K,
+        CONTROL_WHITE_BALANCE_TEMPERATURE: ZED_WHITE_BALANCE_TEMPERATURE_DEFAULT,
     }
     return FakeCameraControls(ranges, values)

@@ -57,34 +57,45 @@ CONTROL_WHITE_BALANCE_TEMPERATURE = "white_balance_temperature"
 AUTO_SWITCH_NAME_PREFIX = "auto_"
 AUTO_SWITCH_NAME_INFIX = "_automatic"
 
-# Arducam B0495 wrist pair. Reference values in the same sense as the bandwidth cap above:
-# measured on a sibling rig running this same model, never on this bench. Exposure, gain and
-# white balance are all lighting-dependent, so `PG-CAM-001` re-measures them here before any
-# of it is a target. The functions take the declaration as an argument for exactly that reason.
-ARDUCAM_AUTO_EXPOSURE_MANUAL = 1
-ARDUCAM_WHITE_BALANCE_AUTOMATIC_OFF = 0
-
-# The other end of each switch — the automatic mode a camera powers up in, and what holds
-# `exposure_time_absolute` and `white_balance_temperature` at `flags=inactive` until it is
-# turned off. `auto_exposure` is a V4L2 menu whose automatic entry is 3, not a boolean.
-AUTO_EXPOSURE_APERTURE_PRIORITY = 3
-ARDUCAM_WHITE_BALANCE_AUTOMATIC_ON = 1
+# Arducam B0495 wrist pair. These three are lighting-dependent, so they are reference values in
+# the same sense as the bandwidth cap above: measured on a sibling rig running this same model,
+# never on this bench. `PG-CAM-001` re-measures them here before any of it is a target, and the
+# functions take the declaration as an argument for exactly that reason.
 ARDUCAM_EXPOSURE_TIME_ABSOLUTE = 60
 ARDUCAM_GAIN = 200
 ARDUCAM_WHITE_BALANCE_TEMPERATURE_K = 4000
 
-# Where an unconfigured B0495 actually sits: both driving controls pinned at their maximum,
-# which clips every frame to white. This is the state a camera opened with no declaration is
-# in, and it reads as "the detector is bad" rather than as a camera fault.
-ARDUCAM_STOCK_EXPOSURE_TIME_ABSOLUTE = 660
-ARDUCAM_STOCK_GAIN = 1600
-ARDUCAM_EXPOSURE_TIME_MINIMUM = 5
-ARDUCAM_GAIN_MINIMUM = 168
+# The two automatic switches, and what each one holds inactive. `auto_exposure` is a V4L2 menu
+# and this model offers two entries: 0 `Auto Mode` and 1 `Manual Mode`. `QUERYCTRL` reports its
+# range as 0..3 regardless, so a value inside those bounds can still name an entry the device
+# does not have — the legal set is enumerated rather than derived from the bounds, because a
+# menu write outside it is refused with EINVAL where an integer write outside its bounds is not.
+ARDUCAM_AUTO_EXPOSURE_AUTO_MODE = 0
+ARDUCAM_AUTO_EXPOSURE_MANUAL = 1
+ARDUCAM_AUTO_EXPOSURE_MENU_ENTRIES = (0, 1)
+ARDUCAM_WHITE_BALANCE_AUTOMATIC_OFF = 0
+ARDUCAM_WHITE_BALANCE_AUTOMATIC_ON = 1
 
-# Not measured on this model — the white-balance entry carries the inactive-flag rule, while
-# the silent-clamp rule rides on exposure, whose bounds above are measured.
-ARDUCAM_WHITE_BALANCE_TEMPERATURE_MINIMUM = 2800
+# Bounds and power-up state, read from both wrist units on this bench with `VIDIOC_QUERYCTRL`.
+# An unconfigured B0495 sits at the minimum of both driving controls, and that minimum is also
+# what the driver reports as the default: exposure 5, gain 168. Both are flagged inactive under
+# the automatic modes that own them, so neither value is what the sensor is actually running at.
+ARDUCAM_EXPOSURE_TIME_MINIMUM = 5
+ARDUCAM_EXPOSURE_TIME_MAXIMUM = 660
+ARDUCAM_GAIN_MINIMUM = 168
+ARDUCAM_GAIN_MAXIMUM = 1600
+ARDUCAM_WHITE_BALANCE_TEMPERATURE_MINIMUM = 2300
 ARDUCAM_WHITE_BALANCE_TEMPERATURE_MAXIMUM = 6500
+ARDUCAM_WHITE_BALANCE_TEMPERATURE_DEFAULT = 4500
+
+# The ZED-M over UVC, same bench, same reader. Its white balance is a different control from the
+# wrist pair's despite the shared name — a narrower floor and a coarser step — which is why the
+# bounds are carried per device rather than shared. It exposes no exposure controls at all: no
+# `auto_exposure`, no `exposure_time_absolute`, no camera-class controls of any kind, because
+# those live in the Stereolabs SDK rather than on the UVC interface.
+ZED_WHITE_BALANCE_TEMPERATURE_MINIMUM = 2800
+ZED_WHITE_BALANCE_TEMPERATURE_MAXIMUM = 6500
+ZED_WHITE_BALANCE_TEMPERATURE_DEFAULT = 4600
 
 # The module streams YUYV only; it offers no MJPEG (`06` §2.9 bandwidth then scales with
 # resolution×fps directly, since nothing is compressed).

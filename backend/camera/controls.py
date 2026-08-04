@@ -1,30 +1,40 @@
 """Declare what exposure and white balance a wrist camera is opened with, and prove it took.
 
-An Arducam B0495 opened with no declaration sits at `exposure_time_absolute=660` and
-`gain=1600` — both maxima — and clips every frame to white. The failure does not look like a
-camera fault to anyone downstream; it looks like the detector is bad. So the values are
+An Arducam B0495 opened with no declaration sits at `exposure_time_absolute=5` and `gain=168`,
+the floor of both, and both held inactive by the automatic modes that own them — so what the
+sensor is really running at is not any number the device will report. The failure does not look
+like a camera fault to anyone downstream; it looks like the detector is bad. So the values are
 declared rather than inherited, and the declaration is checked rather than trusted.
 
-Three properties of V4L2 shape everything here:
+Four properties of V4L2 shape everything here, and only the first of them is silent:
 
-- A control write does not report what it did. An out-of-range or off-step value is silently
-  replaced with the nearest legal one (9999 becomes 660 on this model), and the camera then
-  runs at an exposure nobody declared, visible only as "a bit dark".
+- An integer control clamps. A value outside its bounds is replaced with the nearest legal one
+  and the write reports success: 9999 lands as 660 and 1 lands as 168 on this model. The camera
+  then runs at an exposure nobody declared, visible only as a frame that is a bit dark. This is
+  the property the readback check exists for, and it is the only one a caller cannot learn about
+  from the write itself.
+- A menu control refuses. `auto_exposure` is a menu, and this model offers two entries — 0
+  `Auto Mode` and 1 `Manual Mode` — while `QUERYCTRL` still reports its range as 0..3. Writing 3
+  is inside the reported bounds, names no entry, and comes back EINVAL rather than clamped. A
+  menu value is therefore checked against the entry list, never against the bounds.
 - A control guarded by an automatic mode carries `flags=inactive` while that mode is on, and a
-  write to it is discarded without an error. `exposure_time_absolute` and
+  write to it comes back EACCES with the value untouched. `exposure_time_absolute` and
   `white_balance_temperature` are both guarded. The switches must therefore be written first,
   and `plan_control_writes` reorders to guarantee it — the ordering is not left to the order
-  someone happened to list the controls in.
+  someone happened to list the controls in. Getting it wrong does not quietly produce a wrong
+  exposure; it produces a failed write, which a caller has to have somewhere to put.
 - The control set differs per camera. The B0495 has no focus control at all (fixed M12 lens)
-  and the ZED-M exposes no exposure controls over UVC. A name the device does not have is not
-  a fault; it is skipped and named in the plan.
+  and the ZED-M exposes no exposure controls over UVC — no `auto_exposure`, no
+  `exposure_time_absolute`, no camera-class controls of any kind. A name the device does not
+  have is not a fault; it is skipped and named in the plan.
 
 Failure direction differs per operation, and the split is by what a wrong value costs:
 
 - A readback mismatch is refused. The device could be rewritten, but frames already captured
-  under a wrong exposure cannot — clipping has discarded the information, and no gamma or
-  contrast pass brings it back. Refusing before the stream opens costs one message; continuing
-  costs every episode recorded until someone notices.
+  under a wrong exposure cannot — the sensor discarded the information at capture, into
+  clipping at one end and into the noise floor at the other, and no gamma or contrast pass
+  brings it back. Refusing before the stream opens costs one message; continuing costs every
+  episode recorded until someone notices.
 - A control the device does not expose is skipped and reported. It is that device's only
   possible answer, and its name survives into the plan.
 - An empty readback is refused rather than passed. Reading nothing means the reader failed, not
@@ -202,10 +212,11 @@ def assert_controls_locked(
         return
     detail = "; ".join(f"{m.name}: asked {m.declared}, device holds {m.actual}" for m in mismatches)
     raise CameraControlError(
-        f"{camera_label} did not take its declared controls — {detail}. V4L2 replaces an "
-        "out-of-range or off-step value with the nearest legal one and discards a write to a "
-        "control its automatic mode still guards, in both cases without an error. Read "
-        "`v4l2-ctl -d <device> -L` for the accepted range and the flags before recording, "
+        f"{camera_label} did not take its declared controls — {detail}. A write that reached an "
+        "integer control and landed somewhere else was clamped into that control's bounds and "
+        "reported success; the refusals (EACCES on a control an automatic mode still guards, "
+        "EINVAL on a menu entry the device does not have) raise at the write instead and never "
+        "reach here. Read `v4l2-ctl -d <device> -L` for the accepted range before recording, "
         "because a wrong exposure only looks like a slightly dark frame"
     )
 
