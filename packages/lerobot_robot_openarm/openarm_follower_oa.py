@@ -516,7 +516,7 @@ class OaOpenArmFollower(OpenArmFollower):
         self._torque_enabled = False
         self._connected_readonly = True
 
-    def connect(self, calibrate: bool = False) -> None:  # noqa: ARG002
+    def connect(self, calibrate: bool = False) -> None:  # noqa: ARG002 — ABC signature
         """Bring up the arm without commanding torque; never auto-zero, never enable.
 
         Overrides the stock `connect()` to drop its auto `set_zero_position()` and
@@ -1240,8 +1240,15 @@ class BiOaOpenArmFollower(OpenArmRobot):
             ) from exc
         self._connected = True
 
-    def connect(self, calibrate: bool = False) -> None:  # noqa: ARG002
-        """Bring up both arms torque-OFF; never auto-zero and never enable torque."""
+    def connect(self, calibrate: bool = False) -> None:  # noqa: ARG002 — ABC signature
+        """Bring up both arms torque-OFF; never auto-zero and never enable torque.
+
+        Args:
+            calibrate: Accepted for ABC compatibility and never acted on, the same refusal
+                the per-arm `connect` makes (02 FR-CON-061). Zeroing an arm moves nothing but
+                rewrites the frame every later command is expressed in, so it is an operator
+                act with its own flow and not something a connect argument turns on.
+        """
         self.connect_readonly()
 
     def calibrate(self) -> None:
