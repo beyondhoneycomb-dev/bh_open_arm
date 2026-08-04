@@ -133,29 +133,19 @@ def live() -> Corpus:
     return Corpus(REPO_ROOT)
 
 
-def test_the_repository_is_still_red(live: Corpus) -> None:
-    """Both rulings are unenforced in the documents, at these exact cells.
+def test_the_documents_carry_both_rulings(live: Corpus) -> None:
+    """Neither ruling has an unenforced cell left in the live corpus.
 
-    Written as an inventory rather than a bare count so that repairing one cell changes
-    this list and repairing the wrong one does not.
+    Stated as the whole inventory rather than a count, so that a regression names the cell
+    it reappeared in. The empty set is the assertion: this ran red against nine cells while
+    the documents still said `비상정지` where the ruling names STOP_HOLD, and offered a
+    power cut the port manifest has no boundary for.
     """
     reported = {
         (violation.norm_id, violation.kind, violation.detail.split(" ")[0])
         for violation in check_norm_006(live) + check_norm_007(live)
     }
-    spec = "docs/v1/spec/13-GUI-화면-명세.md"
-    catalog = "docs/v1/plan/02d-작업패키지-GUI.md:125"
-    assert reported == {
-        ("NORM-006", "ambiguous-stop-word", f"{spec}:232"),
-        ("NORM-006", "ambiguous-stop-word", f"{spec}:234"),
-        ("NORM-006", "ambiguous-stop-word", f"{spec}:326"),
-        ("NORM-006", "ambiguous-stop-word", catalog),
-        ("NORM-006", "unfixed-reachability-subject", catalog),
-        ("NORM-007", "discarded-reading-alive", f"{spec}:227"),
-        ("NORM-007", "discarded-reading-alive", f"{spec}:230"),
-        ("NORM-007", "discarded-reading-alive", f"{spec}:287"),
-        ("NORM-007", "power-cut-policy-option", f"{spec}:287"),
-    }
+    assert reported == set()
 
 
 def test_a_repaired_specification_clears_both_rulings(tmp_path: Path) -> None:

@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/v1/plan/00-실행계획-개요.md@b6271a4
+spine_ref: docs/v1/plan/00-실행계획-개요.md@ec10b70
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -9296,44 +9296,44 @@ entries:
   negative_branch:
   - gate: CG-G-03a
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03b
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03c
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03d
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03e
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03f
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03g
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03h
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   downstream: []
   terminal: true
   stale_on:
@@ -9396,44 +9396,44 @@ entries:
   negative_branch:
   - gate: CG-G-03a
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03b
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03c
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03d
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03e
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03f
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03g
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03h
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   downstream: []
   terminal: true
   stale_on:
@@ -9495,44 +9495,44 @@ entries:
   negative_branch:
   - gate: CG-G-03a
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03b
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03c
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03d
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03e
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03f
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03g
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03h
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   downstream: []
   terminal: true
   stale_on:
@@ -9594,44 +9594,44 @@ entries:
   negative_branch:
   - gate: CG-G-03a
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03b
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03c
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03d
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03e
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03f
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03g
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03h
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   downstream: []
   terminal: true
   stale_on:
@@ -9694,44 +9694,44 @@ entries:
   negative_branch:
   - gate: CG-G-03a
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03b
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03c
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03d
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03e
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03f
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03g
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03h
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   downstream: []
   terminal: true
   stale_on:
@@ -9793,44 +9793,44 @@ entries:
   negative_branch:
   - gate: CG-G-03a
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03b
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03c
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03d
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03e
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03f
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03g
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03h
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   downstream: []
   terminal: true
   stale_on:
@@ -9893,44 +9893,44 @@ entries:
   negative_branch:
   - gate: CG-G-03a
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03b
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03c
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03d
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03e
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03f
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03g
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03h
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   downstream: []
   terminal: true
   stale_on:
@@ -9992,44 +9992,44 @@ entries:
   negative_branch:
   - gate: CG-G-03a
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03b
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03c
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03d
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03e
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03f
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03g
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03h
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   downstream: []
   terminal: true
   stale_on:
@@ -10092,44 +10092,44 @@ entries:
   negative_branch:
   - gate: CG-G-03a
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03b
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03c
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03d
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03e
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03f
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03g
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03h
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   downstream: []
   terminal: true
   stale_on:
@@ -10191,44 +10191,44 @@ entries:
   negative_branch:
   - gate: CG-G-03a
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03b
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03c
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03d
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03e
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03f
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03g
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03h
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   downstream: []
   terminal: true
   stale_on:
@@ -10290,44 +10290,44 @@ entries:
   negative_branch:
   - gate: CG-G-03a
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03b
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03c
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03d
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03e
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03f
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03g
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03h
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   downstream: []
   terminal: true
   stale_on:
@@ -10389,44 +10389,44 @@ entries:
   negative_branch:
   - gate: CG-G-03a
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03b
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03c
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03d
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03e
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03f
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03g
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03h
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   downstream: []
   terminal: true
   stale_on:
@@ -10488,44 +10488,44 @@ entries:
   negative_branch:
   - gate: CG-G-03a
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03b
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03c
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03d
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03e
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03f
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03g
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03h
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   downstream: []
   terminal: true
   stale_on:
@@ -10587,44 +10587,44 @@ entries:
   negative_branch:
   - gate: CG-G-03a
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03b
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03c
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03d
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03e
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03f
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03g
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03h
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   downstream: []
   terminal: true
   stale_on:
@@ -10686,44 +10686,44 @@ entries:
   negative_branch:
   - gate: CG-G-03a
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03b
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03c
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03d
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03e
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03f
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03g
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   - gate: CG-G-03h
     'on': FAIL
-    action: ①실패 → FAIL. 두 정지가 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 소프트 스톱으로 오인해 누른다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만
-      true면 build_dataset_frame이 KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고
-      후 진행"은 프리플라이트가 아니다)
+    action: ①실패 → FAIL. 둘이 한 컨트롤로 합쳐지면 오퍼레이터가 낙하를 STOP_HOLD로 오인해 누른다. POWER_CUT에 핸들러가 붙으면 그것대로 FAIL —
+      누를 수 있는데 아무 일도 없는 정지는 정지가 있다고 믿게 만든다 / ②실패 → FAIL / ③실패 → FAIL. 팔로워만 true면 build_dataset_frame이
+      KeyError로 런타임 사망하고, 둘 다 false면 플랫폼 정체성(힘/컴플라이언스)이 조용히 사라진다 / ⑥실패 → FAIL("경고 후 진행"은 프리플라이트가 아니다)
   downstream: []
   terminal: true
   stale_on:
