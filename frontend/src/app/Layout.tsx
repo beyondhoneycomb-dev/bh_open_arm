@@ -2,11 +2,16 @@
 // route, and an outlet the active route renders into. Nav entries come straight
 // from the canonical registry, so the shell can never drift from 13 §2.6. Layout
 // density and sidebar state read from the shared runtime config.
+//
+// The safety surface sits above the outlet rather than inside any screen, which is what
+// makes it unconditional: it is a sibling of the outlet, so no route, redirect, or screen
+// error can replace it, and every route inherits it (CG-G-03b, FR-GUI-065).
 
 import { NavLink, Outlet } from "react-router-dom";
 
 import { SCREENS, VIEWPORT_PATH } from "../routes/registry";
 import { useConfig } from "./ConfigContext";
+import { SafetyBarHost } from "./SafetyBarHost";
 
 export function Layout() {
   const { config, status } = useConfig();
@@ -35,7 +40,10 @@ export function Layout() {
         </p>
       </nav>
       <main className="oa-main">
-        <Outlet />
+        <SafetyBarHost />
+        <div className="oa-main__content">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

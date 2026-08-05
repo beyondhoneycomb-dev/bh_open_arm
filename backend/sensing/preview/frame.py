@@ -1,8 +1,8 @@
 """Pack an encoded preview into a single-WebSocket binary frame (WP-3B-06).
 
 One preview frame is one binary WebSocket message on the single realtime channel
-(`CTR-WS@v1` D-2). Its identity is the camera frame tag `<slot>:<channel>`, built
-through `CTR-WS@v1`'s own `camera_frame_tag` so the preview carries the exact slot
+(`CTR-WS@v2` D-2). Its identity is the camera frame tag `<slot>:<channel>`, built
+through `CTR-WS@v2`'s own `camera_frame_tag` so the preview carries the exact slot
 key the CAM registry, the CAP sidecar and the REC feature key use — the same
 identifier round-trips across all four surfaces (`CTR-PRIM@v1` join). The tag is
 length-prefixed so the opaque image bytes that follow need no delimiter and no
@@ -46,7 +46,7 @@ class PreviewFrame:
 
     @property
     def tag(self) -> str:
-        """The `CTR-WS@v1` camera frame tag `<slot>:<channel>` this frame rides under."""
+        """The `CTR-WS@v2` camera frame tag `<slot>:<channel>` this frame rides under."""
         return camera_frame_tag(self.slot, self.channel)
 
     def to_ws_binary(self) -> bytes:

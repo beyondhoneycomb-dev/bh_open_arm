@@ -1,10 +1,10 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://openarm/contracts/CTR-WS@v1",
-  "contract": "CTR-WS@v1",
-  "title": "OpenArm single-WebSocket envelope (CTR-WS@v1)",
-  "description": "The one realtime browser<->backend transport (D-2): a single WebSocket multiplexing telemetry, command, camera-binary and control-lease frames. Consumes CTR-PRIM@v1 by reference and redefines none of its primitives. Transports the WP-2A-02 dead-man lease; it does NOT redefine the lease semantics. This body is generated from contracts/ws/schema.py by canonical_envelope(); WP-3A-06 freezes it by content hash (CI-09).",
-  "schema_version": 1,
+  "$id": "https://openarm/contracts/CTR-WS@v2",
+  "contract": "CTR-WS@v2",
+  "title": "OpenArm single-WebSocket envelope (CTR-WS@v2)",
+  "description": "The one realtime browser<->backend transport (D-2): a single WebSocket multiplexing telemetry, command, camera-binary, soft-stop and control-lease frames. Consumes CTR-PRIM@v1 by reference and redefines none of its primitives. Transports the WP-2A-02 dead-man lease; it does NOT redefine the lease semantics. This body is generated from contracts/ws/schema.py by canonical_envelope(); WP-3A-06 freezes it by content hash (CI-09).",
+  "schema_version": 2,
   "consumed_contracts": [
     "CTR-PRIM@v1"
   ],
@@ -49,6 +49,16 @@
       "fields": [],
       "tag": "<slot>:<channel>",
       "tag_separator": ":"
+    },
+    "stop_hold": {
+      "direction": "client_to_server",
+      "payload": "text",
+      "queue": "command",
+      "priority": 1,
+      "control_frame": false,
+      "fields": [
+        "session_id"
+      ]
     },
     "lease_renew": {
       "direction": "client_to_server",
@@ -168,6 +178,7 @@
       "telemetry": "telemetry",
       "command": "command",
       "camera": "camera_preview",
+      "stop_hold": "command",
       "lease_renew": "lease",
       "lease_grant": "lease",
       "lease_reject": "lease",
@@ -186,6 +197,7 @@
       "lease_renew",
       "lease_grant",
       "lease_reject",
+      "stop_hold",
       "command",
       "telemetry"
     ]

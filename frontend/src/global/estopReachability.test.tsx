@@ -1,9 +1,12 @@
 // CG-G-03b: the stop surface must be reachable across every screen x mode x
 // {observer, controller}. This renders the always-on GlobalSafetyBar for each of the 208
-// matrix cells and asserts two things of every one: the STOP_HOLD control is present —
-// NORM-006 fixed FR-GUI-065's subject to STOP_HOLD, not to a power cut — and no clickable
-// hard E-Stop exists anywhere, because this rig has no software path to a contactor and a
-// button reaching none would be read as a stop that works (NORM-007).
+// matrix cells and asserts two things of every one: the STOP_HOLD control is present and
+// pressable — NORM-006 fixed FR-GUI-065's subject to STOP_HOLD, not to a power cut — and
+// no clickable hard E-Stop exists anywhere, because this rig has no software path to a
+// contactor and a button reaching none would be read as a stop that works (NORM-007).
+//
+// This file proves the component's own behaviour given props. That the shell actually
+// mounts it on every route is a separate claim, proven in app/safetyMount.test.tsx.
 
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
@@ -40,46 +43,27 @@ describe("CG-G-03b stop surface reachable across the whole screen x mode x role 
     expect(estopMatrix().length).toBe(ESTOP_MATRIX_SIZE);
   });
 
-  it("renders the STOP_HOLD control in every cell", () => {
-    const unreachable: string[] = [];
+  // Rendered is not reachable — a present but disabled button stops nothing. FR-GUI-063
+  // makes STOP_HOLD a pressable control and FR-GUI-065 requires it reachable regardless of
+  // who holds control, which CTR-WS@v2 supports by carrying `stop_hold` as a frame with
+  // control_frame: false. So the requirement is one property over the whole matrix, not two
+  // per role: in every cell the control exists AND is pressable. Both failure modes are
+  // collected separately so a red run names which one occurred.
+  it("renders a pressable STOP_HOLD control in every cell, whoever holds control", () => {
+    const missing: string[] = [];
+    const disabled: string[] = [];
     for (const cell of estopMatrix()) {
       const { queryByRole, unmount } = render(<GlobalSafetyBar {...propsFor(cell)} />);
-      if (!queryByRole("button", { name: /소프트 스톱/ })) {
-        unreachable.push(`${cell.screen}|${cell.mode}|${cell.role}`);
+      const label = `${cell.screen}|${cell.mode}|${cell.role}`;
+      const stop = queryByRole("button", { name: /소프트 스톱/ }) as HTMLButtonElement | null;
+      if (!stop) {
+        missing.push(label);
+      } else if (stop.disabled) {
+        disabled.push(label);
       }
       unmount();
     }
-    expect(unreachable).toEqual([]);
-  });
-
-  it("enables it wherever the client holds control", () => {
-    const gated: string[] = [];
-    for (const cell of estopMatrix().filter((c) => c.role === "controller")) {
-      const { getByRole, unmount } = render(<GlobalSafetyBar {...propsFor(cell)} />);
-      if ((getByRole("button", { name: /소프트 스톱/ }) as HTMLButtonElement).disabled) {
-        gated.push(`${cell.screen}|${cell.mode}|${cell.role}`);
-      }
-      unmount();
-    }
-    expect(gated).toEqual([]);
-  });
-
-  // Rendered is not reachable. FR-GUI-065 asks for a stop an observer can press, and
-  // NORM-006 fixed its subject to STOP_HOLD — but StopControls gates the soft stop on
-  // control authority, so an observer has nothing to press now that the hard E-Stop is a
-  // panel. This pins that gap rather than hiding it behind a presence check: opening the
-  // soft stop to observers turns this red, which is the point. Until someone does, the
-  // matrix above certifies reachability of a control half the cells cannot use.
-  it("has NO pressable stop for an observer — the open gap, pinned", () => {
-    const pressable: string[] = [];
-    for (const cell of estopMatrix().filter((c) => c.role !== "controller")) {
-      const { getByRole, unmount } = render(<GlobalSafetyBar {...propsFor(cell)} />);
-      if (!(getByRole("button", { name: /소프트 스톱/ }) as HTMLButtonElement).disabled) {
-        pressable.push(`${cell.screen}|${cell.mode}|${cell.role}`);
-      }
-      unmount();
-    }
-    expect(pressable).toEqual([]);
+    expect({ missing, disabled }).toEqual({ missing: [], disabled: [] });
   });
 
   it("renders the physical-E-Stop guidance in every cell, and never as a button", () => {

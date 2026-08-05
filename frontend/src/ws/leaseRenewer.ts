@@ -33,6 +33,11 @@ export interface LeaseSnapshot {
 
 // Sends one client lease/re-arm frame, already authorized by the client. The
 // renewer only ever asks to send control frames while it holds the lease.
+//
+// May throw when the frame reached no transport. The two emitters differ in who
+// absorbs that: `tick()` is exempt by frame type (see EXPIRY_COVERED_FRAME in
+// wsClient.ts) because a lost renewal is expiry and a timer has no caller to catch
+// anything, while `confirmRearm()` lets it propagate to the operator who pressed it.
 export type SendLeaseFrame = (frameType: WsFrameType, frame: Record<string, unknown>) => void;
 
 export class LeaseRenewer {
@@ -129,6 +134,10 @@ export class LeaseRenewer {
 
   // Operator confirms a re-arm the server issued. This is the only client action
   // that resumes a latched lease, and it carries no expiry field.
+  //
+  // Throws when the confirm reached no socket, rather than leaving the lease
+  // `rearming` with the operator unaware their resume went nowhere. Status is not
+  // advanced here in any case — only the server's `rearm_accept` does that.
   confirmRearm(): void {
     if (this.mStatus !== "rearming") {
       return;

@@ -38,7 +38,7 @@ export interface EpisodeControlState {
 }
 
 // One WS-transmit channel's drop exposure: frames the single WebSocket shed on
-// send (queue eviction / backpressure), classified by CTR-WS@v1. This is the
+// send (queue eviction / backpressure), classified by CTR-WS@v2. This is the
 // preview/telemetry transmit path — kept STRICTLY separate from capture/encode
 // drops (CG-G-S07c), because merging them hides whether a lost frame was the
 // browser link or the camera pipeline.

@@ -1,5 +1,5 @@
 // The public health projection (CG-G-04g, FR-GUI-092). The public health endpoint
-// must NOT leak the control holder or the active profile — CTR-WS@v1
+// must NOT leak the control holder or the active profile — CTR-WS@v2
 // health.forbidden_fields = ["control_holder", "active_profile"]. `PublicHealth`
 // has no slot for either field, so a component cannot render what the type cannot
 // carry, and `projectPublicHealth` copies only the allowlisted fields — a backend

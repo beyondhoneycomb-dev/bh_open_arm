@@ -1,4 +1,5 @@
-"""Named keys, paths and defaults for the runtime_config document (FR-GUI-004).
+"""Named keys, paths and defaults for the runtime_config document (FR-GUI-004), and for the
+service boundary `oa-serve` opens over it (FR-GUI-006).
 
 The wire is camelCase because the browser client already reads it that way
 (`frontend/src/config/schema.ts`); Python field names stay snake_case and carry the wire name
@@ -13,6 +14,7 @@ question decides whether CAN id `0x08` is polled.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Literal
 
 # The document file name under the config directory. The whole file is the wire document: what
@@ -62,3 +64,30 @@ SIDEBAR_COLLAPSED_DEFAULT = False
 CONFIG_ROUTE = "/api/config"
 CONFIG_SUBOBJECT_ROUTE = "/api/config/{subobject}"
 TOOLS_ROUTE = "/api/config/tools"
+
+# The browser<->backend boundary `oa-serve` opens (13 §2.7, FR-GUI-006). One port carries the SPA
+# bundle, the REST surface and the single WebSocket, which is what lets the browser hold exactly
+# one origin and the air-gap CSP stay closed. The spec fixes the default and requires the port be
+# configurable, so the number lives here and no call site spells it.
+DEFAULT_HTTP_PORT = 8000
+
+# Loopback until someone widens it. The operator's browser runs on the control host, so binding
+# every interface would publish the control surface onto whatever network the host is plugged into
+# without anyone having asked for that; `--host` keeps widening it a deliberate act.
+DEFAULT_HTTP_HOST = "127.0.0.1"
+
+# Where vite writes the built SPA (`frontend/vite.config.ts`: root `frontend/`, `build.outDir`
+# `dist`), relative to the repository root. `.gitignore` excludes it, so a fresh clone carries no
+# bundle until someone runs the frontend build — an absent bundle is a normal state, not a fault.
+SPA_BUNDLE_DIRECTORY = Path("frontend") / "dist"
+
+# The bundle entry, and the deep-link target every non-file route resolves to. Presence of the
+# directory is NOT the test for a usable bundle: a leftover empty `dist/` satisfies that one and
+# then answers every route with a 404 an operator cannot tell apart from a routing bug.
+SPA_ENTRY_FILENAME = "index.html"
+
+# The SPA mounts at the origin root, which is what `base: "./"` in the vite config resolves its
+# assets against. A mount at `/` matches every path, so it is registered last — the REST routes
+# and the WebSocket have to already be on the app before it goes on.
+SPA_MOUNT_PATH = "/"
+SPA_MOUNT_NAME = "spa"

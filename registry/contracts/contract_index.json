@@ -2,7 +2,7 @@
   "version": 1,
   "namespace": "CTR-<NAME>@v<n>",
   "canonical_source": "docs/v1/plan/01-의존성-DAG-및-병렬화.md",
-  "ledger_head": "262227619c872ca3d41cb00e28b3778fdb0417dbe344bce64ce30b691315c82f",
+  "ledger_head": "088f3ed432b747a1b0af1ecb561140689febf1e009ce121d304f8c1d7f7e5a49",
   "contracts": [
     {
       "contract_id": "CTR-ACT@v1",
@@ -162,6 +162,14 @@
       "contract_id": "CTR-WS@v1",
       "version": 1,
       "canonical_hash": "sha256:7834385d9f54f12c6681154acb91d246399650b36167e7016738e05ee572ad27",
+      "status": "SUPERSEDED",
+      "owner_wp": "WP-3A-04",
+      "consumer_wps": []
+    },
+    {
+      "contract_id": "CTR-WS@v2",
+      "version": 2,
+      "canonical_hash": "sha256:e3d2ca179f5a0866793c2ccb88110d6d23e314a83cab9a57001286fb9ba3ee90",
       "status": "FROZEN",
       "owner_wp": "WP-3A-04",
       "consumer_wps": [

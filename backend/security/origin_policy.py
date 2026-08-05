@@ -87,7 +87,7 @@ class ControlChannelSecurity:
     """The whole control-channel security policy: WS (reused) + REST (added).
 
     Attributes:
-        ws: The `CTR-WS@v1` WS security policy (WSS, Origin allowlist, CSRF/CORS).
+        ws: The `CTR-WS@v2` WS security policy (WSS, Origin allowlist, CSRF/CORS).
         rest: The REST/CORS policy for the paired HTTP surface.
     """
 

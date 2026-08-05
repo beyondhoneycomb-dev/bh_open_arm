@@ -5,18 +5,22 @@
 // later caller from re-creating a button that reaches nothing (NORM-007). The standing
 // drop warning (role="alert") stays beside the hard panel regardless of scroll or modal
 // state — removing the button does not remove the hazard it described (FR-GUI-064).
+//
+// The soft stop is pressable by every client, never disabled. FR-GUI-065 requires it
+// reachable independently of who holds control, and CTR-WS@v2 carries STOP_HOLD as a
+// `stop_hold` frame with `control_frame: false`, so the server does not refuse it from
+// a client holding no lease. Whoever sees the arm moving wrongly is who needs to stop
+// it, and that is not always the lease holder.
 
 import { HARD_ESTOP_DROP_WARNING, PHYSICAL_ESTOP, SOFT_STOP } from "./stopControls";
 
 export interface StopControlsProps {
-  // Soft stop: sends STOP_HOLD. May be gated when this client is not the control
-  // holder, since a soft stop is a control-authority action.
+  // Soft stop: sends STOP_HOLD. Wired for every client — control authority is not a
+  // precondition for stopping (FR-GUI-065, `stop_hold` is not a control frame).
   onSoftStop: () => void;
-  // Whether this client holds control. Only the soft stop honours it.
-  hasControl: boolean;
 }
 
-export function StopControls({ onSoftStop, hasControl }: StopControlsProps) {
+export function StopControls({ onSoftStop }: StopControlsProps) {
   return (
     <div className="oa-stops" role="group" aria-label="정지 컨트롤">
       <button
@@ -24,7 +28,6 @@ export function StopControls({ onSoftStop, hasControl }: StopControlsProps) {
         className="oa-stop oa-stop--soft"
         data-stop-kind={SOFT_STOP.kind}
         onClick={onSoftStop}
-        disabled={!hasControl}
         title={SOFT_STOP.effect}
       >
         <span className="oa-stop__label">{SOFT_STOP.label}</span>

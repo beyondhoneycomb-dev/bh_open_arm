@@ -8,13 +8,19 @@ on each — a new command path that forgets to consult it is a gap the enumerati
 makes visible.
 
 The WS-frame surfaces delegate to `contracts.ws.authorize_send`, so the "who may send
-a control frame" rule has one definition (`CTR-WS@v1`) and this module states its
+a control frame" rule has one definition (`CTR-WS@v2`) and this module states its
 agreement by reference rather than restating it. The non-WS surfaces (the L2 lock,
 the deadman renewal, VR pose injection, forced release) use the same single
-command-authority role, `CTR-WS@v1`'s `CONTROL_HOLDER_ROLE`.
+command-authority role, `CTR-WS@v2`'s `CONTROL_HOLDER_ROLE`.
 
 Reading is not a command path: an observer may subscribe to telemetry, camera and
-diagnostics. Only writing is closed.
+diagnostics.
+
+Neither is the soft stop, and it is the one write that is not. `CTR-WS@v2` carries
+`stop_hold` as a client-authored frame with `control_frame: false`, because `13`
+FR-GUI-065 requires the stop to be reachable by a client holding no control. What is
+closed here is command AUTHORITY, not the set of bytes a client may send; `stop_hold`
+is therefore deliberately absent from `CommandPath` below.
 """
 
 from __future__ import annotations
@@ -38,8 +44,14 @@ class CommandPath(Enum):
     """Every write surface an observer must be refused on (`FR-OPS-077`, `CG-5-08f`).
 
     A closed enumeration is the point: "refused on every path" is only checkable if
-    the paths are named in one place. The WS-frame members map to `CTR-WS@v1` control
+    the paths are named in one place. The WS-frame members map to `CTR-WS@v2` control
     frames; the rest are the non-WS command surfaces this WP adds.
+
+    `stop_hold` is not a member and must not become one. Every member here is a path an
+    observer is refused, and the stop is the one client-authored frame an observer may
+    send (`13` FR-GUI-065). Adding it would also be caught rather than silent:
+    `authorize_send` admits it for every role, so `observer_refused_paths` would return
+    less than the full set and `CG-5-08f` would fail.
     """
 
     WS_COMMAND = "ws_command"
@@ -51,7 +63,7 @@ class CommandPath(Enum):
     FORCED_RELEASE = "forced_release"
 
 
-# The WS command paths, mapped to the `CTR-WS@v1` control frame each one is, so the
+# The WS command paths, mapped to the `CTR-WS@v2` control frame each one is, so the
 # refusal on those paths is decided by `authorize_send` and never re-implemented.
 _WS_FRAME_FOR_PATH = {
     CommandPath.WS_COMMAND: WsFrameType.COMMAND,

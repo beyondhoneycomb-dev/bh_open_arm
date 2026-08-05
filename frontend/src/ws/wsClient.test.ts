@@ -15,11 +15,12 @@ import {
   fixtureServerAuthorize,
   leaseGrantFrame,
   observationFeatures,
+  rearmIssueFrame,
   SyncDecoderPort,
   telemetryFrame,
   textRaw,
 } from "./synthetic";
-import { WsClient, type WsClientOptions } from "./wsClient";
+import { WsClient, WsSendUndeliverableError, type WsClientOptions } from "./wsClient";
 
 const NEVER_PUMP_MS = 1_000_000;
 
@@ -174,6 +175,104 @@ describe("socket retry is WS-only and never re-attaches the backend Robot", () =
     factory.latest().emitError(new Error("boom"));
     expect(client.stats().socketErrorCount).toBe(1);
     expect(onError).not.toHaveBeenCalled();
+    client.dispose();
+  });
+});
+
+// A send that reaches no socket must never look like a send that worked. The stop is
+// the case that makes this a safety property rather than a tidiness one: under
+// CTR-WS@v2 `stop_hold` travels through WsClient.send, so a silent return would let
+// an operator press STOP_HOLD against a closed socket and see nothing at all.
+describe("a frame that reaches no socket is never silent", () => {
+  it("throws on stop_hold with no socket, and counts it", () => {
+    const { client } = makeClient({ role: "operator" });
+    // Never started: there is no socket, which is the state a closed link leaves.
+    expect(() => client.send("stop_hold", { type: "stop_hold", session_id: "s" })).toThrow(
+      WsSendUndeliverableError,
+    );
+    expect(client.stats().undeliverableCount).toBe(1);
+    client.dispose();
+  });
+
+  it("still signals the observer whose stop is the one FR-GUI-065 is written for", () => {
+    // The observer passes authorization (stop_hold is not a control frame), so the
+    // failure it must hear about is delivery, not authority. Asserting the error TYPE
+    // is the point: a WsAuthorityError here would mean the stop was refused by role
+    // and the reachability guarantee had quietly broken.
+    const { client, factory } = makeClient({ role: "observer" });
+    client.start();
+    factory.latest().emitClose();
+
+    let caught: unknown = null;
+    try {
+      client.send("stop_hold", { type: "stop_hold", session_id: "s" });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(WsSendUndeliverableError);
+    expect((caught as WsSendUndeliverableError).frameType).toBe("stop_hold");
+    expect(client.stats().undeliverableCount).toBe(1);
+    client.dispose();
+  });
+
+  it("counts a lost renewal without throwing, so the timer loop survives an outage", () => {
+    // The one exemption. A renewal is emitted from setInterval with no caller to
+    // catch anything, and a lost renewal is already expiry — the server holds the arm
+    // when renewals stop. Throwing here would fire once per interval into the
+    // scheduler for as long as the socket stayed down.
+    const { client, factory, scheduler } = makeClient({
+      role: "operator",
+      renewIntervalMs: 250,
+      retryDelayMs: 100_000,
+    });
+    client.start();
+    const socket = factory.latest();
+    socket.receive(
+      textRaw(
+        leaseGrantFrame({
+          sessionId: "s",
+          generation: 1,
+          sequence: 1,
+          expiryMonoServer: 9,
+          issuedMonoClient: 0,
+        }),
+      ),
+    );
+    client.pump();
+    socket.emitClose();
+
+    // Several intervals with no socket: every tick is counted, none escapes.
+    expect(() => scheduler.advance(1000)).not.toThrow();
+    expect(client.stats().undeliverableCount).toBeGreaterThan(1);
+    client.dispose();
+  });
+
+  it("throws on a re-arm confirm with no socket — an operator pressed it", () => {
+    // rearm_confirm is client-authored like the renewal but is NOT exempt: a person
+    // asked for the resume, so a dropped confirm must not leave them watching a
+    // latched arm with no explanation.
+    const { client, factory } = makeClient({ role: "operator" });
+    client.start();
+    const socket = factory.latest();
+    socket.receive(textRaw(rearmIssueFrame("s", 2)));
+    client.pump();
+    socket.emitClose();
+
+    expect(() => client.lease.confirmRearm()).toThrow(WsSendUndeliverableError);
+    expect(client.stats().undeliverableCount).toBe(1);
+    client.dispose();
+  });
+
+  it("does not confuse a saturated buffer with an absent socket", () => {
+    // Backpressure is a different failure with a different answer: the transport is
+    // there, so the frozen rule decides, and a protected frame is still sent.
+    const { client, factory } = makeClient({ role: "operator" });
+    client.start();
+    factory.latest().bufferedAmountValue = BUFFERED_AMOUNT_THRESHOLD_BYTES + 1;
+
+    expect(() => client.send("stop_hold", { type: "stop_hold", session_id: "s" })).not.toThrow();
+    expect(factory.latest().sent).toHaveLength(1);
+    expect(client.stats().undeliverableCount).toBe(0);
     client.dispose();
   });
 });

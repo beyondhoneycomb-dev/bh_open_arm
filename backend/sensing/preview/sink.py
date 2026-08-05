@@ -8,10 +8,10 @@ pipe holds a `PreviewSink` and nothing wider, so "the preview does not drive the
 robot" (`02b` §6.2 acceptance, the `FAIL_BLOCKING` boundary) is enforced by the
 shape of the surface, not by discipline.
 
-The sink is the one realtime channel (`CTR-WS@v1` D-2): a preview frame rides the
+The sink is the one realtime channel (`CTR-WS@v2` D-2): a preview frame rides the
 same single WebSocket as telemetry and the lease, and is the first class shed when
 the buffer fills. There is no second stream — the parallel realtime stacks
-`CTR-WS@v1` forbids (`FORBIDDEN_PARALLEL_STACKS`) are opened nowhere in this
+`CTR-WS@v2` forbids (`FORBIDDEN_PARALLEL_STACKS`) are opened nowhere in this
 package (`02b` §6.2 acceptance ④).
 """
 
@@ -24,7 +24,7 @@ from typing import Protocol, runtime_checkable
 class PreviewSink(Protocol):
     """The single-WebSocket transmit surface a preview frame is sent through.
 
-    `buffered_amount()` mirrors the WebSocket `bufferedAmount` the `CTR-WS@v1`
+    `buffered_amount()` mirrors the WebSocket `bufferedAmount` the `CTR-WS@v2`
     backpressure rule reads: when it is over threshold the pipe drops the camera
     frame rather than encoding and queuing it, so a saturated link never delays a
     dead-man renewal (HOL mitigation). `send_binary()` is the only egress, and it

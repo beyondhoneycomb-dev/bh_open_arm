@@ -8,7 +8,7 @@ when the camera load saturates the link.
 
 It does not fork the transport rules. The frame priorities, the backpressure signal
 (`bufferedAmount`), its threshold, and which classes are shed versus protected are all
-read from `CTR-WS@v1` (`contracts.ws.schema`), and camera load is sized from the
+read from `CTR-WS@v2` (`contracts.ws.schema`), and camera load is sized from the
 `06` §2.9 bandwidth formula (`backend.camera.bandwidth`). The only thing this module
 adds is the discrete-event drain: one bounded send buffer, drained in priority order
 each step, with camera frames shed on the exact `should_drop_under_backpressure` rule
@@ -189,7 +189,7 @@ class _SendBuffer:
     """The single WS send buffer: one serialized writer, frames selected lease-first.
 
     Priorities, the drop-under-backpressure rule and the protected set are all read
-    from `CTR-WS@v1`; this buffer only sequences them. `bufferedAmount` is the total
+    from `CTR-WS@v2`; this buffer only sequences them. `bufferedAmount` is the total
     unsent bytes (queued plus the in-flight frame's remainder), which is exactly what
     the frontend `WsClient` reads to decide a camera shed, so the same rule fires here
     on the same signal.
@@ -228,9 +228,10 @@ class _SendBuffer:
     def offer(self, frame: _PendingFrame) -> bool:
         """Offer a frame to the buffer, shedding it if backpressure rejects it.
 
-        The shed decision is `CTR-WS@v1`'s `should_drop_under_backpressure` read
+        The shed decision is `CTR-WS@v2`'s `should_drop_under_backpressure` read
         against the current buffered bytes: only a camera frame over threshold is
-        shed; lease, command and telemetry are always admitted.
+        shed. Every protected class — lease, the soft stop, command, telemetry — is
+        admitted at any buffer level.
 
         Args:
             frame: The frame offered this step.

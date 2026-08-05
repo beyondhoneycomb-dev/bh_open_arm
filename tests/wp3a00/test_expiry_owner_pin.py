@@ -2,7 +2,7 @@
 
 U-4's dead-man rests on one fact: lease expiry is judged on the server clock, and
 the client clock is only an age input. `02b` §5.2 WP-3A-00 ③ pins that ownership
-here, below `CTR-WS@v1`, so the WS schema transports the lease but cannot re-own
+here, below `CTR-WS@v2`, so the WS schema transports the lease but cannot re-own
 who judges its expiry. These tests prove the pin holds and that a WS override is
 refused two ways: the runtime guard and the static no-redefinition scan.
 """

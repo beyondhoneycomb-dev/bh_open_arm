@@ -88,6 +88,18 @@ describe("CG-G-03a: the two stops never merge, and only the soft one is a contro
     expect(code).not.toMatch(/function\s+stop\s*\(\s*kind/);
   });
 
+  // FR-GUI-065 makes the STOP_HOLD control reachable regardless of control authority, so
+  // the component must hold no authority input to gate on. A render test can show the
+  // button enabled for the props it was handed; only the source proves there is no prop
+  // that could ever disable it.
+  it("names no control-authority input, and never disables the stop", () => {
+    const stopControls = SOURCES.find(({ path }) => path.endsWith("StopControls.tsx"));
+    const code = stopControls?.code ?? "";
+    expect(code).not.toMatch(/hasControl/);
+    expect(code).not.toMatch(/\bisController\b|\bcontrolHolder\b|\bhasAuthority\b/);
+    expect(code).not.toMatch(/disabled/);
+  });
+
   it("renders both stop kinds with distinct classes and shows the drop warning", () => {
     const stopControls = SOURCES.find(({ path }) => path.endsWith("StopControls.tsx"));
     const code = stopControls?.code ?? "";

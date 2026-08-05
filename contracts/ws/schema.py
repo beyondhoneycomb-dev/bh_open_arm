@@ -1,9 +1,9 @@
-"""CTR-WS@v1 — the single-WebSocket envelope, transported over one realtime channel.
+"""CTR-WS@v2 — the single-WebSocket envelope, transported over one realtime channel.
 
 `02b` §5.2 WP-3A-04 fixes what this module is: the one realtime browser<->backend
-transport (D-2), multiplexing telemetry, command, camera-binary and control-lease
-frames on a single WebSocket. It has two disciplines it may never break, and both
-are the `FAIL_BLOCKING` defect of this WP:
+transport (D-2), multiplexing telemetry, command, camera-binary, soft-stop and
+control-lease frames on a single WebSocket. It has two disciplines it may never
+break, and both are the `FAIL_BLOCKING` defect of this WP:
 
 1. It CONSUMES `CTR-PRIM@v1` and redefines none of its six primitives. The camera
    identifier, the timestamp/clock ownership, the frame-type tag, the queue
@@ -21,8 +21,8 @@ are the `FAIL_BLOCKING` defect of this WP:
    offset by `CONTRACT_FROZEN` + CI-09.
 
 The one structural guarantee that makes acceptance ⑤ (expiry never judged on the
-client clock) unbreakable: a client-authored lease frame carries no expiry field
-at all. The field simply does not exist on anything a client sends, mirroring
+client clock) unbreakable: no client-authored frame carries an expiry field at all.
+The field simply does not exist on anything a client sends, mirroring
 `backend.deadman.LeaseRenewal`, so no server path can read a client-supplied expiry.
 
 `contracts/ws/envelope.schema.json` is the frozen, language-agnostic mirror of this
@@ -59,22 +59,22 @@ from contracts.prim import (
 
 # The contract id this module and its JSON mirror are the body of. Freeze checks,
 # staleness and the no-redefinition scan key on this exact string.
-CONTRACT_ID = "CTR-WS@v1"
+CONTRACT_ID = "CTR-WS@v2"
 
 # The human title and description carried into the generated frozen body.
-CONTRACT_TITLE = "OpenArm single-WebSocket envelope (CTR-WS@v1)"
+CONTRACT_TITLE = "OpenArm single-WebSocket envelope (CTR-WS@v2)"
 CONTRACT_DESCRIPTION = (
     "The one realtime browser<->backend transport (D-2): a single WebSocket "
-    "multiplexing telemetry, command, camera-binary and control-lease frames. "
-    "Consumes CTR-PRIM@v1 by reference and redefines none of its primitives. "
-    "Transports the WP-2A-02 dead-man lease; it does NOT redefine the lease "
-    "semantics. This body is generated from contracts/ws/schema.py by "
+    "multiplexing telemetry, command, camera-binary, soft-stop and control-lease "
+    "frames. Consumes CTR-PRIM@v1 by reference and redefines none of its "
+    "primitives. Transports the WP-2A-02 dead-man lease; it does NOT redefine the "
+    "lease semantics. This body is generated from contracts/ws/schema.py by "
     "canonical_envelope(); WP-3A-06 freezes it by content hash (CI-09)."
 )
 
 # The frozen generation. A change to the envelope is a new generation
-# (`CTR-WS@v2`), never an in-place edit (`06` §4.3).
-SCHEMA_VERSION = 1
+# (`CTR-WS@v3`), never an in-place edit (`06` §4.3).
+SCHEMA_VERSION = 2
 
 # The one contract this envelope consumes by reference. Named so a bump of it
 # propagates staleness here (`CR-2`), and so consumers can assert the join.
@@ -114,11 +114,14 @@ class WsFrameType(StrEnum):
 
     Telemetry, command and camera-binary are the three application classes; the six
     lease/re-arm frames transport the dead-man lease and its resume handshake.
+    `STOP_HOLD` is the soft stop, which is a fourth kind: a state-changing frame that
+    carries no command authority, so an observer may send it (`13` FR-GUI-065).
     """
 
     TELEMETRY = "telemetry"
     COMMAND = "command"
     CAMERA = "camera"
+    STOP_HOLD = "stop_hold"
     LEASE_RENEW = "lease_renew"
     LEASE_GRANT = "lease_grant"
     LEASE_REJECT = "lease_reject"
@@ -192,8 +195,11 @@ class FrameSpec:
         direction: Which way it travels on the single WebSocket.
         payload: Whether it is a text or binary frame.
         queue: The bounded `CTR-PRIM@v1` queue class it is delivered through.
-        is_control_frame: Whether sending it is a control action (an observer may
-            not); telemetry and camera are read-only, so they are not control frames.
+        is_control_frame: Whether sending it requires command authority (an observer
+            holds none). This is an authority test, not a "changes robot state" test:
+            telemetry and camera are read-only and so are not control frames, and the
+            soft stop changes state yet is not one either, because `13` FR-GUI-065
+            puts it within reach of a client that holds no control.
         fields: The wire field names this frame carries, in declaration order.
     """
 
@@ -238,6 +244,32 @@ FRAME_TABLE: dict[WsFrameType, FrameSpec] = {
         queue=PRIM_QUEUE_PROFILES["camera_preview"],
         is_control_frame=False,
         fields=(),
+    ),
+    WsFrameType.STOP_HOLD: FrameSpec(
+        frame_type=WsFrameType.STOP_HOLD,
+        direction=FrameDirection.CLIENT_TO_SERVER,
+        payload=FramePayload.TEXT,
+        # The command class, NOT the lease class. The lease queue is capacity 1 with
+        # LATEST_WINS (`CTR-PRIM@v1`), so a queued stop would be evicted by the very
+        # next renewal — and renewals never stop arriving, which makes that loss a
+        # certainty rather than a race. The command queue is capacity 8 DROP_OLDEST,
+        # where an arriving stop is the newest and so is never the evicted item.
+        # What this costs: the stop is drained after the lease class (one small
+        # frame) and shares a queue with jog commands, so eight command frames
+        # arriving between two drains could still evict it. That residue closes only
+        # with a stop-only queue class, which `CTR-PRIM@v1` does not have; adding one
+        # bumps CTR-PRIM and the five contracts that consume it.
+        queue=PRIM_QUEUE_PROFILES["command"],
+        # Not a control frame. `is_control_frame` gates command AUTHORITY, and `13`
+        # FR-GUI-065 puts the stop within reach independently of who holds control.
+        # Marking it True would make that requirement unsatisfiable, since
+        # `authorize_send` would refuse the frame from the very observers it is
+        # written for.
+        is_control_frame=False,
+        # The session is carried for attribution only — who pressed it. Nothing on
+        # this frame decides anything: the server stamps the time and the reason,
+        # because a client-supplied cause on a safety path is a forgeable audit.
+        fields=(LEASE_SESSION_FIELD,),
     ),
     WsFrameType.LEASE_RENEW: FrameSpec(
         frame_type=WsFrameType.LEASE_RENEW,
@@ -306,8 +338,9 @@ FRAME_TABLE: dict[WsFrameType, FrameSpec] = {
     ),
 }
 
-# The client-authored lease frames: the ones a client may send. The expiry field
-# must never appear on any of them (structural acceptance ⑤).
+# The lease frames a client authors. Named for the renewal loop, which needs to know
+# which lease frames it emits; the expiry guarantee below does not read this tuple,
+# because it must hold for every client-authored frame, not only the lease ones.
 CLIENT_LEASE_FRAMES = (WsFrameType.LEASE_RENEW, WsFrameType.REARM_CONFIRM)
 
 
@@ -359,13 +392,22 @@ def assert_expiry_owner_is_server() -> None:
     verify_expiry_owner(EXPIRY_JUDGE_ROLE)
 
 
-def client_lease_frames_omit_expiry() -> bool:
-    """Whether every client-authored lease frame omits the expiry field (acceptance ⑤).
+def client_frames_omit_expiry() -> bool:
+    """Whether every client-authored frame omits the expiry field (acceptance ⑤).
+
+    The set is derived from the frame table's directions rather than listed, so a
+    frame added to the table is inside this guarantee the moment it exists. Listing
+    it would put the newest frame — the one nobody has audited yet — outside the
+    check that exists to stop a client from authoring an expiry.
 
     Returns:
         (bool) True when no frame a client may send carries `LEASE_EXPIRY_FIELD`.
     """
-    return all(LEASE_EXPIRY_FIELD not in FRAME_TABLE[frame].fields for frame in CLIENT_LEASE_FRAMES)
+    return all(
+        LEASE_EXPIRY_FIELD not in spec.fields
+        for spec in FRAME_TABLE.values()
+        if spec.direction is FrameDirection.CLIENT_TO_SERVER
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -398,6 +440,11 @@ def authorize_send(role: WsRole, frame_type: WsFrameType) -> None:
     and camera may not write a command, a lease renewal or a re-arm confirmation.
     The refusal is server-side by contract, not a client-side courtesy.
 
+    The soft stop passes for every role, and it does so through the frame table's
+    `is_control_frame` rather than a branch here. A frame-type-granular rule can be
+    checked statically and read off one table; an exception written into this
+    function could not, and the next safety frame would need a second one.
+
     Args:
         role: The sending client's role.
         frame_type: The frame the client is trying to send.
@@ -427,6 +474,7 @@ BACKPRESSURE_PROTECTED_FRAMES = (
     WsFrameType.LEASE_RENEW,
     WsFrameType.LEASE_GRANT,
     WsFrameType.LEASE_REJECT,
+    WsFrameType.STOP_HOLD,
     WsFrameType.COMMAND,
     WsFrameType.TELEMETRY,
 )
@@ -590,7 +638,7 @@ def canonical_envelope() -> dict[str, Any]:
             "sequence_field": LEASE_SEQUENCE_FIELD,
             "session_field": LEASE_SESSION_FIELD,
             "expiry_judge_role": EXPIRY_JUDGE_ROLE.value,
-            "client_frame_carries_no_expiry": client_lease_frames_omit_expiry(),
+            "client_frame_carries_no_expiry": client_frames_omit_expiry(),
             "age_filter": {
                 "max_lease_age_field": MAX_LEASE_AGE_FIELD,
                 "age_input_role": ClockRole.CLIENT.value,
@@ -675,7 +723,7 @@ __all__ = [
     "authorize_send",
     "camera_frame_tag",
     "canonical_envelope",
-    "client_lease_frames_omit_expiry",
+    "client_frames_omit_expiry",
     "envelope_json",
     "health_leaks",
     "public_health",

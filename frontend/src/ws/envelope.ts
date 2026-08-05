@@ -1,4 +1,4 @@
-// CTR-WS@v1, mirrored for the browser. This module is the single browser-side
+// CTR-WS@v2, mirrored for the browser. This module is the single browser-side
 // definition of the frozen single-WebSocket envelope: frame types, their queue
 // bindings and priorities, the transported (never redefined) dead-man lease
 // fields, the bufferedAmount backpressure rule, and the observer/operator send
@@ -7,13 +7,14 @@
 // frozen JSON from disk and asserts this mirror equals it, so a CTR-WS bump
 // fails the lane (CR-2 staleness) rather than drifting silently. The browser
 // TRANSPORTS the lease and does NOT own its semantics (WP-2A-02 canon): the
-// proof is structural — a client-authored lease frame carries no expiry field.
+// proof is structural — no client-authored frame carries an expiry field.
 
-// The nine frame types the one WebSocket multiplexes (frozen order).
+// The ten frame types the one WebSocket multiplexes (frozen order).
 export const WS_FRAME_TYPES = [
   "telemetry",
   "command",
   "camera",
+  "stop_hold",
   "lease_renew",
   "lease_grant",
   "lease_reject",
@@ -137,9 +138,9 @@ export interface FrameSpec {
   fields: readonly string[];
 }
 
-// One row per frame type. Client lease frames (lease_renew, rearm_confirm) omit
-// LEASE_EXPIRY_FIELD by construction — that omission is what makes "the server
-// clock is the sole expiry judge" unbreakable from the browser.
+// One row per frame type. Every client_to_server row omits LEASE_EXPIRY_FIELD by
+// construction — that omission is what makes "the server clock is the sole expiry
+// judge" unbreakable from the browser.
 export const FRAME_TABLE: Record<WsFrameType, FrameSpec> = {
   telemetry: {
     frameType: "telemetry",
@@ -164,6 +165,22 @@ export const FRAME_TABLE: Record<WsFrameType, FrameSpec> = {
     queue: "camera_preview",
     isControlFrame: false,
     fields: [],
+  },
+  // The soft stop. isControlFrame is false on purpose: the flag gates command
+  // AUTHORITY, not "changes robot state", and FR-GUI-065 puts the stop within reach
+  // of a client that holds no control. Marking it true would make authorizeSend
+  // refuse it from the very observers it exists for. It rides the command queue
+  // rather than the lease queue because the lease queue is capacity 1 latest-wins,
+  // where the next renewal would evict a queued stop.
+  stop_hold: {
+    frameType: "stop_hold",
+    direction: "client_to_server",
+    payload: "text",
+    queue: "command",
+    isControlFrame: false,
+    // Session only, for attribution. The server stamps the time and the reason: a
+    // client-supplied cause on a safety path is a forgeable audit.
+    fields: [LEASE_SESSION_FIELD],
   },
   lease_renew: {
     frameType: "lease_renew",
@@ -208,6 +225,10 @@ export const FRAME_TABLE: Record<WsFrameType, FrameSpec> = {
     isControlFrame: false,
     fields: [LEASE_SESSION_FIELD, LEASE_GENERATION_FIELD],
   },
+  // Control frame, while stop_hold above is not — the asymmetry is the point, not an
+  // oversight. An observer may STOP the arm but may not RESUME it: stopping a
+  // brakeless arm needs no authority to be safe, and resuming one is a command in
+  // every sense, so it stays behind the single control holder.
   rearm_confirm: {
     frameType: "rearm_confirm",
     direction: "client_to_server",
@@ -232,7 +253,9 @@ export const FRAME_TABLE: Record<WsFrameType, FrameSpec> = {
   },
 };
 
-// The client-authored lease frames. None of them may carry the expiry field.
+// The lease frames a client authors, for the renewal loop that emits them. The
+// expiry guarantee below does not read this list: it must hold for every
+// client-authored frame, not only the lease ones.
 export const CLIENT_LEASE_FRAMES: readonly WsFrameType[] = ["lease_renew", "rearm_confirm"];
 
 // The three re-arm frames, in the only order a latched lease resumes: server
@@ -261,13 +284,14 @@ export const FORBIDDEN_PARALLEL_STACKS = ["webrtc", "foxglove", "rosbridge", "gr
 
 // bufferedAmount backpressure: above the threshold the camera class is shed and
 // the lease/command/telemetry classes are protected, so a saturated link never
-// delays a dead-man renewal (FR-GUI-042 H2).
+// delays a dead-man renewal (FR-GUI-042 H2) and never sheds the soft stop.
 export const BUFFERED_AMOUNT_THRESHOLD_BYTES = 1 << 20;
 export const BACKPRESSURE_DROP_FRAMES: readonly WsFrameType[] = ["camera"];
 export const BACKPRESSURE_PROTECTED_FRAMES: readonly WsFrameType[] = [
   "lease_renew",
   "lease_grant",
   "lease_reject",
+  "stop_hold",
   "command",
   "telemetry",
 ];
@@ -352,10 +376,13 @@ export function isWsFrameType(value: unknown): value is WsFrameType {
   return typeof value === "string" && (WS_FRAME_TYPES as readonly string[]).includes(value);
 }
 
-// Whether every client-authored lease frame omits the expiry field (structural
-// proof that the browser cannot author an expiry).
-export function clientLeaseFramesOmitExpiry(): boolean {
-  return CLIENT_LEASE_FRAMES.every(
+// Whether every client-authored frame omits the expiry field (structural proof that
+// the browser cannot author an expiry). The set is derived from the frame table's
+// directions rather than listed, so a frame added to the table is inside this
+// guarantee the moment it exists — a list would leave the newest frame, the one
+// nobody has audited yet, outside the check.
+export function clientFramesOmitExpiry(): boolean {
+  return WS_FRAME_TYPES.filter((frame) => FRAME_TABLE[frame].direction === "client_to_server").every(
     (frame) => !FRAME_TABLE[frame].fields.includes(LEASE_EXPIRY_FIELD),
   );
 }

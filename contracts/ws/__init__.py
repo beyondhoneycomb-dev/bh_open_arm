@@ -1,4 +1,4 @@
-"""CTR-WS@v1 — the single import point for the WebSocket envelope contract.
+"""CTR-WS@v2 — the single import point for the WebSocket envelope contract.
 
 The public surface of the single-WebSocket transport (`02b` §5.2 WP-3A-04). It
 consumes `CTR-PRIM@v1` and redefines none of its primitives, and it transports the
@@ -53,7 +53,7 @@ from contracts.ws.schema import (
     authorize_send,
     camera_frame_tag,
     canonical_envelope,
-    client_lease_frames_omit_expiry,
+    client_frames_omit_expiry,
     envelope_json,
     health_leaks,
     public_health,
@@ -102,7 +102,7 @@ __all__ = [
     "camera_frame_tag",
     "canonical_envelope",
     "check_ws_no_redefinition",
-    "client_lease_frames_omit_expiry",
+    "client_frames_omit_expiry",
     "envelope_json",
     "health_leaks",
     "public_health",

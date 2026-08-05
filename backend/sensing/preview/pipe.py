@@ -9,7 +9,7 @@ This is where the `WP-3B-06` disciplines meet in one place (`02b` §6.2):
   warn-and-skip, never a failure of arm connect or motion.
 - Sheds under load rather than queuing. Before encoding, the pipe asks the sink
   for its `bufferedAmount` and drops the camera frame when the WS is over the
-  `CTR-WS@v1` backpressure threshold, so a saturated link never delays a dead-man
+  `CTR-WS@v2` backpressure threshold, so a saturated link never delays a dead-man
   renewal and the wasted encode never happens.
 - OFF means OFF. When preview is disabled — master switch or this camera's switch —
   the pipe returns before it reads, encodes, or transmits, so a disabled preview
@@ -168,7 +168,7 @@ class PreviewPipe:
 class PreviewService:
     """The whole preview surface: a master switch over per-camera pipes.
 
-    A single realtime channel carries every camera's preview (`CTR-WS@v1` D-2);
+    A single realtime channel carries every camera's preview (`CTR-WS@v2` D-2);
     this service holds one pipe per camera and one master switch. `pump()` runs a
     round over the registered pipes. When the master switch is off, `pump()` does
     no read, no encode and no transmit — the whole preview stops (`02b` §6.2

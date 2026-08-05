@@ -14,14 +14,27 @@ import type { PushToHubState, VelocityTorqueState } from "./flags";
 import type { LiveLinkMode } from "./modes";
 import type { Notification } from "./notifications";
 
+// Every field here has an honest reading for "no session", because this bar renders
+// before anything is connected and a badge that claims a healthy state it never
+// observed is the failure this shape exists to prevent.
 export interface RobotBadgeState {
   connected: boolean;
-  mode: LiveLinkMode;
+  // Null until a session reports a mode. IDLE is not that value — IDLE is a state a
+  // connected robot holds, so using it here would claim a connection.
+  mode: LiveLinkMode | null;
   // Active gain/limit profile name, or null when none is loaded (control blocked).
   profileName: string | null;
   // Label of the control holder (session), or null when nobody holds control.
   controlHolder: string | null;
 }
+
+// Shown where a session has reported no value at all.
+export const UNOBSERVED_LABEL = "미상";
+
+// Shown in place of the per-interface CAN badges when the backend has reported no
+// interface status. Zero badges would read as "no problem found" when the truth is
+// "nothing was looked at" (FR-GUI-061).
+export const CAN_UNOBSERVED_LABEL = "관측 없음";
 
 export interface StatusBadgeBarProps {
   robot: RobotBadgeState;
@@ -50,9 +63,12 @@ export function StatusBadgeBar({
         <span className="oa-badge__value">{robot.connected ? "연결됨" : "끊김"}</span>
       </span>
 
-      <span className="oa-badge oa-badge--nominal" data-badge="mode">
+      <span
+        className={`oa-badge ${robot.mode ? "oa-badge--nominal" : "oa-badge--muted"}`}
+        data-badge="mode"
+      >
         <span className="oa-badge__key">모드</span>
-        <span className="oa-badge__value">{robot.mode}</span>
+        <span className="oa-badge__value">{robot.mode ?? UNOBSERVED_LABEL}</span>
       </span>
 
       <span
@@ -71,6 +87,13 @@ export function StatusBadgeBar({
       {canInterfaces.map((iface) => (
         <CanBadge key={iface.iface} status={iface} />
       ))}
+
+      {canInterfaces.length === 0 && (
+        <span className="oa-badge oa-badge--muted" data-badge="can-unobserved">
+          <span className="oa-badge__key">CAN</span>
+          <span className="oa-badge__value">{CAN_UNOBSERVED_LABEL}</span>
+        </span>
+      )}
 
       <VelocityTorqueBadge state={velocityTorque} onToggle={onToggleVelocityTorque} />
       <PushToHubBadge state={pushToHub} />

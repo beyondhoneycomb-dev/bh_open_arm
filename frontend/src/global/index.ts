@@ -1,10 +1,17 @@
-// Public surface of the always-on safety elements (WP-G-03). The shell (WP-G-00)
-// mounts GlobalSafetyBar; screens (WP-G-S01..S13) consume the badges, the
-// preflight gate, the notification center, and the shortcut registry. Everything
-// re-exported here is the boundary other WPs depend on.
+// Public surface of the always-on safety elements (WP-G-03). The shell (WP-G-00) mounts
+// GlobalSafetyBar in its Layout, above the route outlet, so the surface is present on
+// every route; screens (WP-G-S01..S13) consume the badges, the preflight gate, the
+// notification center, and the shortcut registry. Everything re-exported here is the
+// boundary other WPs depend on.
 
 export { GlobalSafetyBar, type GlobalSafetyBarProps } from "./GlobalSafetyBar";
-export { StatusBadgeBar, type RobotBadgeState, type StatusBadgeBarProps } from "./StatusBadgeBar";
+export {
+  StatusBadgeBar,
+  CAN_UNOBSERVED_LABEL,
+  UNOBSERVED_LABEL,
+  type RobotBadgeState,
+  type StatusBadgeBarProps,
+} from "./StatusBadgeBar";
 export { StopControls, type StopControlsProps } from "./StopControls";
 export {
   SOFT_STOP,
@@ -31,8 +38,11 @@ export { VelocityTorqueBadge } from "./VelocityTorqueBadge";
 export { PushToHubBadge, PushToHubConfirm } from "./PushToHubBadge";
 export {
   velocityTorqueIsWarning,
+  velocityTorqueIsUnknown,
   setVelocityTorqueCoupled,
   pushToHubRequiresConfirm,
+  pushToHubIsUnknown,
+  FLAG_VALUE_UNKNOWN_LABEL,
   VELOCITY_TORQUE_OFF_WARNING,
   PUSH_TO_HUB_UPLOAD_WARNING,
   type VelocityTorqueState,
@@ -60,6 +70,8 @@ export {
 export { DummyModeBanner } from "./DummyModeBanner";
 export {
   DEFAULT_SHORTCUTS,
+  RESERVED_ACTION,
+  ReservedShortcutError,
   SHORTCUT_ACTIONS,
   getBinding,
   rebind,

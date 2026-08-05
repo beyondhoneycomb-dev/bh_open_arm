@@ -20,11 +20,24 @@ from registry.contracts.index import ContractStore
 REPO_ROOT = Path(__file__).resolve().parents[2]
 AUTHORITY = REPO_ROOT / "registry" / "contracts" / "contract_index.json"
 
-# The six contracts this barrier freezes, and the order WP-3A-06 appended the five
-# consumers after `CTR-PRIM@v1` (`02b` freeze mechanics: CAM -> CAP -> TEL -> WS -> REC).
 PRIMITIVE = "CTR-PRIM@v1"
+
+# The order WP-3A-06 appended the five consumers after `CTR-PRIM@v1` (`02b` freeze
+# mechanics: CAM -> CAP -> TEL -> WS -> REC). These are the generations that were
+# appended, so this tuple is fixed by the ledger: it is append-only, and a later
+# generation is a new event rather than a rewrite of the one recorded here.
 CONSUMER_ORDER = ("CTR-CAM@v1", "CTR-CAP@v1", "CTR-TEL@v1", "CTR-WS@v1", "CTR-REC@v1")
-ALL_SIX = (PRIMITIVE, *CONSUMER_ORDER)
+
+# The generation of each of the six that is FROZEN *now*. This diverges from
+# CONSUMER_ORDER wherever a contract has been bumped: the replaced generation drops to
+# SUPERSEDED and only the successor carries a live lock, so the authority check and the
+# ledger-order check cannot share one tuple.
+LIVE_CONSUMERS = ("CTR-CAM@v1", "CTR-CAP@v1", "CTR-TEL@v1", "CTR-WS@v2", "CTR-REC@v1")
+ALL_SIX = (PRIMITIVE, *LIVE_CONSUMERS)
+
+# Generations replaced by a later freeze. Asserted SUPERSEDED rather than ignored: a
+# replaced generation left FROZEN would give its frozen glob two contradictory locks.
+SUPERSEDED_GENERATIONS = ("CTR-WS@v1",)
 
 
 def _authority_rows() -> dict[str, dict[str, object]]:
@@ -38,11 +51,18 @@ def _authority_rows() -> dict[str, dict[str, object]]:
 
 
 def test_all_six_contracts_are_frozen_in_the_authority() -> None:
-    """Each of the six contracts is FROZEN with a non-null locked hash."""
+    """The live generation of each of the six is FROZEN with a non-null locked hash."""
     rows = _authority_rows()
     for contract_id in ALL_SIX:
         assert rows[contract_id]["status"] == "FROZEN", f"{contract_id} is not FROZEN"
         assert rows[contract_id]["canonical_hash"], f"{contract_id} has no locked hash"
+
+
+def test_replaced_generations_are_superseded_not_frozen() -> None:
+    """A bumped generation is SUPERSEDED, so exactly one generation per glob is live."""
+    rows = _authority_rows()
+    for contract_id in SUPERSEDED_GENERATIONS:
+        assert rows[contract_id]["status"] == "SUPERSEDED", f"{contract_id} is still live"
 
 
 def test_ledger_chain_is_valid_and_records_the_five_consumers_in_order() -> None:

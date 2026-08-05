@@ -1,9 +1,11 @@
 """The backpressure-policy verifier — the CTR-WS shed rule, exercised on both sides.
 
 `CG-5-05b` rests on one rule: above the `bufferedAmount` threshold the camera class is
-shed and lease/command/telemetry are protected. This module does not restate that rule
+shed and every other class — lease, the soft stop, command, telemetry — is protected.
+The protected set is read from the contract, never listed here, so a frame added to it
+is covered without editing this module. This module does not restate that rule
 — it imports `should_drop_under_backpressure`, the protected set, the drop set and the
-threshold from `CTR-WS@v1` and fires them on synthetic buffer levels, proving the shed
+threshold from `CTR-WS@v2` and fires them on synthetic buffer levels, proving the shed
 actually happens for the camera above threshold and never happens for a protected class
 at any level. Verifying the contract's own function (rather than a copy) is what makes
 the check real: if the transport rule changed, this would move with it.

@@ -1,6 +1,6 @@
 // Synthetic 3A fixtures for the WS lane — the TypeScript analog of
 // `contracts/fixtures`. The GUI never sees real hardware (02d §3): it is verified
-// against deterministic frames shaped by the frozen CTR-WS@v1 envelope and the
+// against deterministic frames shaped by the frozen CTR-WS@v2 envelope and the
 // CTR-ERR@v1 codes. This module also holds the injected test doubles (a fake
 // socket, a fake clock, a synchronous decode port, and a fixture server that
 // applies the frozen server-side send authority) so the lane drives WsClient with

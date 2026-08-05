@@ -24,11 +24,12 @@ def test_exactly_one_realtime_channel_no_parallel_stacks() -> None:
 
 
 def test_frame_set_is_the_single_multiplexed_set() -> None:
-    """The nine frame types are the one set the single WS multiplexes."""
+    """The ten frame types are the one set the single WS multiplexes."""
     assert {frame.value for frame in ws.WsFrameType} == {
         "telemetry",
         "command",
         "camera",
+        "stop_hold",
         "lease_renew",
         "lease_grant",
         "lease_reject",
@@ -51,6 +52,13 @@ def test_lease_outranks_camera_and_command_and_telemetry() -> None:
         for frame in ws.WsFrameType
         if frame.name.startswith(("LEASE", "REARM"))
     )
+    # The soft stop outranks telemetry and camera, and is deliberately NOT on the
+    # lease class: that queue is capacity 1 / LATEST_WINS, so a queued stop would be
+    # evicted by the next renewal, and renewals never stop arriving.
+    stop = ws.FRAME_TABLE[ws.WsFrameType.STOP_HOLD]
+    assert stop.queue.name != ws.FRAME_TABLE[ws.WsFrameType.LEASE_RENEW].queue.name
+    assert int(stop.priority) < int(telemetry)
+    assert stop.queue.bounded_capacity > 1
 
 
 def test_camera_is_dropped_under_backpressure_lease_is_not() -> None:
@@ -96,6 +104,29 @@ def test_observer_send_of_a_control_frame_is_refused() -> None:
     for frame in (ws.WsFrameType.COMMAND, ws.WsFrameType.LEASE_RENEW, ws.WsFrameType.REARM_CONFIRM):
         with pytest.raises(ws.WsError):
             ws.authorize_send(ws.WsRole.OBSERVER, frame)
+
+
+def test_every_role_may_send_the_soft_stop() -> None:
+    """The stop is reachable without command authority (`13` FR-GUI-065, CG-G-03b).
+
+    This is the whole reason `stop_hold` exists as its own frame: `command` is a
+    control frame, so an observer sending a stop through it would be refused by the
+    rule above, and half the acceptance matrix would carry a button that throws.
+    """
+    for role in ws.WsRole:
+        ws.authorize_send(role, ws.WsFrameType.STOP_HOLD)
+    assert ws.FRAME_TABLE[ws.WsFrameType.STOP_HOLD].is_control_frame is False
+
+
+def test_the_soft_stop_is_never_shed_under_backpressure() -> None:
+    """A saturated link drops camera frames and never the stop."""
+    assert ws.WsFrameType.STOP_HOLD in ws.BACKPRESSURE_PROTECTED_FRAMES
+    assert (
+        ws.should_drop_under_backpressure(
+            ws.WsFrameType.STOP_HOLD, ws.BUFFERED_AMOUNT_THRESHOLD_BYTES + 1
+        )
+        is False
+    )
 
 
 def test_operator_may_send_control_frames_observer_may_subscribe() -> None:

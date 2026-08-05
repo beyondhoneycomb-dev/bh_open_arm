@@ -1,6 +1,6 @@
 // The control-authority lease and its anti-replay classification (FR-GUI-092,
 // FR-OPS-091, CG-G-04d). The lease is the WP-2A-02 dead-man canon transported over
-// CTR-WS@v1 — this module TRANSPORTS and RENDERS it, it does not redefine the
+// CTR-WS@v2 — this module TRANSPORTS and RENDERS it, it does not redefine the
 // lease semantics. The server is the authority: expiry is judged server-side
 // (CTR-WS lease.expiry_judge_role = "server") and the server rejects stale/replayed
 // commands. The browser classifies incoming lease frames only so it never RENDERS
@@ -8,7 +8,7 @@
 // badge would let an operator send commands under a lease the server has already
 // invalidated (CG-G-04d negative branch = control takeover).
 //
-// Field mapping to CTR-WS@v1 lease_grant: expiry <- expiry_mono_server (server
+// Field mapping to CTR-WS@v2 lease_grant: expiry <- expiry_mono_server (server
 // owns it), timestamp <- issued_mono_client (client stamps it). FR-GUI-092's lease
 // shape {session_id, lease_generation, expiry, sequence, timestamp} is exactly
 // these five fields.

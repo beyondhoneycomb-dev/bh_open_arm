@@ -39,6 +39,23 @@ const DEFAULT_RENEW_INTERVAL_MS = 250;
 const DEFAULT_RETRY_DELAY_MS = 1000;
 const DEFAULT_PUMP_INTERVAL_MS = 16;
 
+// The one client frame whose loss may go unthrown when there is no socket.
+//
+// Two reasons, and both have to hold — a frame is only silent-tolerant if losing it
+// is already handled AND throwing would land somewhere nobody can catch:
+//   1. Renewal absence IS expiry (`leaseRenewer.ts`). A renewal that never arrives
+//      is the server's signal to expire the lease and hold the arm, so a dropped
+//      renewal reaches the same outcome as a delivered refusal — it fails safe.
+//   2. `LeaseRenewer.tick()` emits it from a `setInterval`. A throw there escapes
+//      into the scheduler with no caller on the stack, once per interval for as
+//      long as the socket is down.
+//
+// Every other client frame was sent because something asked for it, and the asker
+// is owed an answer. `rearm_confirm` is deliberately NOT here: it comes from
+// `confirmRearm()`, an operator action, and a silently dropped resume leaves them
+// pressing a button that does nothing.
+const EXPIRY_COVERED_FRAME: WsFrameType = "lease_renew";
+
 // The receive-side queue classes. Command is client_to_server only, so it is
 // never received; the client holds the three classes it actually consumes.
 const RECEIVE_QUEUE_CLASSES = ["lease", "telemetry", "camera_preview"] as const;
@@ -73,6 +90,28 @@ export interface WsClientStats {
   malformedCount: number;
   errorCount: number;
   socketErrorCount: number;
+  // Frames that reached no socket at all. Counted even when `send` also throws, so
+  // a tolerated drop is still visible; distinct from `backpressureDrops`, which
+  // counts frames shed by the frozen rule while a socket was open.
+  undeliverableCount: number;
+}
+
+// Raised by `send` when a frame could not be handed to a socket because there is
+// none open. This is NOT backpressure: a full buffer still has a transport, and the
+// frozen rule decides whether that frame is queued or shed. Here the frame reached
+// nothing, and the socket retry does not replay it — a caller that needs the frame
+// delivered has to send it again.
+export class WsSendUndeliverableError extends Error {
+  readonly frameType: WsFrameType;
+
+  constructor(frameType: WsFrameType) {
+    super(
+      `frame '${frameType}' was not sent: no open WebSocket. It was not queued and ` +
+        `the socket retry will not replay it; the caller must re-send`,
+    );
+    this.name = "WsSendUndeliverableError";
+    this.frameType = frameType;
+  }
 }
 
 // Derive the same-origin WS URL from the page location: wss when the page is
@@ -130,6 +169,7 @@ export class WsClient {
   private mMalformedCount: number;
   private mErrorCount: number;
   private mSocketErrorCount: number;
+  private mUndeliverableCount: number;
 
   constructor(options: WsClientOptions) {
     this.mUrl = options.url;
@@ -165,6 +205,7 @@ export class WsClient {
     this.mMalformedCount = 0;
     this.mErrorCount = 0;
     this.mSocketErrorCount = 0;
+    this.mUndeliverableCount = 0;
 
     this.mDecoderPort.onDecoded((frame) => this.onDecoded(frame));
   }
@@ -217,15 +258,34 @@ export class WsClient {
       malformedCount: this.mMalformedCount,
       errorCount: this.mErrorCount,
       socketErrorCount: this.mSocketErrorCount,
+      undeliverableCount: this.mUndeliverableCount,
     };
   }
 
-  // Send one frame. The frozen server rule (authorize_send) is mirrored here as
-  // defence in depth: an observer may not send a control frame. The authoritative
-  // rejection is the server's; this refusal keeps the browser from even trying.
+  // Send one frame, or fail loudly. Returning normally means the frame was handed to
+  // an open socket; the two ways it does not are both signalled, never swallowed:
+  //
+  //   - the role may not send this frame -> WsAuthorityError (the frozen
+  //     authorize_send rule, mirrored here as defence in depth; the authoritative
+  //     rejection is still the server's, this just keeps the browser from trying).
+  //   - there is no open socket -> WsSendUndeliverableError, except for
+  //     EXPIRY_COVERED_FRAME, which is counted only. See that constant for why one
+  //     frame is exempt and why nothing else is.
+  //
+  // A silent return on an absent socket is what this used to do, and under CTR-WS@v2
+  // this method is the stop path: `stop_hold` travels through here, so a quiet drop
+  // would let an operator press STOP_HOLD against a closed socket and be told
+  // nothing. NORM-007 already ruled that a stop reaching nothing is worse than no
+  // stop, because it is indistinguishable from one that worked.
   send(frameType: WsFrameType, frame: Record<string, unknown>): void {
     authorizeSend(this.mRole, frameType);
     if (!this.mSocket) {
+      // Counted on both branches: a tolerated drop is still a drop, and stats() is
+      // where this module already reports what it could not do.
+      this.mUndeliverableCount += 1;
+      if (frameType !== EXPIRY_COVERED_FRAME) {
+        throw new WsSendUndeliverableError(frameType);
+      }
       return;
     }
     this.mSocket.send(JSON.stringify(frame));

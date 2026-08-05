@@ -54,7 +54,7 @@ def test_client_renew_frame_has_no_expiry_matching_the_canon_wire_message() -> N
     assert LEASE_EXPIRY_FIELD not in renew
     assert LEASE_EXPIRY_FIELD not in canon_renew
     assert {LEASE_ISSUED_FIELD, "sequence"} <= renew
-    assert ws.client_lease_frames_omit_expiry() is True
+    assert ws.client_frames_omit_expiry() is True
 
 
 def test_expiry_field_appears_only_on_server_authored_frames() -> None:

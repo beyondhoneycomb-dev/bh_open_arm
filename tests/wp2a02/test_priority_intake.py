@@ -2,7 +2,7 @@
 
 `02b` §1.0 requires the lease renewal stream to be the highest-priority class so a
 flood of camera frames cannot delay it (the head-of-line hazard of the single WS).
-The production mitigation is the WS transport frozen as `CTR-WS@v1` (`WP-3A-04`); this
+The production mitigation is the WS transport frozen as `CTR-WS@v2` (`WP-3A-04`); this
 exercises the deadman-side intake that models the invariant: renewals drain ahead of
 bulk and survive a bulk flood that sheds only bulk.
 """

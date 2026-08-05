@@ -2,7 +2,7 @@
 
 Acceptance ⑧ requires the lease renewal stream not to be held up by the camera-frame
 stream (`02b` §1.0: the lease "must be the highest-priority class queue"). The real
-head-of-line mitigation lives in the WS transport frozen as `CTR-WS@v1` (`WP-3A-04`);
+head-of-line mitigation lives in the WS transport frozen as `CTR-WS@v2` (`WP-3A-04`);
 Wave 2A has no WS yet, so this is the deadman-side intake that models the invariant
 the transport must preserve — a class-separated bounded queue where the renewal
 class is always drained ahead of the bulk (camera) class and is never dropped under

@@ -3,7 +3,7 @@
 `02b` §6.2 acceptance ④ ("별도 WebRTC/RTSP/Foxglove 스트림 0개") and the
 `FAIL_BLOCKING` boundary ("프리뷰가 캡처를 블로킹"). These are proved by the shape of
 the code, not by runtime behaviour: the package opens none of the parallel
-realtime stacks `CTR-WS@v1` forbids, its camera surface can only be read latest-wins
+realtime stacks `CTR-WS@v2` forbids, its camera surface can only be read latest-wins
 and non-blocking, and its egress surface can only send binary — never drive the robot.
 """
 

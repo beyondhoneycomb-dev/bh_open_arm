@@ -1,4 +1,4 @@
-"""The reverify hook for CTR-WS@v1: the body agrees with CTR-PRIM, the frozen file with the source.
+"""The reverify hook for CTR-WS@v2: the body agrees with CTR-PRIM, the frozen file with the source.
 
 The frozen body `contracts/ws/envelope.schema.json` (`CONTRACT_FROZEN`, frozen by
 `WP-3A-06`) is a projection of `schema.py` via `canonical_envelope()`. Two things can
@@ -40,12 +40,12 @@ from contracts.ws.schema import (
     assert_expiry_owner_is_server,
     camera_frame_tag,
     canonical_envelope,
-    client_lease_frames_omit_expiry,
+    client_frames_omit_expiry,
     envelope_json,
     slot_from_camera_frame_tag,
 )
 
-# The frozen body's path, alongside this module. Absent while CTR-WS@v1 is DRAFT
+# The frozen body's path, alongside this module. Absent while CTR-WS@v2 is DRAFT
 # (WP-3A-06 writes it here from `envelope_json()` and freezes it); the on-disk drift
 # check activates once the file exists.
 ENVELOPE_PATH = Path(__file__).parent / "envelope.schema.json"
@@ -141,8 +141,8 @@ def reverify_body(document: dict[str, Any]) -> ReverifyReport:
     except Exception as error:  # noqa: BLE001 — a pin failure is a check failure, reported not raised
         mismatches.append(f"expiry-owner pin rejected the server role: {error}")
 
-    if not lease["client_frame_carries_no_expiry"] or not client_lease_frames_omit_expiry():
-        mismatches.append("a client-authored lease frame carries the expiry field")
+    if not lease["client_frame_carries_no_expiry"] or not client_frames_omit_expiry():
+        mismatches.append("a client-authored frame carries the expiry field")
 
     if not _camera_tag_round_trips():
         mismatches.append("the camera frame tag does not round-trip through the CTR-PRIM@v1 join")

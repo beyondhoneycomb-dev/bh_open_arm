@@ -1,5 +1,5 @@
 // The consume-the-frozen-contract proof. This reads the frozen
-// `contracts/ws/envelope.schema.json` (CTR-WS@v1) and `contracts/prim/schema.json`
+// `contracts/ws/envelope.schema.json` (CTR-WS@v2) and `contracts/prim/schema.json`
 // (CTR-PRIM@v1) from disk and asserts the browser mirror in envelope.ts equals
 // them field for field. A CTR-WS or CTR-PRIM bump changes those bytes and fails
 // this test — the browser cannot silently drift from the frozen envelope (CR-2).
@@ -15,7 +15,7 @@ import {
   BACKPRESSURE_DROP_FRAMES,
   BACKPRESSURE_PROTECTED_FRAMES,
   BUFFERED_AMOUNT_THRESHOLD_BYTES,
-  clientLeaseFramesOmitExpiry,
+  clientFramesOmitExpiry,
   CONTROL_HOLDER_ROLE,
   EXPIRY_JUDGE_ROLE,
   FORBIDDEN_PARALLEL_STACKS,
@@ -65,10 +65,10 @@ const roles = obj(ws.roles);
 const health = obj(ws.health);
 const transport = obj(ws.transport);
 
-describe("CTR-WS@v1 mirror equals the frozen envelope", () => {
-  it("is CTR-WS@v1 at schema version 1", () => {
-    expect(ws.contract).toBe("CTR-WS@v1");
-    expect(ws.schema_version).toBe(1);
+describe("CTR-WS@v2 mirror equals the frozen envelope", () => {
+  it("is CTR-WS@v2 at schema version 2", () => {
+    expect(ws.contract).toBe("CTR-WS@v2");
+    expect(ws.schema_version).toBe(2);
   });
 
   it("has exactly the frozen frame-type set", () => {
@@ -103,9 +103,20 @@ describe("CTR-WS@v1 mirror equals the frozen envelope", () => {
     expect(obj(lease.rearm_handshake).frames).toEqual([...REARM_HANDSHAKE_FRAMES]);
   });
 
-  it("keeps the client lease frames free of an expiry field (structural acceptance)", () => {
+  it("keeps every client-authored frame free of an expiry field (structural acceptance)", () => {
     expect(lease.client_frame_carries_no_expiry).toBe(true);
-    expect(clientLeaseFramesOmitExpiry()).toBe(true);
+    expect(clientFramesOmitExpiry()).toBe(true);
+  });
+
+  // The soft stop is the one frame that changes robot state while carrying no
+  // command authority. Both halves are asserted against the frozen file, because
+  // either one alone would let the stop drift out of an observer's reach.
+  it("carries the soft stop as a client-authored frame that is not a control frame", () => {
+    const stopHold = obj(frameTypes.stop_hold);
+    expect(stopHold.direction).toBe("client_to_server");
+    expect(stopHold.control_frame).toBe(false);
+    expect(obj(queues.bindings).stop_hold).toBe("command");
+    expect(backpressure.protected_frames).toContain("stop_hold");
   });
 
   it("matches the priority classes, lease-first ordering and queue bindings", () => {

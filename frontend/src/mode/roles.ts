@@ -1,4 +1,4 @@
-// The three control-authority roles, from CTR-WS@v1 roles.values (FR-OPS-078).
+// The three control-authority roles, from CTR-WS@v2 roles.values (FR-OPS-078).
 // observer reads only and may send no control frame (CTR-WS
 // observer_may_send_control_frame = false); operator is the single control holder
 // (CTR-WS control_holder_role = "operator"); admin additionally may force-release a

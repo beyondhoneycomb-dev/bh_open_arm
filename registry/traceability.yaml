@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/v1/plan/00-실행계획-개요.md@ec10b70
+spine_ref: docs/v1/plan/00-실행계획-개요.md@b222e74
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -2100,7 +2100,7 @@ entries:
     mode: EXCLUSIVE
   contract:
     consumes:
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-3B-06a
@@ -2187,29 +2187,75 @@ entries:
   - id: ART-EVIDENCE-3B15D
     kind: report
     path: registry/build/evidence/CG-3B-15d/
-  owns: []
+  - id: ART-EVIDENCE-3B15E
+    kind: report
+    path: registry/build/evidence/CG-3B-15e/
+  - id: ART-EVIDENCE-3B15F
+    kind: report
+    path: registry/build/evidence/CG-3B-15f/
+  - id: ART-EVIDENCE-3B15G
+    kind: report
+    path: registry/build/evidence/CG-3B-15g/
+  owns:
+  - glob: backend/ws/**
+    mode: EXCLUSIVE
+  - glob: tests/wp3b15/**
+    mode: EXCLUSIVE
   contract:
     consumes:
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-3B-15a
   - CG-3B-15b
   - CG-3B-15c
   - CG-3B-15d
+  - CG-3B-15e
+  - CG-3B-15f
+  - CG-3B-15g
   negative_branch:
   - gate: CG-3B-15a
     'on': FAIL
-    action: 고정 타일 수 하드코딩 → FAIL_BLOCKING(WP-3A-01 계약 위반)
+    action: '고정 타일 수 하드코딩 → FAIL_BLOCKING(WP-3A-01 계약 위반). ⑤실패 → FAIL_BLOCKING(D-2 위반 — 두 번째 실시간 경로는 정지
+      경로도 두 곳으로 만든다). ⑥실패 → FAIL_BLOCKING, 양방향 모두: 관찰자의 command가 통과하면 제어권 탈취이고, 관찰자의 stop_hold가 막히면 FR-GUI-065가
+      서버측에서 성립하지 않는다 — 후자는 화면에 버튼이 보이는 채로 실패하므로 정지가 있다고 믿게 만든다. ⑦실패 → FAIL_BLOCKING(U-4 설계 무효 — 팔이 혼자
+      다시 움직인다)'
   - gate: CG-3B-15b
     'on': FAIL
-    action: 고정 타일 수 하드코딩 → FAIL_BLOCKING(WP-3A-01 계약 위반)
+    action: '고정 타일 수 하드코딩 → FAIL_BLOCKING(WP-3A-01 계약 위반). ⑤실패 → FAIL_BLOCKING(D-2 위반 — 두 번째 실시간 경로는 정지
+      경로도 두 곳으로 만든다). ⑥실패 → FAIL_BLOCKING, 양방향 모두: 관찰자의 command가 통과하면 제어권 탈취이고, 관찰자의 stop_hold가 막히면 FR-GUI-065가
+      서버측에서 성립하지 않는다 — 후자는 화면에 버튼이 보이는 채로 실패하므로 정지가 있다고 믿게 만든다. ⑦실패 → FAIL_BLOCKING(U-4 설계 무효 — 팔이 혼자
+      다시 움직인다)'
   - gate: CG-3B-15c
     'on': FAIL
-    action: 고정 타일 수 하드코딩 → FAIL_BLOCKING(WP-3A-01 계약 위반)
+    action: '고정 타일 수 하드코딩 → FAIL_BLOCKING(WP-3A-01 계약 위반). ⑤실패 → FAIL_BLOCKING(D-2 위반 — 두 번째 실시간 경로는 정지
+      경로도 두 곳으로 만든다). ⑥실패 → FAIL_BLOCKING, 양방향 모두: 관찰자의 command가 통과하면 제어권 탈취이고, 관찰자의 stop_hold가 막히면 FR-GUI-065가
+      서버측에서 성립하지 않는다 — 후자는 화면에 버튼이 보이는 채로 실패하므로 정지가 있다고 믿게 만든다. ⑦실패 → FAIL_BLOCKING(U-4 설계 무효 — 팔이 혼자
+      다시 움직인다)'
   - gate: CG-3B-15d
     'on': FAIL
-    action: 고정 타일 수 하드코딩 → FAIL_BLOCKING(WP-3A-01 계약 위반)
+    action: '고정 타일 수 하드코딩 → FAIL_BLOCKING(WP-3A-01 계약 위반). ⑤실패 → FAIL_BLOCKING(D-2 위반 — 두 번째 실시간 경로는 정지
+      경로도 두 곳으로 만든다). ⑥실패 → FAIL_BLOCKING, 양방향 모두: 관찰자의 command가 통과하면 제어권 탈취이고, 관찰자의 stop_hold가 막히면 FR-GUI-065가
+      서버측에서 성립하지 않는다 — 후자는 화면에 버튼이 보이는 채로 실패하므로 정지가 있다고 믿게 만든다. ⑦실패 → FAIL_BLOCKING(U-4 설계 무효 — 팔이 혼자
+      다시 움직인다)'
+  - gate: CG-3B-15e
+    'on': FAIL
+    action: '고정 타일 수 하드코딩 → FAIL_BLOCKING(WP-3A-01 계약 위반). ⑤실패 → FAIL_BLOCKING(D-2 위반 — 두 번째 실시간 경로는 정지
+      경로도 두 곳으로 만든다). ⑥실패 → FAIL_BLOCKING, 양방향 모두: 관찰자의 command가 통과하면 제어권 탈취이고, 관찰자의 stop_hold가 막히면 FR-GUI-065가
+      서버측에서 성립하지 않는다 — 후자는 화면에 버튼이 보이는 채로 실패하므로 정지가 있다고 믿게 만든다. ⑦실패 → FAIL_BLOCKING(U-4 설계 무효 — 팔이 혼자
+      다시 움직인다)'
+  - gate: CG-3B-15f
+    'on': FAIL
+    action: '고정 타일 수 하드코딩 → FAIL_BLOCKING(WP-3A-01 계약 위반). ⑤실패 → FAIL_BLOCKING(D-2 위반 — 두 번째 실시간 경로는 정지
+      경로도 두 곳으로 만든다). ⑥실패 → FAIL_BLOCKING, 양방향 모두: 관찰자의 command가 통과하면 제어권 탈취이고, 관찰자의 stop_hold가 막히면 FR-GUI-065가
+      서버측에서 성립하지 않는다 — 후자는 화면에 버튼이 보이는 채로 실패하므로 정지가 있다고 믿게 만든다. ⑦실패 → FAIL_BLOCKING(U-4 설계 무효 — 팔이 혼자
+      다시 움직인다)'
+  - gate: CG-3B-15g
+    'on': FAIL
+    action: '고정 타일 수 하드코딩 → FAIL_BLOCKING(WP-3A-01 계약 위반). ⑤실패 → FAIL_BLOCKING(D-2 위반 — 두 번째 실시간 경로는 정지
+      경로도 두 곳으로 만든다). ⑥실패 → FAIL_BLOCKING, 양방향 모두: 관찰자의 command가 통과하면 제어권 탈취이고, 관찰자의 stop_hold가 막히면 FR-GUI-065가
+      서버측에서 성립하지 않는다 — 후자는 화면에 버튼이 보이는 채로 실패하므로 정지가 있다고 믿게 만든다. ⑦실패 → FAIL_BLOCKING(U-4 설계 무효 — 팔이 혼자
+      다시 움직인다)'
   downstream: []
   terminal: true
   stale_on:
@@ -2783,7 +2829,7 @@ entries:
     consumes:
     - CTR-PRIM@v1
     produces:
-    - CTR-WS@v1
+    - CTR-WS@v2
   gate:
   - PG-STOP-001
   - CG-3A-04a
@@ -4695,7 +4741,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: FR-CON-062
   spec_ref: 02#3.4
   priority: M
@@ -4911,7 +4957,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: FR-CON-063
   spec_ref: 02#3.4
   priority: M
@@ -4933,7 +4979,7 @@ entries:
     wp_candidates:
     - WP-1-02
     - WP-G-S02
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: FR-CON-064
   spec_ref: 02#3.4
   priority: M
@@ -5454,7 +5500,7 @@ entries:
   owns: []
   contract:
     consumes:
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-3D-08a
@@ -5647,7 +5693,7 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
-  justification: 하류 GUI 창구 WP-3D-08·WP-G-S08(S-08 데이터셋 화면)은 뷰어 산출을 CTR-WS@v1 엔벨로프 문자열 키 구독과 meta/info.json·parquet·mp4
+  justification: 하류 GUI 창구 WP-3D-08·WP-G-S08(S-08 데이터셋 화면)은 뷰어 산출을 CTR-WS@v2 엔벨로프 문자열 키 구독과 meta/info.json·parquet·mp4
     파일 직독으로 소비하므로 backend.dataset.viewer를 정적 import하지 않으며(타임라인 스크럽·채널 플롯·라벨은 정적 import 그래프에 안 보임), 뷰어
     자신도 CTR-REC@v1 데이터셋을 parquet/mp4 직독으로만 읽고 채널을 info.json의 names 문자열로 조회하여 contracts.recorder를 정적 import하지
     않는다(CTR-PRIM@v1 카메라 슬롯·이미지 키 원시타입만 참조로 소비, 06 §5.6)
@@ -6547,7 +6593,7 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
-  justification: 하류 GUI WP-G-S08(S-08 데이터셋 창구)는 계보 양방향 조회를 CTR-WS@v1 엔벨로프의 문자열 키로 구독하고 계보 레코드를 데이터로 소비하므로
+  justification: 하류 GUI WP-G-S08(S-08 데이터셋 창구)는 계보 양방향 조회를 CTR-WS@v2 엔벨로프의 문자열 키로 구독하고 계보 레코드를 데이터로 소비하므로
     backend.dataset.lineage를 정적 import하지 않는다 — 계보는 상류 WP-3B-11 레코더의 stamped repo_id 규약과 CTR-REC@v1 채널
     계약만 코드로 재사용(재구현 아님)하고, 계보를 읽는 화면은 WS 조인이라 정적 import 그래프에 미가시(06 §5.6)
   planned: true
@@ -6675,7 +6721,7 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
-  justification: 하류 GUI WP-G-S08(S-08 데이터셋 창구)는 import 스키마 차이 표시·병합 거부·import 유효성 판정을 CTR-WS@v1 엔벨로프의
+  justification: 하류 GUI WP-G-S08(S-08 데이터셋 창구)는 import 스키마 차이 표시·병합 거부·import 유효성 판정을 CTR-WS@v2 엔벨로프의
     문자열 키로 구독하고 그 산출을 데이터로 소비하므로 backend.dataset.import_export를 정적 import하지 않으며, 레거시 컨버터(openarm_dataset)는
     격리된 별도 환경에서만 실행되어 네이티브 런타임에 아예 import되지 않고(FR-DAT-040), 이 밴드는 상류 CTR-REC@v1 채널 계약만 코드로 재사용(재구현 아님)한다(06
     §5.6)
@@ -6970,7 +7016,7 @@ entries:
   justification: 상류 WP-3B-11 레코더의 산출물을 소비한다 — stamped repo_id는 저널로, 패킹 data parquet·meta/episodes·info.json은
     파일 직독·데이터 조인으로 읽으며 backend.recorder.embed 쓰기 API를 정적 import하지 않는다(재개는 기존 stamped id를 그대로 재사용하고 stamp_repo_id()를
     재호출하지 않음 — 정적 스캔·런타임 스파이로 검증). WP-3B-12 품질 밴드(푸터 없는 parquet 검출·격리·PENDING_JUDGMENT 라벨)는 재구현이 아니라 정적
-    import로 재사용한다. 하류 GUI WP-G-S07(S-07 수집 창구)는 복구 저장/폐기 선택·저널 재개 상태를 CTR-WS@v1 엔벨로프의 문자열 키로 구독하므로 backend.crash_recovery를
+    import로 재사용한다. 하류 GUI WP-G-S07(S-07 수집 창구)는 복구 저장/폐기 선택·저널 재개 상태를 CTR-WS@v2 엔벨로프의 문자열 키로 구독하므로 backend.crash_recovery를
     정적 import하지 않는다 — 데이터·WS 조인 경계는 import 그래프에 미가시(06 §5.6)
   planned: true
   provenance:
@@ -7117,7 +7163,7 @@ entries:
   contract:
     consumes:
     - CTR-OWN@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-00a
@@ -7228,7 +7274,7 @@ entries:
   contract:
     consumes:
     - CTR-OWN@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-00a
@@ -7321,7 +7367,7 @@ entries:
   contract:
     consumes:
     - CTR-UNIT@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-02a
@@ -7465,7 +7511,7 @@ entries:
   contract:
     consumes:
     - CTR-OWN@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-00a
@@ -7872,7 +7918,7 @@ entries:
   contract:
     consumes:
     - CTR-UNIT@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-02a
@@ -8133,7 +8179,7 @@ entries:
   contract:
     consumes:
     - CTR-UNIT@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-02a
@@ -8646,7 +8692,7 @@ entries:
   contract:
     consumes:
     - CTR-UNIT@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-02a
@@ -9011,7 +9057,7 @@ entries:
     consumes:
     - CTR-ACT@v1
     - CTR-ERR@v2
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-01a
@@ -9187,7 +9233,7 @@ entries:
     consumes:
     - CTR-ACT@v1
     - CTR-ERR@v2
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-01a
@@ -9282,7 +9328,7 @@ entries:
   contract:
     consumes:
     - CTR-ERR@v2
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-03a
@@ -9345,7 +9391,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: FR-GUI-061
   spec_ref: 13#3.5
   priority: M
@@ -9382,7 +9428,7 @@ entries:
   contract:
     consumes:
     - CTR-ERR@v2
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-03a
@@ -9481,7 +9527,7 @@ entries:
   contract:
     consumes:
     - CTR-ERR@v2
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-03a
@@ -9580,7 +9626,7 @@ entries:
   contract:
     consumes:
     - CTR-ERR@v2
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-03a
@@ -9643,7 +9689,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: FR-GUI-064
   spec_ref: 13#3.5
   priority: M
@@ -9680,7 +9726,7 @@ entries:
   contract:
     consumes:
     - CTR-ERR@v2
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-03a
@@ -9779,7 +9825,7 @@ entries:
   contract:
     consumes:
     - CTR-ERR@v2
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-03a
@@ -9842,7 +9888,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: FR-GUI-066
   spec_ref: 13#3.5
   priority: M
@@ -9879,7 +9925,7 @@ entries:
   contract:
     consumes:
     - CTR-ERR@v2
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-03a
@@ -9978,7 +10024,7 @@ entries:
   contract:
     consumes:
     - CTR-ERR@v2
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-03a
@@ -10041,7 +10087,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: FR-GUI-068
   spec_ref: 13#3.5
   priority: M
@@ -10078,7 +10124,7 @@ entries:
   contract:
     consumes:
     - CTR-ERR@v2
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-03a
@@ -10177,7 +10223,7 @@ entries:
   contract:
     consumes:
     - CTR-ERR@v2
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-03a
@@ -10276,7 +10322,7 @@ entries:
   contract:
     consumes:
     - CTR-ERR@v2
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-03a
@@ -10375,7 +10421,7 @@ entries:
   contract:
     consumes:
     - CTR-ERR@v2
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-03a
@@ -10474,7 +10520,7 @@ entries:
   contract:
     consumes:
     - CTR-ERR@v2
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-03a
@@ -10573,7 +10619,7 @@ entries:
   contract:
     consumes:
     - CTR-ERR@v2
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-03a
@@ -10672,7 +10718,7 @@ entries:
   contract:
     consumes:
     - CTR-ERR@v2
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-03a
@@ -10771,7 +10817,7 @@ entries:
   contract:
     consumes:
     - CTR-GW@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-04a
@@ -10862,7 +10908,7 @@ entries:
   contract:
     consumes:
     - CTR-GW@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-04a
@@ -10953,7 +10999,7 @@ entries:
   contract:
     consumes:
     - CTR-GW@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-04a
@@ -11044,7 +11090,7 @@ entries:
   contract:
     consumes:
     - CTR-GW@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-04a
@@ -11135,7 +11181,7 @@ entries:
   contract:
     consumes:
     - CTR-GW@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-04a
@@ -11226,7 +11272,7 @@ entries:
   contract:
     consumes:
     - CTR-GW@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-04a
@@ -11317,7 +11363,7 @@ entries:
   contract:
     consumes:
     - CTR-GW@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-04a
@@ -11408,7 +11454,7 @@ entries:
   contract:
     consumes:
     - CTR-GW@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-04a
@@ -11499,7 +11545,7 @@ entries:
   contract:
     consumes:
     - CTR-GW@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-04a
@@ -11590,7 +11636,7 @@ entries:
   contract:
     consumes:
     - CTR-GW@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-04a
@@ -11681,7 +11727,7 @@ entries:
   contract:
     consumes:
     - CTR-GW@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-04a
@@ -11843,7 +11889,7 @@ entries:
   owns: []
   contract:
     consumes:
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-4C-G1a
@@ -12553,7 +12599,7 @@ entries:
     wp_candidates:
     - WP-2C-07
     - WP-G-S12
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: FR-GUI-112
   spec_ref: 13#3.8
   priority: M
@@ -12951,7 +12997,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: FR-GUI-119
   spec_ref: 13#3.8.1
   priority: M
@@ -13015,7 +13061,7 @@ entries:
   owns: []
   contract:
     consumes:
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-4A-G1a
@@ -13078,7 +13124,7 @@ entries:
   owns: []
   contract:
     consumes:
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-4A-G1a
@@ -13141,7 +13187,7 @@ entries:
   owns: []
   contract:
     consumes:
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-4A-G1a
@@ -13204,7 +13250,7 @@ entries:
   owns: []
   contract:
     consumes:
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-4A-G1a
@@ -13288,7 +13334,7 @@ entries:
   owns: []
   contract:
     consumes:
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-4A-G1a
@@ -13351,7 +13397,7 @@ entries:
   owns: []
   contract:
     consumes:
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-4A-G1a
@@ -17608,7 +17654,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: FR-MAN-036
   spec_ref: 04#3.4
   priority: M
@@ -18050,7 +18096,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: FR-MAN-048
   spec_ref: 04#3.6
   priority: M
@@ -20889,7 +20935,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: FR-MOT-032
   spec_ref: 03#3.5
   priority: M
@@ -30729,7 +30775,7 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
-  justification: 하류 GUI WP-G-S07(S-07 수집 창구)는 품질 리포트·에피소드 라벨·저장소 상태를 CTR-WS@v1 엔벨로프의 문자열 키로 구독하고 에피소드
+  justification: 하류 GUI WP-G-S07(S-07 수집 창구)는 품질 리포트·에피소드 라벨·저장소 상태를 CTR-WS@v2 엔벨로프의 문자열 키로 구독하고 에피소드
     사이드카 JSON을 데이터로 직독하므로 backend.recorder.quality를 정적 import하지 않으며, 상류 WP-3B-11 레코더도 프레임 버퍼·parquet 산출물로만
     연결되어 import 경계를 만들지 않는다(정적 그래프 미가시, 06 §5.6)
   planned: true
@@ -30967,7 +31013,7 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
-  justification: 하류 GUI WP-G-S07(S-07 수집 창구)는 품질 리포트·에피소드 라벨·저장소 상태를 CTR-WS@v1 엔벨로프의 문자열 키로 구독하고 에피소드
+  justification: 하류 GUI WP-G-S07(S-07 수집 창구)는 품질 리포트·에피소드 라벨·저장소 상태를 CTR-WS@v2 엔벨로프의 문자열 키로 구독하고 에피소드
     사이드카 JSON을 데이터로 직독하므로 backend.recorder.quality를 정적 import하지 않으며, 상류 WP-3B-11 레코더도 프레임 버퍼·parquet 산출물로만
     연결되어 import 경계를 만들지 않는다(정적 그래프 미가시, 06 §5.6)
   planned: true
@@ -31525,7 +31571,7 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
-  justification: 하류 GUI WP-G-S08(S-08 데이터셋 창구)는 계보 양방향 조회를 CTR-WS@v1 엔벨로프의 문자열 키로 구독하고 계보 레코드를 데이터로 소비하므로
+  justification: 하류 GUI WP-G-S08(S-08 데이터셋 창구)는 계보 양방향 조회를 CTR-WS@v2 엔벨로프의 문자열 키로 구독하고 계보 레코드를 데이터로 소비하므로
     backend.dataset.lineage를 정적 import하지 않는다 — 계보는 상류 WP-3B-11 레코더의 stamped repo_id 규약과 CTR-REC@v1 채널
     계약만 코드로 재사용(재구현 아님)하고, 계보를 읽는 화면은 WS 조인이라 정적 import 그래프에 미가시(06 §5.6)
   planned: true
@@ -33993,7 +34039,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: FR-SAF-021
   spec_ref: 12#3.3
   priority: M
@@ -34288,7 +34334,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: FR-SAF-032
   spec_ref: 12#3.4
   priority: M
@@ -34788,7 +34834,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: FR-SAF-046
   spec_ref: 12#3.6
   priority: M
@@ -35538,7 +35584,7 @@ entries:
   - WP-0B-01
   - WP-1-01
   stale_on: []
-  env_hash: sha256:a344450f00a67aa04110c465f4ffb2347d0374f5f64be2305328ddfcd9e99fbc
+  env_hash: sha256:c1aa138b290a3ad693eee51e0651ec6aeb618b650329e1e87ef9a2a07c1ba20a
   workflow: SHAPE-CF
   exec_class: AI-offline
   justification: 하류 소비자(WP-0B-01·WP-1-01)는 CTR-OWN@v1 소유 레지스트리를 데이터로 소비한다(소유 규율에 종속) — ownership/ 파이썬을
@@ -35573,7 +35619,7 @@ entries:
     - WP-1-05
     - WP-G-S02
     - WP-N1-02
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: FR-SIM-001
   spec_ref: 09#3.1
   priority: M
@@ -38347,7 +38393,7 @@ entries:
   contract:
     consumes:
     - CTR-UNIT@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-02a
@@ -42962,7 +43008,7 @@ entries:
   downstream:
   - WP-1-02
   stale_on: []
-  env_hash: sha256:a344450f00a67aa04110c465f4ffb2347d0374f5f64be2305328ddfcd9e99fbc
+  env_hash: sha256:c1aa138b290a3ad693eee51e0651ec6aeb618b650329e1e87ef9a2a07c1ba20a
   workflow: SHAPE-CF
   exec_class: AI-offline
   planned: true
@@ -43872,7 +43918,7 @@ entries:
   - WP-OPS-06
   stale_on:
   - CTR-UNIT:MAJOR_BUMP
-  env_hash: sha256:a344450f00a67aa04110c465f4ffb2347d0374f5f64be2305328ddfcd9e99fbc
+  env_hash: sha256:c1aa138b290a3ad693eee51e0651ec6aeb618b650329e1e87ef9a2a07c1ba20a
   workflow: SHAPE-CF
   exec_class: AI-offline
   planned: true
@@ -44044,7 +44090,7 @@ entries:
   - WP-0C-02
   - WP-0C-09
   stale_on: []
-  env_hash: sha256:a344450f00a67aa04110c465f4ffb2347d0374f5f64be2305328ddfcd9e99fbc
+  env_hash: sha256:c1aa138b290a3ad693eee51e0651ec6aeb618b650329e1e87ef9a2a07c1ba20a
   workflow: SHAPE-CF
   exec_class: AI-offline
   planned: true
@@ -44548,7 +44594,7 @@ entries:
   stale_on:
   - CTR-ACT:MAJOR_BUMP
   - CTR-UNIT:MAJOR_BUMP
-  env_hash: sha256:a344450f00a67aa04110c465f4ffb2347d0374f5f64be2305328ddfcd9e99fbc
+  env_hash: sha256:c1aa138b290a3ad693eee51e0651ec6aeb618b650329e1e87ef9a2a07c1ba20a
   workflow: SHAPE-CF
   exec_class: AI-offline
   justification: 도출된 하류 에지 WP-0A-02는 정적 import가 아니라 계약 조인이다 — 메일박스 타입(TargetMailbox/TimestampedTarget
@@ -44647,7 +44693,7 @@ entries:
   stale_on:
   - CTR-ACT:MAJOR_BUMP
   - CTR-UNIT:MAJOR_BUMP
-  env_hash: sha256:a344450f00a67aa04110c465f4ffb2347d0374f5f64be2305328ddfcd9e99fbc
+  env_hash: sha256:c1aa138b290a3ad693eee51e0651ec6aeb618b650329e1e87ef9a2a07c1ba20a
   workflow: SHAPE-CF
   exec_class: AI-offline
   justification: 도출된 하류 에지 WP-0A-02는 정적 import가 아니라 계약 조인이다 — 메일박스 타입(TargetMailbox/TimestampedTarget
@@ -45641,7 +45687,7 @@ entries:
   justification: 하류 에지 WP-3B-09·WP-3C-04·WP-3C-05·WP-G-S05는 정적 import가 아니라 계약 조인이다 — WP-3B-09(클러치·스케일·스무더·정렬)는
     VR 소스를 backend.teleop.vr_udp import가 아니라 동결된 CTR-TEL@v1 포즈 표본(TeleopSample·TeleopValidity)과 월드프레임
     포즈 값(numpy 배열)으로 소비하고 구체 UDP 소스는 루프/플러그인 조립 지점에서 데이터로 주입되므로 backend.teleop.clutch가 backend.teleop.vr_udp를
-    import하지 않는다. WP-G-S05는 CTR-WS@v1 엔벨로프 문자열 키 구독이고 WP-3C-04/WP-3C-05는 사람보조 실기 실행이라 코드 에지가 없다(정적 import
+    import하지 않는다. WP-G-S05는 CTR-WS@v2 엔벨로프 문자열 키 구독이고 WP-3C-04/WP-3C-05는 사람보조 실기 실행이라 코드 에지가 없다(정적 import
     그래프 미가시, 06 §5.6)
   planned: true
   provenance:
@@ -49775,7 +49821,7 @@ entries:
   downstream: []
   terminal: true
   stale_on: []
-  env_hash: sha256:a344450f00a67aa04110c465f4ffb2347d0374f5f64be2305328ddfcd9e99fbc
+  env_hash: sha256:c1aa138b290a3ad693eee51e0651ec6aeb618b650329e1e87ef9a2a07c1ba20a
   workflow: SHAPE-IM
   exec_class: AI-offline
   planned: true
@@ -49917,7 +49963,7 @@ entries:
   - WP-OPS-06
   stale_on:
   - CTR-UNIT:MAJOR_BUMP
-  env_hash: sha256:a344450f00a67aa04110c465f4ffb2347d0374f5f64be2305328ddfcd9e99fbc
+  env_hash: sha256:c1aa138b290a3ad693eee51e0651ec6aeb618b650329e1e87ef9a2a07c1ba20a
   workflow: SHAPE-CF
   exec_class: AI-offline
   planned: true
@@ -50981,7 +51027,7 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
-  justification: 하류 GUI 창구 WP-3D-08·WP-G-S08(S-08 데이터셋 화면)은 뷰어 산출을 CTR-WS@v1 엔벨로프 문자열 키 구독과 meta/info.json·parquet·mp4
+  justification: 하류 GUI 창구 WP-3D-08·WP-G-S08(S-08 데이터셋 화면)은 뷰어 산출을 CTR-WS@v2 엔벨로프 문자열 키 구독과 meta/info.json·parquet·mp4
     파일 직독으로 소비하므로 backend.dataset.viewer를 정적 import하지 않으며(타임라인 스크럽·채널 플롯·라벨은 정적 import 그래프에 안 보임), 뷰어
     자신도 CTR-REC@v1 데이터셋을 parquet/mp4 직독으로만 읽고 채널을 info.json의 names 문자열로 조회하여 contracts.recorder를 정적 import하지
     않는다(CTR-PRIM@v1 카메라 슬롯·이미지 키 원시타입만 참조로 소비, 06 §5.6)
@@ -51419,7 +51465,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: NFR-GUI-005
   spec_ref: 13#3.9
   priority: M
@@ -51443,7 +51489,7 @@ entries:
     - WP-2A-06
     - WP-5-05
     - WP-N1-02
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: NFR-GUI-008
   spec_ref: 13#3.9
   priority: M
@@ -51523,7 +51569,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: NFR-GUI-010
   spec_ref: 13#3.9
   priority: S
@@ -51563,7 +51609,7 @@ entries:
   contract:
     consumes:
     - CTR-UNIT@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   gate:
   - CG-G-02a
@@ -52190,7 +52236,7 @@ entries:
     cancel_policy: latch-to-hold
     after: 0
   justification: 도출된 하류 에지 WP-3A-00·WP-3A-04는 정적 import가 아니라 계약 조인이다 — 서버 단조 시계 = 만료 판정 유일 소유 규약을 CTR-PRIM@v1이
-    원시타입으로 못 박고(EXPIRY_JUDGE_ROLE) CTR-WS@v1이 expiry_mono_server/issued_mono_client로 전송할 뿐이며, backend/deadman
+    원시타입으로 못 박고(EXPIRY_JUDGE_ROLE) CTR-WS@v2이 expiry_mono_server/issued_mono_client로 전송할 뿐이며, backend/deadman
     트리와 contracts 트리는 서로 import하지 않는다(규약은 동결 스키마 + U-4로 공유). 06 §5.6 계약 조인 — CONTRACT_FROZEN+CI-09로 상쇄
   planned: true
   provenance:
@@ -53179,7 +53225,7 @@ entries:
     wp_candidates:
     - WP-1-04
     - WP-N1-03
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: NFR-PRF-005
   spec_ref: 15#3.1
   priority: M
@@ -54643,7 +54689,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: NFR-PRF-055
   spec_ref: 15#3.7
   priority: M
@@ -54773,7 +54819,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: NFR-REC-001
   spec_ref: 07#3.11
   priority: M
@@ -54838,13 +54884,13 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
-  justification: 하류 GUI WP-G-S07(S-07 수집 창구)는 품질 리포트·에피소드 라벨·저장소 상태를 CTR-WS@v1 엔벨로프의 문자열 키로 구독하고 에피소드
+  justification: 하류 GUI WP-G-S07(S-07 수집 창구)는 품질 리포트·에피소드 라벨·저장소 상태를 CTR-WS@v2 엔벨로프의 문자열 키로 구독하고 에피소드
     사이드카 JSON을 데이터로 직독하므로 backend.recorder.quality를 정적 import하지 않으며, 상류 WP-3B-11 레코더도 프레임 버퍼·parquet 산출물로만
     연결되어 import 경계를 만들지 않는다(정적 그래프 미가시, 06 §5.6)
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: NFR-REC-002
   spec_ref: 07#3.11
   priority: M
@@ -55032,7 +55078,7 @@ entries:
   env_hash: null
   workflow: SHAPE-IM
   exec_class: AI-offline
-  justification: 하류 GUI WP-G-S08(S-08 데이터셋 창구)는 import 스키마 차이 표시·병합 거부·import 유효성 판정을 CTR-WS@v1 엔벨로프의
+  justification: 하류 GUI WP-G-S08(S-08 데이터셋 창구)는 import 스키마 차이 표시·병합 거부·import 유효성 판정을 CTR-WS@v2 엔벨로프의
     문자열 키로 구독하고 그 산출을 데이터로 소비하므로 backend.dataset.import_export를 정적 import하지 않으며, 레거시 컨버터(openarm_dataset)는
     격리된 별도 환경에서만 실행되어 네이티브 런타임에 아예 import되지 않고(FR-DAT-040), 이 밴드는 상류 CTR-REC@v1 채널 계약만 코드로 재사용(재구현 아님)한다(06
     §5.6)
@@ -55110,7 +55156,7 @@ entries:
     - WP-2B-05
     - WP-2C-02
     - WP-N1-03
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: NFR-SAF-002
   spec_ref: 12#3.9
   priority: S
@@ -55157,7 +55203,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: NFR-SAF-003
   spec_ref: 12#3.9
   priority: M
@@ -55403,7 +55449,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: NFR-SAF-008
   spec_ref: 12#3.9
   priority: S
@@ -55470,7 +55516,7 @@ entries:
     - WP-N1-02
     - WP-OPS-05
     source: 'tag as written: (none)'
-  normalization: sha256:f3b584e5f9743fa4d137d312ccde1633f9ec63ec5ca9d35e892fea0b0d004fea
+  normalization: sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
 - req: NFR-SIM-001
   spec_ref: 09#3.12
   priority: M
@@ -56315,7 +56361,7 @@ entries:
     - CTR-PRIM@v1
     - CTR-REC@v1
     - CTR-TEL@v1
-    - CTR-WS@v1
+    - CTR-WS@v2
     produces: []
   provenance:
     wp_rule: plan-axis

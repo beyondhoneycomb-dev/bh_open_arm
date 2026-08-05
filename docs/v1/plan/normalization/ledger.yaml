@@ -175,7 +175,7 @@ rows:
         section: "3.9"
         quote: "비상정지 명령의 왕복 지연 상한(브라우저 입력 → WS → 백엔드 STOP_HOLD 적용)"
         req: NFR-GUI-005
-    contract: "CTR-WS@v1"
+    contract: "CTR-WS@v2"
     rationale: >-
       구현자 = 병렬 fan-out 13명(02d §2.0 화면별 착지). 지시체가 둘인 낱말을 13명이 각자 해석하면
       각자의 해석이 전부 02d CG-G-03b의 208조합(13화면 × 8모드 × 관찰자/제어권) 검사를 통과하지만
@@ -405,7 +405,7 @@ rows:
         section: "3.9"
         quote: "제어 루프 스레드는 RT 승격(SCHED_FIFO) + mlockall 대상"
         req: NFR-GUI-008
-    contract: "CTR-WS@v1"
+    contract: "CTR-WS@v2"
     rationale: >-
       RT 승격을 범위에서 제외한다. root 권한을 요구하고 우선순위 역전으로 시스템 전체를
       멈출 수 있는데, GIL 이 병목인 한 얻는 것이 없다. 나머지 세 항목(제어 루프와

@@ -16,7 +16,7 @@ conclude without hardware:
     20 ms reference; the authoritative PG-STOP-001 is deferred (no HW).
 
 It reuses rather than forks: the frame priorities, backpressure signal and protected
-set come from `CTR-WS@v1` (`contracts.ws`); camera load is sized from the `06` §2.9
+set come from `CTR-WS@v2` (`contracts.ws`); camera load is sized from the `06` §2.9
 budget (`backend.camera`); the auto-hold path runs the real `LeaseManager`,
 `DeadmanController` and `decide` (`backend.actuation` / `backend.deadman`); the stop
 reference and its refusal come from `backend.torque_bringup`.

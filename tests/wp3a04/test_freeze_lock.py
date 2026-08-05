@@ -1,16 +1,16 @@
-"""WP-3A-04 — the reverify/freeze-drift hook: CTR-WS@v1, now frozen by WP-3A-06.
+"""WP-3A-04 — the reverify/freeze-drift hook for the live CTR-WS generation.
 
-CTR-WS@v1 is a file-glob contract frozen by the byte-exact content hash of
-`contracts/ws/envelope.schema.json`. `WP-3A-04` authored the typed source and left the
-contract DRAFT (appending to the chained ledger would have raced the parallel 3A
-freezes); `WP-3A-06` materialised the body from `envelope_json()` and froze it in
-sequence.
+CTR-WS is a file-glob contract frozen by the byte-exact content hash of
+`contracts/ws/envelope.schema.json`. `WP-3A-04` owns the typed source; `WP-3A-06`
+materialises the body from `envelope_json()` and appends the freeze to the chained
+ledger. Only one generation is FROZEN at a time: a replaced generation keeps its hash
+but drops to SUPERSEDED, which CI-09 does not treat as a live lock.
 
 What this proves: the generated body is self-consistent (the reverify hook), the
-committed authority now shows CTR-WS FROZEN with its content hash locked, the frozen
-body on disk equals the generator, and the CI-09 lock fires on a one-byte drift —
-proven against a scratch tree. A lock that only ever recomputes the current hash would
-always match and would be a forge.
+committed authority shows the live generation FROZEN with its content hash locked and
+the replaced generation SUPERSEDED, the frozen body on disk equals the generator, and
+the CI-09 lock fires on a one-byte drift — proven against a scratch tree. A lock that
+only ever recomputes the current hash would always match and would be a forge.
 """
 
 from __future__ import annotations
@@ -26,16 +26,40 @@ from registry.checks.fixtures import corpus, record
 REPO_ROOT = Path(__file__).resolve().parents[2]
 AUTHORITY = "registry/contracts/contract_index.json"
 FROZEN_GLOB = "contracts/ws/envelope.schema.json"
-CONTRACT_ID = "CTR-WS@v1"
+
+# The live CTR-WS generation — the one whose hash the frozen glob must match — and the
+# generation it replaced, which must not still claim to be a live freeze.
+CONTRACT_ID = "CTR-WS@v2"
+SUPERSEDED_CONTRACT_ID = "CTR-WS@v1"
+
+
+def _authority_row(contract_id: str) -> dict[str, object]:
+    """Return one contract's record from the committed freeze authority.
+
+    Args:
+        contract_id: The generation to look up.
+
+    Returns:
+        (dict[str, object]) The authority record for that generation.
+    """
+    index = json.loads((REPO_ROOT / AUTHORITY).read_text(encoding="utf-8"))
+    return next(r for r in index["contracts"] if r["contract_id"] == contract_id)
 
 
 def test_ctr_ws_is_frozen_in_the_committed_authority() -> None:
-    """WP-3A-06 appended the CTR-WS freeze; the authority now carries it FROZEN with its hash."""
-    index = json.loads((REPO_ROOT / AUTHORITY).read_text(encoding="utf-8"))
-    row = next(r for r in index["contracts"] if r["contract_id"] == CONTRACT_ID)
+    """The authority carries the live generation FROZEN and the replaced one SUPERSEDED."""
+    row = _authority_row(CONTRACT_ID)
     assert row["status"] == "FROZEN"
     assert row["canonical_hash"] is not None
     assert row["owner_wp"] == "WP-3A-04"
+
+    # The replaced generation keeps its recorded hash — the ledger is append-only — but
+    # SUPERSEDED is what stops CI-09 reading it as the lock the frozen glob must match.
+    # Two generations both claiming FROZEN would give the glob two contradictory locks.
+    superseded = _authority_row(SUPERSEDED_CONTRACT_ID)
+    assert superseded["status"] == "SUPERSEDED"
+    assert superseded["canonical_hash"] is not None
+    assert superseded["canonical_hash"] != row["canonical_hash"]
 
 
 def test_frozen_body_is_present_and_matches_the_generator() -> None:
@@ -52,17 +76,22 @@ def test_reverify_confirms_the_generated_body() -> None:
 
 
 def test_ci_09_raises_no_finding_against_ctr_ws() -> None:
-    """CI-09 never fires on CTR-WS: its frozen body is absent, so it is a clean DRAFT.
+    """CI-09 finds no drift under either CTR-WS generation.
 
-    The whole-tree CI-09 result is not asserted green here on purpose — a concurrent
-    3A sibling that has already written its own frozen body while still DRAFT would
-    make it fire on *that* contract, which is not this WP's business. What this WP
-    owns is that CTR-WS contributes no such finding.
+    The whole-tree CI-09 result is not asserted green here on purpose — a sibling
+    contract's drift is not this WP's business. What this WP owns is that neither the
+    live generation nor the replaced one contributes a finding: the live one because
+    the glob matches its lock, the replaced one because SUPERSEDED is not a live freeze.
     """
     from registry.checks.corpus import Corpus
 
     result = ci_09.run(Corpus(REPO_ROOT))
-    assert all(finding.req_or_wp != CONTRACT_ID for finding in result.findings)
+    ws_findings = [
+        finding
+        for finding in result.findings
+        if finding.req_or_wp in {CONTRACT_ID, SUPERSEDED_CONTRACT_ID}
+    ]
+    assert not ws_findings, [finding.reason for finding in ws_findings]
 
 
 def _scratch_corpus(root: Path, body: bytes, frozen_hash: str | None) -> object:

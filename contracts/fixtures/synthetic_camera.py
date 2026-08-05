@@ -119,7 +119,7 @@ class SyntheticFrame:
         return FRAME_TYPE_DTYPE[self.frame_type]
 
     def ws_tag(self) -> str:
-        """The `CTR-WS@v1` binary frame tag (`<slot>:<channel>`) for this frame.
+        """The `CTR-WS@v2` binary frame tag (`<slot>:<channel>`) for this frame.
 
         Derived through the `CTR-PRIM@v1` join, so a preview consumer recovers the
         exact slot the recorder and sidecar use.

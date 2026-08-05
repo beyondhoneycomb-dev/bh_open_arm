@@ -21,7 +21,7 @@ assignment of a reserved name binds it by definition and is the fork. Only
 module-level definitions are flagged; a local of the same name is not a contract.
 
 This is machinery, not the frozen contract: it is `EXCLUSIVE`, so the reserved set
-can grow without moving the `CTR-WS@v1` frozen hash.
+can grow without moving the `CTR-WS@v2` frozen hash.
 """
 
 from __future__ import annotations

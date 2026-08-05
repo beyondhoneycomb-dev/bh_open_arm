@@ -127,3 +127,41 @@ def test_bimanual_drop_count_is_one_unprefixed_robot_total(tmp_path: Path) -> No
     assert DROP_COUNTER_META in observation
     assert f"left_{DROP_COUNTER_META}" not in observation
     assert f"right_{DROP_COUNTER_META}" not in observation
+
+
+def test_bimanual_arms_share_one_drop_counter(tmp_path: Path) -> None:
+    """Both arms of a self-built pair hold the same counter object (⑮).
+
+    A drop is not attributable to a side at this layer: the vendor logs every one to a
+    single process-wide logger, so any counter attached to it counts both buses. One
+    object for the pair states that in the type instead of leaving two objects whose
+    equal values look like a coincidence.
+    """
+    config = BiOaOpenArmFollowerConfig(
+        id="bi_shared", calibration_dir=tmp_path, use_velocity_and_torque=True
+    )
+    bimanual = BiOaOpenArmFollower(config)
+
+    assert bimanual.left_arm.drop_counter is bimanual.right_arm.drop_counter
+
+
+def test_bimanual_drop_count_is_not_the_sum_of_two_counters(tmp_path: Path) -> None:
+    """Two attached counters each see every drop, so the robot's tally is not their sum.
+
+    Both arms here carry their own counter, which is what an injected fixture pair looks
+    like. Both are attached to the one Damiao logger, so three emitted drops leave both
+    counters reading 3. Adding them would report six drops that never happened — a
+    fabricated number in the one field FR-SYS-018 makes the evidence of lost feedback.
+    """
+    emitted = 3
+    bimanual = _bimanual(tmp_path)
+    bimanual.left_arm.enable_drop_counting()
+    bimanual.right_arm.enable_drop_counting()
+    try:
+        _emit_drop(emitted)
+        assert bimanual.left_arm.drop_counter.count == emitted
+        assert bimanual.right_arm.drop_counter.count == emitted
+        assert bimanual.get_observation()[DROP_COUNTER_META] == emitted
+    finally:
+        bimanual.left_arm.disable_drop_counting()
+        bimanual.right_arm.disable_drop_counting()

@@ -1,7 +1,7 @@
 """WP-3B-06 framing: one binary WebSocket message tagged `<slot>:<channel>`.
 
 `02b` §6.2: a preview is a single WS binary frame carrying the camera id plus the
-channel tag. The tag is `CTR-WS@v1`'s own `camera_frame_tag`, and the frame packs
+channel tag. The tag is `CTR-WS@v2`'s own `camera_frame_tag`, and the frame packs
 and round-trips back to the same slot, channel and image bytes.
 """
 
@@ -24,7 +24,7 @@ def _frame(slot_name: str, channel: FrameType, payload: bytes) -> PreviewFrame:
 
 
 def test_tag_is_the_ctr_ws_camera_frame_tag() -> None:
-    """The frame tag is built through `CTR-WS@v1`, so it carries the shared slot key."""
+    """The frame tag is built through `CTR-WS@v2`, so it carries the shared slot key."""
     frame = _frame("left_wrist", FrameType.RGB, b"jpegbytes")
     assert frame.tag == camera_frame_tag(CameraSlotKey("left_wrist"), FrameType.RGB)
     assert slot_from_camera_frame_tag(frame.tag) == CameraSlotKey("left_wrist")

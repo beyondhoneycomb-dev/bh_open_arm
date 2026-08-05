@@ -1179,9 +1179,22 @@ class BiOaOpenArmFollower(OpenArmRobot):
                 arrives with its own bus and clock.
         """
         super().__init__(config)
-        self.left_arm = left if left is not None else self._build_arm(config, Side.LEFT, publisher)
+        # One counter for the pair, not one per arm. The vendor bus logs every drop to a
+        # single module logger, and `logging.getLogger` returns a process-wide object, so
+        # two counters would each hold the PAIR's total rather than their own arm's — the
+        # drop is not attributable to a side at this layer. Both arms holding one object
+        # makes that fact structural instead of something the reader has to work out.
+        # Double `attach`/`detach` is safe: `Logger.addHandler` admits a handler once.
+        drop_counter = DropCounter()
+        self.left_arm = (
+            left
+            if left is not None
+            else self._build_arm(config, Side.LEFT, publisher, drop_counter)
+        )
         self.right_arm = (
-            right if right is not None else self._build_arm(config, Side.RIGHT, publisher)
+            right
+            if right is not None
+            else self._build_arm(config, Side.RIGHT, publisher, drop_counter)
         )
         self._connected = False
 
@@ -1190,6 +1203,7 @@ class BiOaOpenArmFollower(OpenArmRobot):
         config: BiOaOpenArmFollowerConfig,
         side: Side,
         publisher: AcceptedTargetPublisher | None,
+        drop_counter: DropCounter,
     ) -> OaOpenArmFollower:
         """Build one arm's follower from the bimanual config, namespaced by side."""
         arm_config = OaOpenArmFollowerConfig(
@@ -1198,7 +1212,7 @@ class BiOaOpenArmFollower(OpenArmRobot):
             side=side,
             use_velocity_and_torque=config.use_velocity_and_torque,
         )
-        return OaOpenArmFollower(arm_config, publisher=publisher)
+        return OaOpenArmFollower(arm_config, publisher=publisher, drop_counter=drop_counter)
 
     @property
     def is_connected(self) -> bool:
@@ -1272,15 +1286,22 @@ class BiOaOpenArmFollower(OpenArmRobot):
         a dataset's features from that declaration, so a prefixed counter is dropped from
         every recorded episode — and the tally is the only signal that motor feedback
         frames were lost, which is what makes a lossy-bus episode indistinguishable from a
-        clean one. The two arms share one bus lock and one counter semantic, so the robot's
-        count is their sum.
+        clean one.
+
+        The arms' two tallies are NOT added. Each already counts both buses: the vendor
+        logs every drop to one process-wide logger, so any counter attached to it sees the
+        pair. Summing them reports twice the drops that happened, which is worse than no
+        number — it is a number that reads as evidence. The pair shares one counter
+        (`__init__`), so the values agree and the robot's count is that one value; `max`
+        is the reducer because an injected fixture arm may carry a counter attached later,
+        and a later attachment can only have seen fewer records, never more.
         """
         observation: dict[str, float | int] = {}
         dropped = 0
         for prefix, arm in self._sided_arms:
             for channel, value in arm.get_observation().items():
                 if channel == DROP_COUNTER_META:
-                    dropped += int(value)
+                    dropped = max(dropped, int(value))
                     continue
                 observation[f"{prefix}_{channel}"] = value
         observation[DROP_COUNTER_META] = dropped

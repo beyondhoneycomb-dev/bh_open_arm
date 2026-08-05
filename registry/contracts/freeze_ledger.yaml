@@ -78,3 +78,15 @@ events:
   canonical_hash: sha256:f96d529934a2884cda047f2789b7ca7c59abbe55f9626b425a3d9e38251067f5
   prev_digest: 02d023ff31719d1131aeb38f36a311500b0ab3c411beb9e8081374c2187154d3
   digest: 262227619c872ca3d41cb00e28b3778fdb0417dbe344bce64ce30b691315c82f
+- seq: 14
+  kind: SUPERSEDE
+  contract_id: CTR-WS@v1
+  canonical_hash: null
+  prev_digest: 262227619c872ca3d41cb00e28b3778fdb0417dbe344bce64ce30b691315c82f
+  digest: 8bc18375e111d87994bc732cf8d014f624f320059338a5643fecb6f02736b360
+- seq: 15
+  kind: FREEZE
+  contract_id: CTR-WS@v2
+  canonical_hash: sha256:e3d2ca179f5a0866793c2ccb88110d6d23e314a83cab9a57001286fb9ba3ee90
+  prev_digest: 8bc18375e111d87994bc732cf8d014f624f320059338a5643fecb6f02736b360
+  digest: 088f3ed432b747a1b0af1ecb561140689febf1e009ce121d304f8c1d7f7e5a49

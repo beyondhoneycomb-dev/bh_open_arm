@@ -25,11 +25,20 @@ export const LIVE_LINK_MODES = [
 export type LiveLinkMode = (typeof LIVE_LINK_MODES)[number];
 
 // One cell of the reachability matrix: a screen the operator is on, the active
-// mode, and whether this client holds control.
+// mode, and whether this client holds control. All three are display-only — none
+// of them gates whether the stop surface renders or is pressable.
+//
+// Each admits null, because a shell with no session cannot answer them and must
+// not guess: a fabricated mode or role would read as a live robot. The acceptance
+// matrix itself only ever produces non-null cells.
 export interface SafetyContext {
-  screen: ScreenId;
-  mode: LiveLinkMode;
-  role: ControlRole;
+  // Null on a route that is not one of the 13 screens (/viewport, unknown paths).
+  screen: ScreenId | null;
+  // Null until a session reports a mode. There is no "no session" LiveLinkMode —
+  // IDLE is a mode a connected robot is in, not the absence of a connection.
+  mode: LiveLinkMode | null;
+  // Null until a session assigns this client a role.
+  role: ControlRole | null;
 }
 
 // Every (screen, mode, role) combination — 13 x 8 x 2. The E-Stop acceptance

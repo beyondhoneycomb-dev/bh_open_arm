@@ -4,8 +4,8 @@
 // external origin. The WS scheme (wss vs ws) and absolute URL are derived from
 // `location` by the WS client (WP-G-01) — the shell only fixes the paths.
 
-// The one realtime channel (CTR-WS@v1, D-2). Exactly one WebSocket multiplexes
-// telemetry + command + camera + lease; the shell exposes only its path.
+// The one realtime channel (CTR-WS@v2, D-2). Exactly one WebSocket multiplexes
+// telemetry + command + camera + soft stop + lease; the shell exposes only its path.
 export const WS_ENDPOINT_PATH = "/ws";
 
 // REST (CRUD, non-realtime). Config canon is the backend runtime_config.json;

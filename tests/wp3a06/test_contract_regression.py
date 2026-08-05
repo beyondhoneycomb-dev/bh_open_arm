@@ -26,14 +26,19 @@ AUTHORITY_REL = "registry/contracts/contract_index.json"
 PRIMITIVE = "CTR-PRIM@v1"
 # The five consumer contracts and the producing work package of each, so the scratch
 # corpus reproduces the real consumes/produces axes the checker derives staleness from.
+# The generation must be the LIVE one: the checker derives its tracked set from the
+# registry's `produces` axis, which names the generation currently frozen, and it reads
+# locks only from FROZEN authority rows — a replaced generation is neither.
 CONSUMERS = {
     "CTR-CAM@v1": "WP-3A-01",
     "CTR-CAP@v1": "WP-3A-02",
     "CTR-TEL@v1": "WP-3A-03",
-    "CTR-WS@v1": "WP-3A-04",
+    "CTR-WS@v2": "WP-3A-04",
     "CTR-REC@v1": "WP-3A-05",
 }
 ALL_SIX = (PRIMITIVE, *sorted(CONSUMERS))
+# The WS generation used where a test needs to name one contract concretely.
+WS_CONTRACT = "CTR-WS@v2"
 
 
 def _glob_for(contract_id: str) -> str:
@@ -141,8 +146,8 @@ def test_lock_is_read_from_the_authority_not_recomputed(tmp_path: Path) -> None:
     built, authority = _scratch(tmp_path, frozenset())
     doctored = json.loads(authority.read_text(encoding="utf-8"))
     for row in doctored["contracts"]:
-        if row["contract_id"] == "CTR-WS@v1":
+        if row["contract_id"] == WS_CONTRACT:
             row["canonical_hash"] = "sha256:" + "0" * 64
     authority.write_text(json.dumps(doctored), encoding="utf-8")
     report = check_contract_regression(built, authority)
-    assert "CTR-WS@v1" in report.mismatches, "the checker recomputed the lock instead of reading it"
+    assert WS_CONTRACT in report.mismatches, "the checker recomputed the lock instead of reading it"

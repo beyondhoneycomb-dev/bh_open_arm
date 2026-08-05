@@ -4,7 +4,9 @@
 // by the collect flow (CG-G-03d), and PushToHubConfirm renders that gate.
 
 import {
+  FLAG_VALUE_UNKNOWN_LABEL,
   PUSH_TO_HUB_UPLOAD_WARNING,
+  pushToHubIsUnknown,
   pushToHubRequiresConfirm,
   type PushToHubState,
 } from "./flags";
@@ -13,21 +15,46 @@ export interface PushToHubBadgeProps {
   state: PushToHubState;
 }
 
+// Only an explicit ON is danger, and only an explicit OFF is nominal. An unread flag
+// is muted: the upload warning asserts data will leave the machine, and "OFF" asserts
+// it will not — neither is knowable before a session reports the value.
+function toneFor(state: PushToHubState): string {
+  if (pushToHubIsUnknown(state)) {
+    return "oa-badge--muted";
+  }
+  return state.enabled ? "oa-badge--danger" : "oa-badge--nominal";
+}
+
+function valueLabel(state: PushToHubState): string {
+  if (state.enabled === null) {
+    return FLAG_VALUE_UNKNOWN_LABEL;
+  }
+  return state.enabled ? "ON" : "OFF";
+}
+
+function visibilityLabel(state: PushToHubState): string {
+  if (state.private === null) {
+    return FLAG_VALUE_UNKNOWN_LABEL;
+  }
+  return state.private ? "private" : "public";
+}
+
 export function PushToHubBadge({ state }: PushToHubBadgeProps) {
-  const danger = state.enabled;
+  const danger = state.enabled === true;
   return (
     <span
-      className={`oa-badge ${danger ? "oa-badge--danger" : "oa-badge--nominal"}`}
+      className={`oa-badge ${toneFor(state)}`}
       data-flag="push_to_hub"
+      data-flag-value={state.enabled === null ? "unknown" : String(state.enabled)}
       role="status"
     >
       <span className="oa-badge__key">push_to_hub</span>
-      <span className="oa-badge__value">{state.enabled ? "ON" : "OFF"}</span>
+      <span className="oa-badge__value">{valueLabel(state)}</span>
       {danger && (
         <>
           <span className="oa-badge__warning">{PUSH_TO_HUB_UPLOAD_WARNING}</span>
           <span className="oa-badge__meta">
-            {state.private ? "private" : "public"}
+            {visibilityLabel(state)}
             {state.tags.length > 0 ? ` · ${state.tags.join(", ")}` : ""}
           </span>
         </>

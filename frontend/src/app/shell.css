@@ -98,9 +98,59 @@ body {
   color: var(--oa-muted);
 }
 
+/* Unpadded so the safety block can sit flush against the top of the column and stick
+   there; screen content carries the padding instead. */
 .oa-main {
-  padding: 1.5rem 2rem;
   overflow-x: auto;
+}
+
+.oa-main__content {
+  padding: 1.5rem 2rem;
+}
+
+/* The safety block — the bar plus the delivery notices — sticks as one unit. Sticky is
+   applied here rather than to the bar alone because a sticky element is clipped to its
+   containing block: were this wrapper static, the bar would unstick the moment the
+   wrapper scrolled past, and the notice saying the stop cannot be delivered would scroll
+   away from the button it describes. */
+.oa-safety-host {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--oa-surface);
+}
+
+/* Standing notice: the stop has no delivery path. Muted relative to the failure alert —
+   it states a condition, it is not reporting an event. */
+.oa-link-notice {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--oa-border);
+  color: var(--oa-warning, #b45309);
+  background: var(--oa-warning-bg, #fff4e5);
+  font-size: 0.9rem;
+}
+
+/* A command that did not reach the robot. Filled danger: this is the one place in the
+   shell where a filled danger block is correct, because the operator has just acted and
+   must not believe it landed. */
+.oa-link-failure {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--oa-border);
+  background: var(--oa-danger, #b42318);
+  color: var(--oa-danger-fg, #ffffff);
+}
+
+.oa-link-failure__head {
+  font-weight: 700;
+}
+
+.oa-link-failure__why {
+  font-size: 0.9rem;
 }
 
 .oa-scaffold__id {

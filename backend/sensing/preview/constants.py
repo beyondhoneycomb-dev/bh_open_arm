@@ -14,7 +14,7 @@ import cv2
 # The preview only ever *downscales*: a frame whose longer edge is already at or
 # below this is passed through unscaled (a preview never upscales a camera frame).
 # A modest long edge keeps the single-WS binary small enough that a camera flood
-# is shed by backpressure rather than delaying the lease (`CTR-WS@v1` §7 HOL).
+# is shed by backpressure rather than delaying the lease (`CTR-WS@v2` §7 HOL).
 PREVIEW_MAX_LONG_EDGE_PX = 640
 
 # libjpeg quality for the RGB preview and the colormapped-depth preview (0..100).
@@ -44,7 +44,7 @@ MIME_JPEG = "image/jpeg"
 MIME_PNG = "image/png"
 
 # The single-WS binary layout of a preview frame: a big-endian uint16 tag length,
-# then the `<slot>:<channel>` tag bytes (`CTR-WS@v1` camera frame tag), then the
+# then the `<slot>:<channel>` tag bytes (`CTR-WS@v2` camera frame tag), then the
 # encoded image bytes. The uint16 prefix is what bounds a tag; a slot key is a
 # short snake token, so two bytes never truncate a real tag.
 TAG_LENGTH_STRUCT = ">H"

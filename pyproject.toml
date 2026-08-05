@@ -76,6 +76,18 @@ robot = [
     "fastapi>=0.115",
     "pydantic>=2.9",
     "httpx>=0.27",
+    # `oa-serve`'s ASGI server (13 §2.7, FR-GUI-006). FastAPI builds the app and binds nothing, so
+    # the one process that shares a port between the SPA bundle, REST and the WebSocket needs a
+    # server underneath it. Here rather than in core `dependencies` for exactly the reason FastAPI
+    # is: `registry.check` validates a plan and must not drag a web server in to do it.
+    "uvicorn>=0.30",
+    # Named for one import that has no FastAPI equivalent: `starlette.routing.WebSocketRoute`,
+    # the base class `CG-G-01a` counts to prove the app carries exactly one realtime endpoint.
+    # FastAPI exposes only its own `APIWebSocketRoute` subclass, and counting that would stop
+    # seeing a websocket route added through starlette directly — narrowing the check to the
+    # case nobody was worried about. Every other symbol comes from `fastapi`, which re-exports
+    # them.
+    "starlette>=0.40",
 ]
 
 [project.scripts]
@@ -85,13 +97,18 @@ oa-index = "registry.generate.cli:main"
 oa-state = "ops.launch.cli:main"
 oa-contracts = "registry.contracts.cli:main"
 oa-env = "registry.env.cli:main"
+oa-serve = "backend.config.serve:main"
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["registry*", "ops*"]
+# `backend*` joined the list when `oa-serve` did. A console script gets the interpreter's bin
+# directory on `sys.path`, never the working directory, so an entry point naming a tree that is not
+# installed raises ModuleNotFoundError from every directory including the repository root — the six
+# scripts above all resolve into `registry`/`ops` and never exposed this.
+include = ["registry*", "ops*", "backend*"]
 
 [tool.ruff]
 line-length = 100

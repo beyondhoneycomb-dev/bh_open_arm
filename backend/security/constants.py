@@ -2,7 +2,7 @@
 
 Every literal the security logic depends on is named here rather than buried at a
 call site. Values that already have a single owner elsewhere are imported, not
-restated: the WS scheme/Origin words are `CTR-WS@v1`'s (`contracts.ws`), the VR
+restated: the WS scheme/Origin words are `CTR-WS@v2`'s (`contracts.ws`), the VR
 datagram port is the teleoperator's (`backend.teleop.vr_udp`), and the deadman
 lease generation/duration are the deadman's (`backend.deadman`). Restating any of
 them here would fork a contract this WP only consumes.
@@ -10,7 +10,7 @@ them here would fork a contract this WP only consumes.
 
 from __future__ import annotations
 
-# The plaintext transport schemes a control binding must never use. `CTR-WS@v1`
+# The plaintext transport schemes a control binding must never use. `CTR-WS@v2`
 # owns the WS pair (`WS_PLAINTEXT_SCHEME`/`WS_SECURE_SCHEME`); the HTTP pair is the
 # REST side this WP adds, kept as the bare scheme word so no `scheme://` literal
 # lives in a source file the plaintext-binding scanner reads about itself.
