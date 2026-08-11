@@ -75,6 +75,7 @@ from backend.actuation.gains import (
     profile_names,
     resolve_gain_profile,
 )
+from backend.actuation.pacer import TickPacer
 from backend.can.lock import LockManager, assert_lock_held
 from backend.can.rid.layout import expected_type
 from backend.can.rid.motor_limits import MOTOR_LIMIT_PARAMS, MotorType
@@ -925,6 +926,30 @@ def wait_until_enabled(link: MotorLink, resting: Rad) -> MotorFeedback | None:
     return None
 
 
+def pacer_report(pacer: TickPacer) -> str:
+    """State whether the frames went out on the period they were planned for.
+
+    Worth a line of its own because the ramp's own numbers cannot show it. The position error
+    printed per frame stays small while the period walks — the joint follows fine, it just
+    follows a slower ramp than the one that was asked for, so the move's SPEED was not the
+    commanded speed and nothing else on screen says so.
+
+    Args:
+        pacer: The tick the run's frames went out on.
+
+    Returns:
+        (str) One line naming the period and what it cost, whether or not anything was missed.
+    """
+    if pacer.overruns == 0:
+        return f"주기 {pacer.period_s * 1000.0:.1f} ms · 프레임 {pacer.waits}개 · 초과 0"
+    lost_s = pacer.overruns * pacer.period_s
+    return (
+        f"주기 {pacer.period_s * 1000.0:.1f} ms · 프레임 {pacer.waits}개 · "
+        f"🔴 마감 초과 {pacer.overruns}회 ({lost_s * 1000.0:.0f} ms). 놓친 주기는 프레임을 "
+        "몰아 보내지 않고 버렸다 — 그만큼 이 구간이 계획보다 빨리 지나갔다는 뜻이다."
+    )
+
+
 def _say(line: str) -> None:
     """Print one operator-facing line as it happens.
 
@@ -952,9 +977,15 @@ def run_leg(
     kp: float,
     kd: float,
     limits: AbortLimits,
-    period_s: float,
+    pacer: TickPacer,
 ) -> str | None:
     """Command one ramp, judging every answer before the next frame goes out.
+
+    The frame period is the pacer's, not a sleep after the work. Under MIT the motor answers a
+    position step with `kp·(q_des − q)`, so the interval between two setpoints is what turns a
+    ramp into a speed — and a period that stretches while the setpoints advance as planned asks
+    for the planned torque over a longer interval. The stretch is not hypothetical here: a frame
+    that goes unanswered costs `REPLY_TIMEOUT_S`, which at the default rate is a whole period.
 
     Args:
         link: The motor's channel.
@@ -963,7 +994,7 @@ def run_leg(
         kp: Position gain.
         kd: Velocity gain.
         limits: The ceilings each answer is judged against.
-        period_s: Gap between frames.
+        pacer: The tick this leg's frames go out on.
 
     Returns:
         (str | None) The abort reason, or None when the whole leg completed clean.
@@ -976,7 +1007,7 @@ def run_leg(
             return reason
         if feedback is not None and (index % PROGRESS_EVERY_N_FRAMES == 0 or index == last):
             _say(_progress(leg_name, target, feedback))
-        time.sleep(period_s)
+        pacer.wait()
     return None
 
 
@@ -987,7 +1018,7 @@ def hold_at(
     kd: float,
     limits: AbortLimits,
     frames: int,
-    period_s: float,
+    pacer: TickPacer,
 ) -> str | None:
     """Keep commanding one position for a while, still judging every answer.
 
@@ -1001,12 +1032,12 @@ def hold_at(
         kd: Velocity gain.
         limits: The ceilings each answer is judged against.
         frames: How many frames to hold for.
-        period_s: Gap between frames.
+        pacer: The tick this hold's frames go out on.
 
     Returns:
         (str | None) The abort reason, or None when the hold completed clean.
     """
-    return run_leg(link, HOLD_LEG_NAME, (target,) * frames, kp, kd, limits, period_s)
+    return run_leg(link, HOLD_LEG_NAME, (target,) * frames, kp, kd, limits, pacer)
 
 
 def open_bus(interface: str, locks: LockManager) -> NodeBus:
@@ -1112,30 +1143,35 @@ def jog(plan: JogPlan, bus: NodeBus) -> str | None:
                 "보지 못했다"
             )
 
-        for index, targets in enumerate(legs):
-            reason = run_leg(
-                link,
-                LEG_NAMES[index],
-                targets,
-                plan.gains.kp,
-                plan.gains.kd,
-                plan.limits,
-                plan.period_s,
-            )
-            if reason is not None:
-                return reason
-            if index == 0 and plan.hold_frames > 0:
-                reason = hold_at(
+        # The pacer is armed here rather than at plan time because arming starts the clock: a
+        # timer created before the enable poll would count the poll's periods as missed ones.
+        with TickPacer(plan.period_s) as pacer:
+            for index, targets in enumerate(legs):
+                reason = run_leg(
                     link,
-                    targets[-1],
+                    LEG_NAMES[index],
+                    targets,
                     plan.gains.kp,
                     plan.gains.kd,
                     plan.limits,
-                    plan.hold_frames,
-                    plan.period_s,
+                    pacer,
                 )
                 if reason is not None:
                     return reason
+                if index == 0 and plan.hold_frames > 0:
+                    reason = hold_at(
+                        link,
+                        targets[-1],
+                        plan.gains.kp,
+                        plan.gains.kd,
+                        plan.limits,
+                        plan.hold_frames,
+                        pacer,
+                    )
+                    if reason is not None:
+                        return reason
+            self_report = pacer_report(pacer)
+        _say(self_report)
         return None
     finally:
         final = link.exchange(disable, REPLY_TIMEOUT_S)

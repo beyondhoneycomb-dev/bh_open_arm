@@ -69,12 +69,14 @@ WRIST_EFFORT_NM = 7.0
 LEFT_INTERFACE = "can0"
 LEFT_SIDE = "left"
 
-# The move every wire-level test drives: a tenth of a radian, five frames each way, no gap and no
-# hold. Frames go out with no pacing because nothing in a double arrives asynchronously, so the
-# gap a real joint needs would only make the suite slower.
+# The move every wire-level test drives: a tenth of a radian, five frames each way, no hold.
 SMALL_DELTA = Rad(0.1)
 SMALL_FRAMES = 5
-NO_GAP_S = 0.0
+# The frame period the wire-level tests run at. Short rather than zero: the pacer is a real
+# kernel timer and a zero period arms a one-shot, so the tests drive the same object the bench
+# does instead of a stand-in that could disagree with it. Ten frames at this period is two
+# milliseconds, which is under the noise of the rest of the suite.
+FAST_PERIOD_S = 0.0002
 NO_HOLD_FRAMES = 0
 
 # What `resolve_gains` is passed when the run is on the profile as registered.
@@ -387,7 +389,7 @@ def small_move_plan(returns: bool, hold_frames: int = NO_HOLD_FRAMES) -> JogPlan
         delta=SMALL_DELTA,
         gains=wrist_gains(),
         frames=SMALL_FRAMES,
-        period_s=NO_GAP_S,
+        period_s=FAST_PERIOD_S,
         hold_frames=hold_frames,
         returns=returns,
         limits=TEST_LIMITS,

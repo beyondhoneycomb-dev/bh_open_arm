@@ -28,8 +28,8 @@ from scripts.jog_joint import (
     resolve_envelope,
 )
 from scripts.jog_joint_tests.jog_doubles import (
+    FAST_PERIOD_S,
     LEFT_SIDE,
-    NO_GAP_S,
     NO_HOLD_FRAMES,
     SMALL_DELTA,
     SMALL_FRAMES,
@@ -68,7 +68,7 @@ def _plan_at(delta: Rad) -> JogPlan:
         delta=delta,
         gains=wrist_gains(),
         frames=SMALL_FRAMES,
-        period_s=NO_GAP_S,
+        period_s=FAST_PERIOD_S,
         hold_frames=NO_HOLD_FRAMES,
         returns=True,
         limits=TEST_LIMITS,
