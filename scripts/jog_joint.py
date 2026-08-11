@@ -3,7 +3,7 @@
 This is the first thing in this repository that makes a motor move, and it is deliberately the
 smallest thing that can: one joint, one ramp, one return.
 
-Four properties carry the safety of this file. Each names the function that holds it, and the
+Five properties carry the safety of this file. Each names the function that holds it, and the
 first is the one that throws an arm:
 
 1. The first MIT frame after enable targets the position the motor is at *right now*. A motor
@@ -14,6 +14,11 @@ first is the one that throws an arm:
 3. Each frame's answer is judged before the next one goes out: torque, temperature, fault nibble
    and a lost enable each stop the run (`abort_reason`).
 4. `finally` disables on every exit path, exceptions and Ctrl-C included (`jog`).
+5. The far end of the move is inside the joint's soft envelope, judged from the resting position
+   the torque-free read returned and before the enable frame goes out (`envelope_refusal`). The
+   envelope is LeRobot's per-side soft set, read from `sim.ik.limits` rather than restated, because
+   it is the only one of `03` §2.9's five in the frame this tool commands in and because a second
+   copy would let this refusal and the IK-existence check disagree about "in bounds".
 
 Enable confirmation is polled rather than read once. A DAMIAO answer carries the state the motor
 was in *before* it processed the command, so the first reply after 0xFC still says disabled and a
@@ -115,6 +120,7 @@ from scripts.can_node_watch import (
     drain,
     feedback_id,
 )
+from sim.ik.limits import arm_soft_limits
 
 EXIT_OK = 0
 EXIT_REFUSED = 1
@@ -215,10 +221,11 @@ MIN_RAMP_FRAMES = 2
 # its 0.53 N·m hold and well under its 7 N·m limit.
 ABORT_TORQUE_FRACTION_OF_EFFORT = 0.5
 
-# The largest relative move this runner accepts, degrees. It is a typo bound, not a limit check:
-# this tool reads no joint limit and no collision geometry, so it cannot tell an operator whether
-# a joint has the travel. What it can catch is the realistic mistake — a radian value typed into a
-# degree field, or one extra digit — and a move larger than this is several jogs, watched.
+# The largest relative move this runner accepts, degrees. It is a typo bound, not a limit check —
+# the limit check is `envelope_refusal`, and the two catch different things: this one catches a
+# radian value typed into a degree field or one extra digit, before the bus is even opened, and it
+# still applies to a move that stays inside the envelope. A move larger than this is several jogs,
+# watched. Neither reads collision geometry, so neither can say the arm has room for the swept path.
 MAX_DELTA_DEG = 30.0
 
 # What each stretch of the run is called on the progress lines.
@@ -231,6 +238,10 @@ PROGRESS_EVERY_N_FRAMES = 5
 
 # `URDF_EFFORT_LIMIT_NM` is indexed by joint, and this rig's joints start at CAN send id 0x01.
 FIRST_ARM_SEND_ID = ARM_JOINT_SEND_IDS[0]
+
+# What the envelope is called on screen and in a refusal. The name is `03` §2.9's column header for
+# the set `sim.ik.limits` resolves, so an operator reading a refusal can find the row it came from.
+SOFT_LIMIT_SET_NAME = "LeRobot soft, F_motor"
 
 
 class JogRefusedError(Exception):
@@ -446,6 +457,41 @@ class MotorLink:
 
 
 @dataclass(frozen=True)
+class JointEnvelope:
+    """The position bounds this joint's target is judged against, and which set they came from.
+
+    Attributes:
+        lower: Lower bound.
+        upper: Upper bound.
+        source: The named limit set, carried so a refusal says which envelope refused it.
+
+    The frame is `F_motor` and that is the whole reason this envelope is the one it is. `03` §2.9
+    tabulates five limit sets, and four of them (`URDF/MuJoCo`, the bumping stops, `openarm_cell`,
+    `openarm_teleop`) are stated in `F_URDF`. Converting an `F_URDF` bound into the frame the MIT
+    frame actually carries needs `q_motor = q_URDF + joint_offsets`, and whether those offsets are
+    zero on this rig is exactly the open `Q-10` (`02` §5, `03` §2.9). So there is no choice to
+    offer here: the LeRobot soft set is the only one already in the frame this tool commands in,
+    and it is also what `NORM-004` designates as the initial soft clamp.
+    """
+
+    lower: Rad
+    upper: Rad
+    source: str
+
+    def violation(self, angle: Rad) -> float:
+        """How far outside the envelope an angle lies, in radians; zero when inside."""
+        return max(0.0, self.lower.value - angle.value, angle.value - self.upper.value)
+
+    @property
+    def label(self) -> str:
+        """How the envelope is named on screen."""
+        return (
+            f"리밋 {rad_to_deg(self.lower).value:+.1f}…{rad_to_deg(self.upper).value:+.1f}° "
+            f"({self.source})"
+        )
+
+
+@dataclass(frozen=True)
 class JogTarget:
     """The one motor this run addresses, resolved before anything opens.
 
@@ -456,6 +502,7 @@ class JogTarget:
         send_id: The motor's CAN send id, checked against the fitted set.
         motor_type: The type registered at that id.
         effort_limit_nm: That joint's URDF effort limit, which bounds the abort torque.
+        envelope: The position bounds the target angle is judged against.
     """
 
     side: str
@@ -463,6 +510,7 @@ class JogTarget:
     send_id: int
     motor_type: MotorType
     effort_limit_nm: float
+    envelope: JointEnvelope
 
     @property
     def default_abort_torque_nm(self) -> float:
@@ -492,6 +540,68 @@ def end_effector_rig(config_directory: Path) -> RigEndEffectors:
     """
     record = rig_path(config_directory)
     return load_rig(record) if record.is_file() else default_rig()
+
+
+def resolve_envelope(side: str, send_id: int) -> JointEnvelope:
+    """Read one arm joint's soft position bounds from the single upstream source.
+
+    The numbers are not restated here. `sim.ik.limits` reads LeRobot's per-side defaults straight
+    out of the pinned follower config, and it is the same source the IK adapter's `jnt_range`
+    override and `backend.moveto.limits` already resolve against (`01` FR-SYS-016). A second copy
+    of a limit is the "two sources of one number" divergence `NORM-004` exists to stop, and here it
+    would be worse than a divergence: the limit check and the IK-existence check would disagree
+    about what "in bounds" means, so a target could clear this refusal and have no IK solution.
+
+    The cost is that this tool now needs LeRobot importable to run at all, which it did not before.
+    That is paid deliberately — the alternative is a third copy of eight numbers — and the import
+    reaches a config module only. Nothing is opened and no frame is sent by resolving a limit.
+
+    Args:
+        side: The declared arm side.
+        send_id: The motor's CAN send id, `0x01..0x07`.
+
+    Returns:
+        (JointEnvelope) That joint's bounds, in the `F_motor` frame the MIT frame carries.
+    """
+    limit = arm_soft_limits(side)[send_id - FIRST_ARM_SEND_ID]
+    return JointEnvelope(lower=limit.lower_rad, upper=limit.upper_rad, source=SOFT_LIMIT_SET_NAME)
+
+
+def envelope_refusal(envelope: JointEnvelope, resting: Rad, target: Rad) -> str | None:
+    """Judge the far end of the move against the joint's envelope, or None to proceed.
+
+    Only the two ends are judged because the ramp is monotonic between them: no interior target
+    lies outside a band both ends are inside, and the return leg ends where the joint already was.
+
+    A target outside the envelope is refused rather than clipped. Clipping is right in the
+    `send_action` gateway, which is servicing a stream nobody is watching frame by frame
+    (`03` FR-MOT-038); here an operator asked for a specific angle and is standing next to the arm,
+    and a run that silently moved 2° of a requested 5° would report the move it did not make.
+
+    The one case that is allowed out of bounds is a move that reduces the violation. A joint parked
+    outside a soft bound is not hypothetical — the LeRobot set is far tighter than the mechanical
+    one, J4's lower bound is exactly the angle the elbow rests at, and quantisation puts a resting
+    read a hundredth of a degree either side of it. Refusing every out-of-bounds target would leave
+    such a joint unjoggable in the one direction that fixes it.
+
+    Args:
+        envelope: The bounds this joint is judged against.
+        resting: Where the joint is right now, read torque-free.
+        target: The far end of the move.
+
+    Returns:
+        (str | None) The refusal, or None when the move may be attempted.
+    """
+    target_violation = envelope.violation(target)
+    if target_violation == 0.0:
+        return None
+    if target_violation < envelope.violation(resting):
+        return None
+    return (
+        f"목표 {rad_to_deg(target).value:+.2f}° 가 {envelope.label} 밖이고 현재 "
+        f"{rad_to_deg(resting).value:+.2f}° 보다 더 밖으로 나간다. 통전하지 않았다 — 이 관절은 "
+        "지금 disable 상태 그대로다. 리밋 안으로 돌아오는 방향은 허용되므로 부호를 확인한다."
+    )
 
 
 def resolve_target(
@@ -553,6 +663,7 @@ def resolve_target(
         send_id=send_id,
         motor_type=expected_type(send_id),
         effort_limit_nm=URDF_EFFORT_LIMIT_NM[send_id - FIRST_ARM_SEND_ID],
+        envelope=resolve_envelope(side, send_id),
     )
 
 
@@ -956,6 +1067,12 @@ def jog(plan: JogPlan, bus: NodeBus) -> str | None:
 
     Returns:
         (str | None) The abort reason, or None when the joint moved and came back.
+
+    Raises:
+        JogRefusedError: When the resting position makes the requested target one this runner will
+            not command. It is an exception rather than a returned reason because the two verdicts
+            are different: a returned reason means the arm was energized and something stopped it,
+            and this one means nothing was ever enabled. `main` maps them to different exit codes.
     """
     link = MotorLink(bus, plan.target.send_id, plan.target.motor_type)
     disable = command_frame(DISABLE_COMMAND_CODE)
@@ -972,9 +1089,18 @@ def jog(plan: JogPlan, bus: NodeBus) -> str | None:
             f"τ {resting_feedback.torque_nm:+.2f} N·m  "
             f"{resting_feedback.temp_mos_c}/{resting_feedback.temp_rotor_c}°C"
         )
+        # The envelope is judged here rather than beside the other refusals because this is the
+        # first instant the target angle exists: the move is relative, so it is unknowable until
+        # the resting position has been read. The read is the torque-free 0xFD exchange above, so
+        # a refusal below still leaves the joint disabled and nothing has been energized.
+        target = resting + plan.delta
+        outside = envelope_refusal(plan.target.envelope, resting, target)
+        if outside is not None:
+            raise JogRefusedError(outside)
+
         legs = plan_legs(resting, plan.delta, plan.frames, plan.returns)
         _say(
-            f"목표 {rad_to_deg(resting + plan.delta).value:+.2f}°  "
+            f"목표 {rad_to_deg(target).value:+.2f}°  {plan.target.envelope.label}  "
             f"{plan.gains.label}  프레임 {plan.frames}개/구간  "
             f"중단 τ {plan.limits.max_torque_nm:.2f} N·m · {plan.limits.max_temp_c:.0f}°C"
         )
@@ -1164,6 +1290,9 @@ def main(argv: list[str] | None = None) -> int:
     bus = open_bus(target.interface, locks)
     try:
         reason = jog(plan, bus)
+    except JogRefusedError as refused:
+        _say(f"거부: {refused}")
+        return EXIT_REFUSED
     finally:
         bus.shutdown()
         locks.release_all()

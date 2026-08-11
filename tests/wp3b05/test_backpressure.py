@@ -18,6 +18,9 @@ import pytest
 from backend.sensing.encoding import BackpressureEvent, BackpressureWarning, TranscodeWorker
 from tests.wp3b05.support import ControllableTranscoder, empty_job
 
+# `_NON_BLOCKING_BOUND_S` is a measured elapsed time, so the machine has to be doing nothing else.
+pytestmark = pytest.mark.serial
+
 # Five submits against a gated transcode return well under the gate's timeout when
 # submit is non-blocking; a blocking submit would take the transcode's full wait.
 _NON_BLOCKING_BOUND_S = 1.0

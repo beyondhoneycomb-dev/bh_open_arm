@@ -12,9 +12,13 @@ from __future__ import annotations
 import time
 
 import numpy as np
+import pytest
 
 from backend.dataset.viewer.episode_viewer import EpisodeViewer
 from tests.wp3d01.materialize import MaterializedDataset
+
+# The verdict here is a measured percentile, so the machine has to be doing nothing else.
+pytestmark = pytest.mark.serial
 
 _FRAME_PERIOD_MS = 1000.0 / 30.0
 _ITERATIONS = 200

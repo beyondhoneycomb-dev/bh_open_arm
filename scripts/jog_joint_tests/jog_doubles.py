@@ -50,6 +50,7 @@ from scripts.jog_joint import (
     JogTarget,
     ResolvedGains,
     jog,
+    resolve_envelope,
     resolve_gains,
 )
 
@@ -356,6 +357,7 @@ def wrist_target() -> JogTarget:
         send_id=WRIST_SEND_ID,
         motor_type=expected_type(WRIST_SEND_ID),
         effort_limit_nm=WRIST_EFFORT_NM,
+        envelope=resolve_envelope(LEFT_SIDE, WRIST_SEND_ID),
     )
 
 

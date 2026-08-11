@@ -22,6 +22,12 @@ dev = [
     "ruff==0.15.22",
     "mypy>=1.11",
     "types-PyYAML>=6.0",
+    # The gate runs the suite across cores. Serial, it is ~360 s on this machine and one core of
+    # twenty-four is busy; `-n auto --dist loadfile` is ~80 s. `loadfile` rather than the default
+    # per-test distribution because module- and session-scoped fixtures are shared within a file
+    # and splitting a file across workers rebuilds them per worker — `tests/boot02` alone loads the
+    # 3 MB registry once per session that way.
+    "pytest-xdist>=3.6",
 ]
 # WP-ENV-01/04: everything `backend/`, `sim/` and `packages/` import. Kept OUT of the
 # core `dependencies` so the plan-machine (registry/, ops/, dashboard/) — and
@@ -163,4 +169,9 @@ testpaths = ["tests"]
 addopts = "-q --strict-markers"
 markers = [
     "fixture_corpus: exercises the violation/pass fixture corpora required by WP-BOOT-03",
+    # A test whose verdict is a measured wall-clock duration. It has to be the only thing this
+    # machine is doing, so `scripts/gates.sh` runs these in their own serial lane after the
+    # parallel one. The marker is not a speed hint: under `-n auto` these fail on a healthy tree,
+    # because the number they assert on is the number the contention changed.
+    "serial: asserts on measured wall-clock time; must not share the machine with other workers",
 ]

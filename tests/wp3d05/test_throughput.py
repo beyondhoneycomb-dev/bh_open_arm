@@ -26,6 +26,10 @@ from backend.dataset.integrity import (
 )
 from tests.wp3d05.materialize import materialize
 
+# The verdict is a measured read time against a bandwidth bound, so the machine has to be doing
+# nothing else.
+pytestmark = pytest.mark.serial
+
 # A conservative sequential-read bandwidth standing in for the fio measurement.
 # Deployment storage (SATA SSD, NVMe) reads faster; a slower reference yields a
 # tighter bound, so a pass here holds on faster real hardware.

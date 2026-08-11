@@ -13,6 +13,8 @@ from __future__ import annotations
 import threading
 import time
 
+import pytest
+
 from backend.sensing.encoding import (
     EncoderConfig,
     EncoderSettings,
@@ -20,6 +22,9 @@ from backend.sensing.encoding import (
     TranscodeWorker,
 )
 from tests.wp3b05.support import ControllableTranscoder, ingest_episode, rgb_camera
+
+# `_NON_BLOCKING_BOUND_S` is a measured elapsed time, so the machine has to be doing nothing else.
+pytestmark = pytest.mark.serial
 
 # A save that has to wait on a transcode would take the gated transcode's full
 # timeout; a non-blocking save returns far under it. The bound separates the two.

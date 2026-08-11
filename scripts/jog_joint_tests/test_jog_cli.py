@@ -26,6 +26,7 @@ from scripts.jog_joint import (
     JogTarget,
     build_parser,
     build_plan,
+    resolve_envelope,
 )
 from scripts.jog_joint_tests.jog_doubles import (
     LEFT_INTERFACE,
@@ -78,6 +79,7 @@ def _elbow_target() -> JogTarget:
         send_id=ELBOW_SEND_ID,
         motor_type=expected_type(ELBOW_SEND_ID),
         effort_limit_nm=URDF_EFFORT_LIMIT_NM[ELBOW_SEND_ID - FIRST_ARM_SEND_ID],
+        envelope=resolve_envelope(LEFT_SIDE, ELBOW_SEND_ID),
     )
 
 

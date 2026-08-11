@@ -46,7 +46,23 @@ run "lockfile is current"    uv lock --check
 # Both trees are named because `testpaths` is `tests` alone. The runner in `scripts/` is
 # covered by tests that live beside it: `scripts/**` is the only ownership glob WP-ENV-03
 # declares, and CI-02b refuses a file under `tests/` that no glob claims.
-run "pytest"                 python3 -m pytest -q tests scripts
+#
+# Two lanes, and the split is not a speed tuning — it is what keeps the parallel lane honest.
+# Four files assert on a measured wall-clock duration (`serial` in pyproject, and each file says
+# which number it measures); under load they fail on a healthy tree, because the contention is
+# what changed the number. Running them anyway and calling the red "flaky" is how a gate stops
+# being read. So they get the machine to themselves.
+#
+# The serial lane runs FIRST, and that order is the point rather than a preference. `tests/wp3d01`
+# asserts a p99 over 200 samples, so one scheduling outlier is the verdict; run after the parallel
+# lane it saw p99 = 56 ms against a 33 ms bound with p50 still at 1.4 ms — the machine had not
+# settled from twenty-four workers. Everything above this line is single-core and takes seconds,
+# which is the quietest this script ever is.
+#
+# `--dist loadfile` keeps a whole file on one worker: module- and session-scoped fixtures are
+# shared within a file, and per-test distribution rebuilds them on every worker that draws a test.
+run "pytest (serial)"        python3 -m pytest -q tests scripts -m serial
+run "pytest (parallel)"      python3 -m pytest -q tests scripts -n auto --dist loadfile -m "not serial"
 
 printf '\n=== frontend ===\n'
 if [ -d frontend/node_modules ]; then
