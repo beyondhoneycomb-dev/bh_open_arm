@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 import sim.dryrun.twin as twin_module
+from backend.actuation.gains import COMPLIANT, STIFF, resolve_gain_profile
 from packages.lerobot_robot_openarm_dummy import DummyOpenArmRobot
 from packages.lerobot_robot_openarm_dummy.config import DummyRobotConfig
 from sim.dryrun.staticcheck import check_twin_no_send_action
@@ -19,8 +20,13 @@ from sim.dryrun.twin import (
 )
 from sim.mujoco.scene import MujocoScene
 
-# A compliant (70-series) profile — the v1/v2 common default, not the v2 stiff canon.
-_COMPLIANT_KP = (70.0, 70.0, 70.0, 70.0, 70.0, 70.0, 70.0, 10.0)
+# The compliant (70-series) profile as registered, not a stand-in shaped like one: the twin's
+# refusal has to hold against the vector a real arm can actually be running (`03` §2.8).
+_COMPLIANT_KP = resolve_gain_profile(COMPLIANT).kp
+
+# The parity canon `09` FR-SIM-028b names, spelled out once here so a registry edit that moved
+# these numbers fails the twin's own test rather than passing by following the registry.
+_STIFF_KP_CANON = (230.0, 230.0, 190.0, 190.0, 30.0, 30.0, 30.0, 10.0)
 
 
 def _named_left_j1_source() -> dict[str, float]:
@@ -34,6 +40,18 @@ def _named_left_j1_source() -> dict[str, float]:
 def test_verify_stiff_gain_parity_accepts_the_canon() -> None:
     """⑩ The stiff (230-series) profile passes the parity check."""
     verify_stiff_gain_parity(STIFF_KP)
+
+
+def test_the_twin_reads_the_stiff_canon_from_the_gain_registry() -> None:
+    """⑩ The numbers the twin demands are the registry's `stiff`, and they are still the canon.
+
+    Both halves are asserted. That the twin holds no copy is what keeps one profile from drifting
+    into two; that the values are the 230-series is what keeps the shared copy from drifting away
+    from what the MJCF actuators are modelled at.
+    """
+    assert twin_module.STIFF_PROFILE is resolve_gain_profile(STIFF)
+    assert resolve_gain_profile(STIFF).kp == STIFF_KP
+    assert STIFF_KP == _STIFF_KP_CANON
 
 
 def test_twin_refuses_compliant_gains() -> None:

@@ -6,8 +6,12 @@
 #
 #   ./scripts/jog_joint.sh --arm left --id 0x07 --delta 5
 #                                     wrist J7, 5 degrees and back. The smallest real move.
-#   ./scripts/jog_joint.sh --arm left --id 0x07 --delta 5 --kp 30 --seconds 4
+#   ./scripts/jog_joint.sh --arm left --id 0x07 --delta 5 --profile stiff --seconds 4
 #                                     stiffer and slower — the position error column shrinks.
+#                                     The profile is a name from 03 §2.8; there is no default kp.
+#   ./scripts/jog_joint.sh --arm left --id 0x04 --delta 5 --override-kp 60
+#                                     replace one half of the pair by hand, for probing a joint
+#                                     that will not move. Reported as an override, not a profile.
 #   ./scripts/jog_joint.sh --arm left --id 0x07 --delta 5 --no-return
 #                                     leave it where it arrived.
 #

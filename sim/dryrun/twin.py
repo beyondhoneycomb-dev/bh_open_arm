@@ -24,15 +24,19 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 
+from backend.actuation.gains import STIFF, resolve_gain_profile
 from contracts.units.conversions import deg_to_rad
 from contracts.units.tags import Deg
 from sim.mujoco.scene import MujocoScene
 
-# The v2 stiff PD gain profile per arm side: seven joints then the gripper. This is
-# `openarm_cell_higher_pd.yaml` (kp[230,230,190,190,30,30,30,10]), the only profile
-# whose response matches the MJCF-modelled stiff actuators (`09` FR-SIM-028b).
-STIFF_KP = (230.0, 230.0, 190.0, 190.0, 30.0, 30.0, 30.0, 10.0)
-STIFF_KD = (2.7, 2.7, 2.2, 2.2, 1.5, 1.5, 1.5, 0.2)
+# The parity canon, read from the `03` §2.8 registry rather than restated here. A second copy of
+# these numbers is the failure this refuses to be part of: the twin's whole verdict is "the real
+# arm is on the profile the MJCF actuators are modelled at", and a local copy that drifted from
+# the registry would answer that question about a profile no arm is running (`09` FR-SIM-028b).
+STIFF_PROFILE = resolve_gain_profile(STIFF)
+
+# Per arm side: seven joints then the gripper.
+STIFF_KP = STIFF_PROFILE.kp
 
 # Gain comparison tolerance; a profile within this of the stiff canon is stiff.
 GAIN_TOLERANCE = 1e-6

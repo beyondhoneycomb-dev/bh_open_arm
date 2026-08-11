@@ -26,6 +26,12 @@ effort limit rather than one small fixed number: a ceiling below the gravity hol
 healthy arm and turn a jog into a fall. The first move on this rig belongs on a wrist joint, with
 a hand near the arm.
 
+The gains are not a knob on this tool. It names a profile from the `03` §2.8 registry and reads
+this joint's pair out of it (`--profile`), because one scalar kp is wrong at one end of the arm or
+the other: `compliant` puts the elbow at 60 and the wrist at 10, and the difference is measured,
+not argued (`DEFAULT_PROFILE_NAME`). `--override-kp` / `--override-kd` replace one half by hand for
+probing, and every line that reports the gains says which halves were overridden.
+
 No detached worker and no wall-clock timetable here, unlike `torque_session` and
 `canbind_session`. Those fork because their measurement steps are long and the operator must act
 at a stated instant, and a line printed by a still-running command reaches the terminal after the
@@ -57,6 +63,13 @@ from pathlib import Path
 
 import can
 
+from backend.actuation.gains import (
+    COMPLIANT,
+    NamedGainProfile,
+    UnknownGainProfileError,
+    profile_names,
+    resolve_gain_profile,
+)
 from backend.can.lock import LockManager, assert_lock_held
 from backend.can.rid.layout import expected_type
 from backend.can.rid.motor_limits import MOTOR_LIMIT_PARAMS, MotorType
@@ -170,12 +183,22 @@ ENABLE_POLL_PERIOD_S = 0.02
 
 # --- Move defaults ---
 
-# J7's entries in the `compliant` gain profile (`03` §2.8, FR-MOT-024: kp 10, kd 0.5), the softest
-# profile the spec registers, on the joint a first move belongs to. Soft is the right default
-# here: the position error the operator reads on each line is visible under a soft gain and near
-# zero under a stiff one, and that error is the only thing on screen saying the joint follows.
-DEFAULT_KP = 10.0
-DEFAULT_KD = 0.5
+# The profile a run uses when the operator names none. `compliant` is the softest set `03` §2.8
+# registers and the one this tool's job asks for: one unloaded joint, moved by hand-sized deltas,
+# with a hand near the arm. Soft also keeps the run readable — the position error printed on each
+# line is visible under a soft gain and near zero under a stiff one, and that error is the only
+# thing on screen saying the joint is following.
+#
+# Per joint rather than one number, and that part is measured: on this rig kp=10 moved the elbow
+# 0.02° of a commanded 5°, while kp=60 moved it 3.4°. `compliant` declares J4 kp=60 and J7 kp=10,
+# so the registry already held both answers — a single default would have been wrong at one end of
+# the arm whichever value it took.
+DEFAULT_PROFILE_NAME = COMPLIANT
+
+# The flags that replace one half of a profile's pair by hand. Named, and named as overrides, so a
+# run on `--override-kp 60` cannot be read back as a run on a registered profile.
+OVERRIDE_KP_FLAG = "--override-kp"
+OVERRIDE_KD_FLAG = "--override-kd"
 
 DEFAULT_RAMP_SECONDS = 2.0
 DEFAULT_RAMP_HZ = 20.0
@@ -233,6 +256,26 @@ def can_id(text: str) -> int:
         return int(text, 0)
     except ValueError as bad:
         raise argparse.ArgumentTypeError(f"{text!r} is not a CAN id") from bad
+
+
+def gain_profile(text: str) -> NamedGainProfile:
+    """Resolve a registered gain profile by name (`03` §2.8), refusing an unknown one.
+
+    Args:
+        text: The profile name as typed.
+
+    Returns:
+        (NamedGainProfile) The registered set.
+
+    Raises:
+        ArgumentTypeError: When no profile carries that name. The registry refuses rather than
+            substituting a default (`13` FR-GUI-068), and raising here keeps that refusal on the
+            usage line, where the operator reads which names exist.
+    """
+    try:
+        return resolve_gain_profile(text)
+    except UnknownGainProfileError as unknown:
+        raise argparse.ArgumentTypeError(str(unknown)) from unknown
 
 
 def positive_float(text: str) -> float:
@@ -573,15 +616,16 @@ def request_refusals(
         )
     if not KP_MIN <= kp <= KP_MAX:
         refusals.append(
-            f"--kp {kp} 는 MIT 인코딩 범위 [{KP_MIN}, {KP_MAX}] 밖이다(FR-MOT-018). 인코더는 "
+            f"kp {kp} 는 MIT 인코딩 범위 [{KP_MIN}, {KP_MAX}] 밖이다(FR-MOT-018). 인코더는 "
             "범위를 넘긴 값을 에러 없이 잘라서 내보내므로, 거부하지 않으면 조용히 다른 게인으로 "
-            "움직인다."
+            f"움직인다. 등록된 프로파일은 레지스트리가 가져올 때 이미 검사하므로 이 값은 "
+            f"{OVERRIDE_KP_FLAG} 에서 왔다."
         )
     if not KD_MIN < kd <= KD_MAX:
         refusals.append(
-            f"--kd {kd} 는 (0, {KD_MAX}] 밖이다. 상한은 MIT 인코딩 범위이고(FR-MOT-018), 0 이 "
+            f"kd {kd} 는 (0, {KD_MAX}] 밖이다. 상한은 MIT 인코딩 범위이고(FR-MOT-018), 0 이 "
             "빠진 건 Damiao 공식 제약이다(FR-MOT-021): 위치 제어에서 kd=0 이면 모터가 진동하거나 "
-            "폭주한다."
+            f"폭주한다. 등록된 프로파일은 이미 검사되므로 이 값은 {OVERRIDE_KD_FLAG} 에서 왔다."
         )
     if max_torque_nm > target.effort_limit_nm:
         refusals.append(
@@ -597,6 +641,67 @@ def request_refusals(
 
 
 # --- The move ---
+
+
+@dataclass(frozen=True)
+class ResolvedGains:
+    """The pair this run commands at one joint, and where each half of it came from.
+
+    Attributes:
+        kp: Position gain that goes in every commanded frame.
+        kd: Velocity gain that goes in every commanded frame.
+        profile_name: The registered profile the pair was read from.
+        overridden: The flags whose values replaced the registered ones, empty when the run is on
+            the profile as registered.
+
+    The origin travels with the numbers because the two are not interchangeable on a bench: a run
+    on a registered profile is repeatable from its name alone, and a run carrying an override is
+    only repeatable from the command line that produced it.
+    """
+
+    kp: float
+    kd: float
+    profile_name: str
+    overridden: tuple[str, ...]
+
+    @property
+    def label(self) -> str:
+        """How the gains are named on screen: the profile, plus any hand override on top of it."""
+        origin = self.profile_name
+        if self.overridden:
+            origin = f"{origin} + {' '.join(self.overridden)}"
+        return f"게인 {origin} kp={self.kp} kd={self.kd}"
+
+
+def resolve_gains(
+    profile: NamedGainProfile, send_id: int, override_kp: float | None, override_kd: float | None
+) -> ResolvedGains:
+    """Read one joint's gains out of a profile, then apply whatever the operator overrode.
+
+    Args:
+        profile: The registered profile named on the command line.
+        send_id: The motor's CAN send id, which selects the entry — this is the whole point of a
+            profile over a scalar, since `compliant` is kp 60 at J4 and kp 10 at J7.
+        override_kp: A stiffness that replaces the registered one, or None.
+        override_kd: A damping that replaces the registered one, or None.
+
+    Returns:
+        (ResolvedGains) What the frames carry, and what to call it.
+
+    Raises:
+        GainProfileError: When the profile has no entry for this id.
+    """
+    registered = profile.for_send_id(send_id)
+    overridden: list[str] = []
+    kp = registered.kp
+    kd = registered.kd
+    if override_kp is not None:
+        kp = override_kp
+        overridden.append(OVERRIDE_KP_FLAG)
+    if override_kd is not None:
+        kd = override_kd
+        overridden.append(OVERRIDE_KD_FLAG)
+    return ResolvedGains(kp=kp, kd=kd, profile_name=profile.name, overridden=tuple(overridden))
 
 
 @dataclass(frozen=True)
@@ -819,8 +924,7 @@ class JogPlan:
     Attributes:
         target: The motor to address.
         delta: The relative move.
-        kp: Position gain.
-        kd: Velocity gain.
+        gains: The pair every commanded frame carries, and which profile it came from.
         frames: Targets per leg.
         period_s: Gap between frames.
         hold_frames: How many frames the far end is held for; zero means no hold.
@@ -830,8 +934,7 @@ class JogPlan:
 
     target: JogTarget
     delta: Rad
-    kp: float
-    kd: float
+    gains: ResolvedGains
     frames: int
     period_s: float
     hold_frames: int
@@ -872,7 +975,7 @@ def jog(plan: JogPlan, bus: NodeBus) -> str | None:
         legs = plan_legs(resting, plan.delta, plan.frames, plan.returns)
         _say(
             f"목표 {rad_to_deg(resting + plan.delta).value:+.2f}°  "
-            f"kp={plan.kp} kd={plan.kd}  프레임 {plan.frames}개/구간  "
+            f"{plan.gains.label}  프레임 {plan.frames}개/구간  "
             f"중단 τ {plan.limits.max_torque_nm:.2f} N·m · {plan.limits.max_temp_c:.0f}°C"
         )
 
@@ -885,7 +988,13 @@ def jog(plan: JogPlan, bus: NodeBus) -> str | None:
 
         for index, targets in enumerate(legs):
             reason = run_leg(
-                link, LEG_NAMES[index], targets, plan.kp, plan.kd, plan.limits, plan.period_s
+                link,
+                LEG_NAMES[index],
+                targets,
+                plan.gains.kp,
+                plan.gains.kd,
+                plan.limits,
+                plan.period_s,
             )
             if reason is not None:
                 return reason
@@ -893,8 +1002,8 @@ def jog(plan: JogPlan, bus: NodeBus) -> str | None:
                 reason = hold_at(
                     link,
                     targets[-1],
-                    plan.kp,
-                    plan.kd,
+                    plan.gains.kp,
+                    plan.gains.kd,
                     plan.limits,
                     plan.hold_frames,
                     plan.period_s,
@@ -919,7 +1028,8 @@ def build_plan(target: JogTarget, args: argparse.Namespace) -> JogPlan:
 
     This is the one place this file crosses units (CTR-UNIT@v1): the CLI is degrees because that
     is what the operator reads off the arm, and everything below is radians because that is what
-    the CAN frame carries (`03` §2.3).
+    the CAN frame carries (`03` §2.3). It is also where the named profile becomes two numbers, at
+    the joint this run addresses and nowhere else.
 
     Args:
         target: The motor to address.
@@ -927,13 +1037,15 @@ def build_plan(target: JogTarget, args: argparse.Namespace) -> JogPlan:
 
     Returns:
         (JogPlan) The move, ready to run.
+
+    Raises:
+        GainProfileError: When the named profile has no entry for this joint.
     """
     max_torque = args.max_torque if args.max_torque is not None else target.default_abort_torque_nm
     return JogPlan(
         target=target,
         delta=deg_to_rad(Deg(args.delta)),
-        kp=args.kp,
-        kd=args.kd,
+        gains=resolve_gains(args.profile, target.send_id, args.override_kp, args.override_kd),
         frames=max(MIN_RAMP_FRAMES, frame_count(args.hz, args.seconds)),
         period_s=1.0 / args.hz,
         hold_frames=round(args.hz * args.hold),
@@ -956,8 +1068,27 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--delta", type=float, required=True, help="현재 위치 기준 상대 각도(도), 필수"
     )
-    parser.add_argument("--kp", type=float, default=DEFAULT_KP, help="위치 게인 (기본 %(default)s)")
-    parser.add_argument("--kd", type=float, default=DEFAULT_KD, help="속도 게인 (기본 %(default)s)")
+    parser.add_argument(
+        "--profile",
+        type=gain_profile,
+        default=resolve_gain_profile(DEFAULT_PROFILE_NAME),
+        help=(
+            f"게인 프로파일 이름 — 03 §2.8 정본 {', '.join(profile_names())} "
+            f"(기본 {DEFAULT_PROFILE_NAME})"
+        ),
+    )
+    parser.add_argument(
+        OVERRIDE_KP_FLAG,
+        type=float,
+        default=None,
+        help="프로파일의 이 관절 kp 를 손으로 대체한다 (탐침용, 화면에 override 로 표시된다)",
+    )
+    parser.add_argument(
+        OVERRIDE_KD_FLAG,
+        type=float,
+        default=None,
+        help="프로파일의 이 관절 kd 를 손으로 대체한다 (탐침용, 화면에 override 로 표시된다)",
+    )
     parser.add_argument(
         "--seconds",
         type=positive_float,
@@ -1010,7 +1141,12 @@ def main(argv: list[str] | None = None) -> int:
 
     plan = build_plan(target, args)
     refusals = channel_refusals(target.interface, channels, locks) + request_refusals(
-        target, Deg(args.delta), plan.kp, plan.kd, plan.limits.max_torque_nm, plan.limits.max_temp_c
+        target,
+        Deg(args.delta),
+        plan.gains.kp,
+        plan.gains.kd,
+        plan.limits.max_torque_nm,
+        plan.limits.max_temp_c,
     )
     if refusals:
         for refusal in refusals:

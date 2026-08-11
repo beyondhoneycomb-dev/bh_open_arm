@@ -11,18 +11,49 @@ import math
 
 import pytest
 
+from backend.actuation.gains import COMPLIANT, STIFF, resolve_gain_profile
+from backend.can.rid.layout import expected_type
 from backend.excitation.constants import DEFAULT_MAX_MOTOR_TEMP_C
+from backend.safety_bringup.constants import URDF_EFFORT_LIMIT_NM
 from contracts.units import Rad
 from scripts.jog_joint import (
     ABORT_TORQUE_FRACTION_OF_EFFORT,
+    DEFAULT_PROFILE_NAME,
     MIN_RAMP_FRAMES,
+    OVERRIDE_KD_FLAG,
+    OVERRIDE_KP_FLAG,
     JogPlan,
+    JogTarget,
     build_parser,
     build_plan,
 )
-from scripts.jog_joint_tests.jog_doubles import WRIST_SEND_ID, wrist_target
+from scripts.jog_joint_tests.jog_doubles import (
+    LEFT_INTERFACE,
+    LEFT_SIDE,
+    WRIST_SEND_ID,
+    wrist_target,
+)
 
 BASE_ARGV = ["--arm", "left", "--id", "0x07", "--delta", "5"]
+
+# The elbow, and the two `compliant` entries that make the per-joint lookup visible: J4 kp 60
+# against J7 kp 10 (`03` §2.8). On this rig kp=10 moved the elbow 0.02° of a commanded 5° while
+# kp=60 moved it 3.4°, so this is the difference a scalar default gets wrong.
+ELBOW_SEND_ID = 0x04
+ELBOW_ARGV = ["--arm", "left", "--id", "0x04", "--delta", "5"]
+COMPLIANT_ELBOW_KP = 60.0
+COMPLIANT_ELBOW_KD = 2.0
+COMPLIANT_WRIST_KP = 10.0
+
+# The stiffness the operator reached for by hand when the elbow would not move.
+PROBE_KP = "60"
+PROBE_KD = "1.5"
+
+# A name that is not in the `03` §2.8 registry.
+UNREGISTERED_PROFILE = "medium"
+
+# `URDF_EFFORT_LIMIT_NM` is indexed from J1, which is CAN send id 0x01.
+FIRST_ARM_SEND_ID = 0x01
 
 RIGHT_ANGLE_DEG = "90"
 SLOW_SECONDS = "4"
@@ -37,6 +68,22 @@ HOLD_SECONDS = "2"
 def _plan_from(argv: list[str]) -> JogPlan:
     """Parse an argument list and build the plan it names, against the wrist joint."""
     return build_plan(wrist_target(), build_parser().parse_args(argv))
+
+
+def _elbow_target() -> JogTarget:
+    """The left arm's elbow, as `resolve_target` would have produced it."""
+    return JogTarget(
+        side=LEFT_SIDE,
+        interface=LEFT_INTERFACE,
+        send_id=ELBOW_SEND_ID,
+        motor_type=expected_type(ELBOW_SEND_ID),
+        effort_limit_nm=URDF_EFFORT_LIMIT_NM[ELBOW_SEND_ID - FIRST_ARM_SEND_ID],
+    )
+
+
+def _elbow_plan_from(argv: list[str]) -> JogPlan:
+    """Parse an argument list and build the plan it names, against the elbow joint."""
+    return build_plan(_elbow_target(), build_parser().parse_args(argv))
 
 
 def test_the_help_text_renders() -> None:
@@ -132,3 +179,75 @@ def test_a_negative_hold_is_a_usage_error() -> None:
     """A negative duration is a typo, and rounding it to zero would hide the typo."""
     with pytest.raises(SystemExit):
         build_parser().parse_args([*BASE_ARGV, "--hold", "-1"])
+
+
+def test_the_gains_come_from_the_named_profile_at_this_joint() -> None:
+    """The same command line resolves to different gains on different joints, which is the point.
+
+    `compliant` is kp 60 at the elbow and kp 10 at the wrist. A scalar default is wrong at one of
+    those two ends whichever value it takes, and the bench proved which way: kp=10 moved the elbow
+    0.02° of a commanded 5°.
+    """
+    assert _elbow_plan_from(ELBOW_ARGV).gains.kp == COMPLIANT_ELBOW_KP
+    assert _elbow_plan_from(ELBOW_ARGV).gains.kd == COMPLIANT_ELBOW_KD
+    assert _plan_from(BASE_ARGV).gains.kp == COMPLIANT_WRIST_KP
+
+
+def test_the_default_profile_is_the_registered_compliant_set() -> None:
+    """Unloaded joint, hand-sized deltas, a hand near the arm — the softest set the spec has."""
+    assert DEFAULT_PROFILE_NAME == COMPLIANT
+    assert _plan_from(BASE_ARGV).gains.profile_name == COMPLIANT
+
+
+def test_a_named_profile_replaces_the_default_whole() -> None:
+    """Naming a profile changes every joint's pair at once, which a per-flag gain could not do."""
+    plan = _elbow_plan_from([*ELBOW_ARGV, "--profile", STIFF])
+    registered = resolve_gain_profile(STIFF).for_send_id(ELBOW_SEND_ID)
+
+    assert plan.gains.profile_name == STIFF
+    assert (plan.gains.kp, plan.gains.kd) == (registered.kp, registered.kd)
+
+
+def test_an_unregistered_profile_name_is_a_usage_error() -> None:
+    """The registry refuses rather than defaulting, and the refusal reaches the command line.
+
+    A silently substituted profile would run gains nobody chose while reporting a name nobody
+    typed (`13` FR-GUI-068).
+    """
+    with pytest.raises(SystemExit):
+        build_parser().parse_args([*BASE_ARGV, "--profile", UNREGISTERED_PROFILE])
+
+
+def test_an_override_replaces_one_half_and_leaves_the_other_registered() -> None:
+    """Probing one joint by hand is legitimate; losing track of which half was probed is not."""
+    plan = _elbow_plan_from([*ELBOW_ARGV, OVERRIDE_KP_FLAG, PROBE_KP])
+
+    assert plan.gains.kp == float(PROBE_KP)
+    assert plan.gains.kd == COMPLIANT_ELBOW_KD
+    assert plan.gains.overridden == (OVERRIDE_KP_FLAG,)
+
+
+def test_both_halves_can_be_overridden_together() -> None:
+    """A probe that names both is still a probe, and both flags are reported."""
+    plan = _elbow_plan_from([*ELBOW_ARGV, OVERRIDE_KP_FLAG, PROBE_KP, OVERRIDE_KD_FLAG, PROBE_KD])
+
+    assert (plan.gains.kp, plan.gains.kd) == (float(PROBE_KP), float(PROBE_KD))
+    assert plan.gains.overridden == (OVERRIDE_KP_FLAG, OVERRIDE_KD_FLAG)
+
+
+def test_an_overridden_run_cannot_be_read_back_as_a_profile_run() -> None:
+    """The label is what the operator reads and what a log carries, so it names the override.
+
+    Reporting the profile name alone would make a hand-probed run look repeatable from that name,
+    and it is not: nothing in the registry carries this stiffness.
+    """
+    plan = _elbow_plan_from([*ELBOW_ARGV, OVERRIDE_KP_FLAG, PROBE_KP])
+
+    assert OVERRIDE_KP_FLAG in plan.gains.label
+    assert COMPLIANT in plan.gains.label
+
+
+def test_a_run_on_a_registered_profile_says_only_that() -> None:
+    """No override, no override marker — otherwise the marker means nothing."""
+    assert _plan_from(BASE_ARGV).gains.overridden == ()
+    assert OVERRIDE_KP_FLAG not in _plan_from(BASE_ARGV).gains.label

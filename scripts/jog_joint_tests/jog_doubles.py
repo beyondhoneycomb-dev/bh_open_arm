@@ -23,6 +23,7 @@ from dataclasses import dataclass
 
 import can
 
+from backend.actuation.gains import resolve_gain_profile
 from backend.can.rid.layout import expected_type
 from backend.can.rid.motor_limits import MOTOR_LIMIT_PARAMS, MotorType
 from contracts.units import Rad
@@ -39,6 +40,7 @@ from scripts.can_node_watch import (
 )
 from scripts.can_node_watch_tests.watch_doubles import feedback_payload
 from scripts.jog_joint import (
+    DEFAULT_PROFILE_NAME,
     ENABLE_COMMAND_CODE,
     GAIN_BITS,
     KP_MAX,
@@ -46,7 +48,9 @@ from scripts.jog_joint import (
     AbortLimits,
     JogPlan,
     JogTarget,
+    ResolvedGains,
     jog,
+    resolve_gains,
 )
 
 # The temperatures a powered DM motor reports, degrees Celsius. Non-zero so a test can tell a
@@ -69,10 +73,11 @@ LEFT_SIDE = "left"
 # gap a real joint needs would only make the suite slower.
 SMALL_DELTA = Rad(0.1)
 SMALL_FRAMES = 5
-TEST_KP = 10.0
-TEST_KD = 0.5
 NO_GAP_S = 0.0
 NO_HOLD_FRAMES = 0
+
+# What `resolve_gains` is passed when the run is on the profile as registered.
+NO_OVERRIDE = None
 TEST_LIMITS = AbortLimits(max_torque_nm=3.5, max_temp_c=80.0)
 
 # One LSB of each signed field, for the wrist's motor type. A round trip through the frame lands
@@ -354,6 +359,17 @@ def wrist_target() -> JogTarget:
     )
 
 
+def wrist_gains() -> ResolvedGains:
+    """The wrist's gains as the tool resolves them, read from the registry rather than restated.
+
+    The wire tests only need a driving stiffness, but taking it from the default profile means a
+    registry edit that broke this joint's entry surfaces here as well as at the bench.
+    """
+    return resolve_gains(
+        resolve_gain_profile(DEFAULT_PROFILE_NAME), WRIST_SEND_ID, NO_OVERRIDE, NO_OVERRIDE
+    )
+
+
 def small_move_plan(returns: bool, hold_frames: int = NO_HOLD_FRAMES) -> JogPlan:
     """The judged move the wire-level tests drive.
 
@@ -367,8 +383,7 @@ def small_move_plan(returns: bool, hold_frames: int = NO_HOLD_FRAMES) -> JogPlan
     return JogPlan(
         target=wrist_target(),
         delta=SMALL_DELTA,
-        kp=TEST_KP,
-        kd=TEST_KD,
+        gains=wrist_gains(),
         frames=SMALL_FRAMES,
         period_s=NO_GAP_S,
         hold_frames=hold_frames,
