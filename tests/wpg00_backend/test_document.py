@@ -13,12 +13,17 @@ import pytest
 from pydantic import ValidationError
 
 from backend.config.constants import (
+    CONTROL_TICK_HZ_DEFAULT,
+    CONTROL_TICK_HZ_MAX,
+    CONTROL_TICK_HZ_MIN,
+    FIELD_CONTROL_TICK_HZ,
     FIELD_DENSITY,
     FIELD_MODE,
     FIELD_SIDEBAR_COLLAPSED,
     FIELD_TOOL_ID,
     FIELD_TOOL_MASS_KG,
     FIELD_VIEW_PRESETS,
+    SUBOBJECT_CONTROL,
     SUBOBJECT_END_EFFECTOR,
     SUBOBJECT_LAYOUT,
     SUBOBJECT_PRESETS,
@@ -27,8 +32,10 @@ from backend.config.constants import (
 from backend.config.model import (
     SUBOBJECT_KEYS,
     ArmEndEffectorConfig,
+    ControlConfig,
     EndEffectorConfig,
     LayoutConfig,
+    RuntimeConfigDocument,
     default_document,
     parse_document,
 )
@@ -183,3 +190,66 @@ def test_a_typo_in_an_arm_key_is_refused_not_ignored() -> None:
     assert parsed.document.end_effector.left.tool_id == DEFAULT_TOOL_ID, (
         "a mistyped key must not leave the arm quietly carrying a tool nobody chose"
     )
+
+
+def test_the_control_tick_defaults_to_the_measured_rate() -> None:
+    """100 Hz is what a fresh document carries, and it is a measurement rather than a taste.
+
+    One batch send-then-collect over both channels and all 14 fitted motors is 2.71 ms p50 on
+    this rig, so the IO takes 27% of a 10 ms period. The default is written down here because a
+    build that started at some other rate would silently be running a loop nobody sized.
+    """
+    document = default_document()
+
+    assert document.control.control_tick_hz == CONTROL_TICK_HZ_DEFAULT
+
+
+@pytest.mark.parametrize(
+    "rate",
+    [
+        CONTROL_TICK_HZ_MIN - 1.0,
+        CONTROL_TICK_HZ_MAX + 1.0,
+        0.0,
+        -CONTROL_TICK_HZ_DEFAULT,
+        "100",
+        True,
+        None,
+    ],
+)
+def test_a_tick_outside_the_band_is_refused_rather_than_clamped(rate: Any) -> None:
+    """Refused, not clamped: a clamp stores a rate the operator did not choose and says it worked.
+
+    `True` is in the list because `bool` is an `int` in Python — coercion would store a 1 Hz
+    tick, a control loop running once a second, arrived at by a type nobody looked at.
+    """
+    with pytest.raises(ValidationError):
+        ControlConfig(**{FIELD_CONTROL_TICK_HZ: rate})
+
+
+def test_a_rate_inside_the_band_round_trips_on_the_wire() -> None:
+    """The band is not vacuous, and the stored value comes back under its camelCase name."""
+    chosen = (CONTROL_TICK_HZ_DEFAULT + CONTROL_TICK_HZ_MAX) / 2.0
+    document = RuntimeConfigDocument(control=ControlConfig(**{FIELD_CONTROL_TICK_HZ: chosen}))
+
+    assert document.to_wire()[SUBOBJECT_CONTROL] == {FIELD_CONTROL_TICK_HZ: chosen}
+
+
+def test_a_malformed_control_subobject_leaves_the_fitted_tool_intact() -> None:
+    """Blast-radius isolation covers the new subobject in the direction that has a bus behind it.
+
+    A tick rate nobody can parse must not default the end effector, because a defaulted end
+    effector under-polls the bus and inventing a gripper that is not there walks the controller
+    to ERROR-PASSIVE.
+    """
+    fitted = {SIDE_LEFT: {FIELD_TOOL_ID: DEFAULT_TOOL_ID, FIELD_TOOL_MASS_KG: 0.42}}
+    parsed = parse_document(
+        {
+            SUBOBJECT_CONTROL: {FIELD_CONTROL_TICK_HZ: "not a rate"},
+            SUBOBJECT_END_EFFECTOR: {**GRIPPER_ON_BOTH_ARMS, **fitted},
+        }
+    )
+
+    assert SUBOBJECT_CONTROL in parsed.defaulted
+    assert SUBOBJECT_END_EFFECTOR not in parsed.defaulted
+    assert parsed.document.end_effector.left.tool_mass_kg == 0.42
+    assert parsed.document.control.control_tick_hz == CONTROL_TICK_HZ_DEFAULT

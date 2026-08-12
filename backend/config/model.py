@@ -30,7 +30,11 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from backend.config.constants import (
+    CONTROL_TICK_HZ_DEFAULT,
+    CONTROL_TICK_HZ_MAX,
+    CONTROL_TICK_HZ_MIN,
     DENSITY_DEFAULT,
+    FIELD_CONTROL_TICK_HZ,
     FIELD_DENSITY,
     FIELD_MODE,
     FIELD_SIDEBAR_COLLAPSED,
@@ -38,6 +42,7 @@ from backend.config.constants import (
     FIELD_TOOL_MASS_KG,
     FIELD_VIEW_PRESETS,
     SIDEBAR_COLLAPSED_DEFAULT,
+    SUBOBJECT_CONTROL,
     SUBOBJECT_END_EFFECTOR,
     SUBOBJECT_LAYOUT,
     SUBOBJECT_PRESETS,
@@ -105,6 +110,43 @@ class PresetsConfig(BaseModel):
     model_config = WIRE_MODEL_CONFIG
 
     view_presets: dict[str, Any] = Field(default_factory=dict, alias=FIELD_VIEW_PRESETS)
+
+
+class ControlConfig(BaseModel):
+    """The control loop's tick rate, as the operator set it.
+
+    One number rather than a set of periods, and that is the point. Every other cadence the loop
+    runs — how often the state board is published, how many ticks a debounce counts, the grid a
+    trajectory is sampled on — is a whole number of ticks, so retuning this moves all of them
+    together. A build that also stored those separately would let the tick and the cadences
+    derived from it disagree the moment one was edited, which is a defect that reads as jitter.
+
+    It is persisted because it is a property of this rig rather than of a run: the number that
+    holds on a machine is the one its measured IO leaves room for, and an operator who found it
+    should not find it again next session.
+    """
+
+    model_config = WIRE_MODEL_CONFIG
+
+    control_tick_hz: float = Field(
+        default=CONTROL_TICK_HZ_DEFAULT,
+        alias=FIELD_CONTROL_TICK_HZ,
+        ge=CONTROL_TICK_HZ_MIN,
+        le=CONTROL_TICK_HZ_MAX,
+    )
+
+    @field_validator("control_tick_hz", mode="before")
+    @classmethod
+    def _refuse_a_non_number(cls, value: object) -> object:
+        """Refuse the values pydantic would read as a rate (`"100"`, `True`).
+
+        A bool is checked first because `bool` is an `int` in Python, so `True` would otherwise
+        store a 1 Hz tick — a control loop running once a second, arrived at by a type nobody
+        noticed.
+        """
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            raise ValueError(f"{FIELD_CONTROL_TICK_HZ} must be a number, got {value!r}")
+        return value
 
 
 class ArmEndEffectorConfig(BaseModel):
@@ -182,6 +224,7 @@ class RuntimeConfigDocument(BaseModel):
     end_effector: EndEffectorConfig = Field(
         default_factory=EndEffectorConfig, alias=SUBOBJECT_END_EFFECTOR
     )
+    control: ControlConfig = Field(default_factory=ControlConfig, alias=SUBOBJECT_CONTROL)
 
     def to_wire(self) -> dict[str, Any]:
         """Return the document as the camelCase object the browser client parses."""
@@ -209,6 +252,7 @@ SUBOBJECT_SPECS: tuple[SubobjectSpec, ...] = (
     SubobjectSpec(SUBOBJECT_THEME, "theme", ThemeConfig),
     SubobjectSpec(SUBOBJECT_PRESETS, "presets", PresetsConfig),
     SubobjectSpec(SUBOBJECT_END_EFFECTOR, "end_effector", EndEffectorConfig),
+    SubobjectSpec(SUBOBJECT_CONTROL, "control", ControlConfig),
 )
 
 SUBOBJECT_BY_KEY: dict[str, SubobjectSpec] = {spec.key: spec for spec in SUBOBJECT_SPECS}

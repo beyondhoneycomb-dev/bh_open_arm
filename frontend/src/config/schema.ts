@@ -19,6 +19,18 @@ export interface ThemeConfig {
   mode: ThemeMode;
 }
 
+// The control loop's tick rate. The band mirrors backend.config.constants:
+// 10 Hz floor so a typo cannot arm a timer that never usefully fires, 200 Hz
+// ceiling because the measured batch IO (2.71 ms over 14 motors) is 54% of a
+// 5 ms period there and a single bus-owning thread stops being enough.
+export const CONTROL_TICK_HZ_DEFAULT = 100;
+export const CONTROL_TICK_HZ_MIN = 10;
+export const CONTROL_TICK_HZ_MAX = 200;
+
+export interface ControlConfig {
+  controlTickHz: number;
+}
+
 export interface PresetsConfig {
   // Per-screen view presets, opaque to the shell — a screen WP owns the meaning
   // of its own entries, the shell only round-trips them through REST.
@@ -63,6 +75,7 @@ export interface RuntimeConfig {
   theme: ThemeConfig;
   presets: PresetsConfig;
   endEffector: EndEffectorConfig;
+  control: ControlConfig;
 }
 
 export type ConfigSubobjectKey = keyof RuntimeConfig;
@@ -118,6 +131,23 @@ function defaultArmEndEffector(): ArmEndEffector {
   return { toolId: DEFAULT_TOOL_ID, toolMassKg: null };
 }
 
+// The rate is refused rather than clamped when it is outside the band. Clamping
+// would store a tick the operator did not choose and report success for it, and
+// every derived cadence would then be computed from a number nobody picked.
+function isControlTickHz(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= CONTROL_TICK_HZ_MIN &&
+    value <= CONTROL_TICK_HZ_MAX
+  );
+}
+
+const CONTROL_SPEC: SubobjectSpec<ControlConfig> = {
+  validate: (value): value is ControlConfig => isObject(value) && isControlTickHz(value.controlTickHz),
+  makeDefault: () => ({ controlTickHz: CONTROL_TICK_HZ_DEFAULT }),
+};
+
 const END_EFFECTOR_SPEC: SubobjectSpec<EndEffectorConfig> = {
   validate: (value): value is EndEffectorConfig =>
     isObject(value) && isArmEndEffector(value.left) && isArmEndEffector(value.right),
@@ -131,6 +161,7 @@ const CONFIG_SCHEMA: { [K in ConfigSubobjectKey]: SubobjectSpec<RuntimeConfig[K]
   theme: THEME_SPEC,
   presets: PRESETS_SPEC,
   endEffector: END_EFFECTOR_SPEC,
+  control: CONTROL_SPEC,
 };
 
 const SUBOBJECT_KEYS = Object.keys(CONFIG_SCHEMA) as ConfigSubobjectKey[];
@@ -141,6 +172,7 @@ export function defaultConfig(): RuntimeConfig {
     theme: THEME_SPEC.makeDefault(),
     presets: PRESETS_SPEC.makeDefault(),
     endEffector: END_EFFECTOR_SPEC.makeDefault(),
+    control: CONTROL_SPEC.makeDefault(),
   };
 }
 

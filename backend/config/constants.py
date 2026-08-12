@@ -35,6 +35,7 @@ SUBOBJECT_LAYOUT = "layout"
 SUBOBJECT_THEME = "theme"
 SUBOBJECT_PRESETS = "presets"
 SUBOBJECT_END_EFFECTOR = "endEffector"
+SUBOBJECT_CONTROL = "control"
 
 FIELD_SIDEBAR_COLLAPSED = "sidebarCollapsed"
 FIELD_DENSITY = "density"
@@ -42,6 +43,23 @@ FIELD_MODE = "mode"
 FIELD_VIEW_PRESETS = "viewPresets"
 FIELD_TOOL_ID = "toolId"
 FIELD_TOOL_MASS_KG = "toolMassKg"
+FIELD_CONTROL_TICK_HZ = "controlTickHz"
+
+# The control loop's tick rate, and the band an operator may move it inside.
+#
+# 100 Hz is measured, not chosen: one batch send-then-collect over both channels and all 14
+# fitted motors is 2.71 ms p50 / 3.16 ms max on this rig (300 cycles, torque-free), so the IO
+# takes 27% of a 10 ms period and leaves the rest for the filter, IK and the trace. The sibling
+# rig runs the same number for the same reason.
+#
+# The ceiling is where that budget stops being comfortable rather than where the bus stops
+# keeping up: the same measurement achieves 369 Hz, but at 200 Hz the IO is 54% of the period and
+# `bh_remy_openArm` D3 records that a single bus-owning thread stops being enough there — the
+# next step is a thread per channel, which is a different design and not a setting. The floor is
+# well under anything useful and exists so a typo cannot arm a timer that never fires.
+CONTROL_TICK_HZ_DEFAULT = 100.0
+CONTROL_TICK_HZ_MIN = 10.0
+CONTROL_TICK_HZ_MAX = 200.0
 
 # The tool-choice wire shape `GET /api/config/tools` emits. `toolId` is shared with the
 # endEffector subobject on purpose: the id the GUI offers is the id it stores back.

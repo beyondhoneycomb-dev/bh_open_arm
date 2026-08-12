@@ -17,6 +17,7 @@ from backend.config.constants import (
     FIELD_LABEL,
     FIELD_TOOL_ID,
     FIELD_TOOL_MASS_KG,
+    SUBOBJECT_CONTROL,
     SUBOBJECT_END_EFFECTOR,
     SUBOBJECT_LAYOUT,
     SUBOBJECT_PRESETS,
@@ -42,7 +43,7 @@ def subobject_route(key: str) -> str:
 
 
 def test_get_returns_the_whole_document(client: TestClient) -> None:
-    """All four subobjects, camelCase, nothing else — what the browser client parses."""
+    """Every subobject, camelCase, nothing else — what the browser client parses."""
     body = client.get(CONFIG_ROUTE).json()
 
     assert set(body) == {
@@ -50,6 +51,7 @@ def test_get_returns_the_whole_document(client: TestClient) -> None:
         SUBOBJECT_THEME,
         SUBOBJECT_PRESETS,
         SUBOBJECT_END_EFFECTOR,
+        SUBOBJECT_CONTROL,
     }
 
 
