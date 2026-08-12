@@ -51,6 +51,7 @@ from pathlib import Path
 from typing import Any
 
 from backend.actuation import BimanualCanWriter
+from backend.actuation.pacer import PacerError, TickPacer
 
 EXIT_OK = 0
 EXIT_REFUSED = 1
@@ -678,17 +679,49 @@ class HoldMaintainer(threading.Thread):
         self._stop_event = threading.Event()
         self.failure: BaseException | None = None
         self.ticks = 0
+        self.overruns = 0
 
     def run(self) -> None:
-        """Re-send the hold every period until stopped, recording the tick that failed."""
-        while not self._stop_event.is_set():
-            try:
-                self._rig.maintain_hold()
-            except BaseException as failure:  # noqa: BLE001 — a dead loop is the whole finding
-                self.failure = failure
-                return
-            self.ticks += 1
-            self._stop_event.wait(self._period_sec)
+        """Re-send the hold every period until stopped, recording the tick that failed.
+
+        The period is held by a kernel timer rather than slept after the work, and on this loop
+        that is a fall hazard rather than a jitter one. `Event.wait(period)` runs after the tick,
+        so the interval a motor actually sees is `work + period` — and the precondition that is
+        supposed to keep this under the RID-9 no-send ceiling
+        (`backend.torque_bringup.preconditions`, `rid9_send_period_sec < rid9_no_send_margin_sec`)
+        compares the *nominal* period against the ceiling and cannot see the work term at all.
+        On this rig those are 10 ms against 20 ms, so the whole margin is one tick's work; past
+        the ceiling the motor stops applying the last MIT command, and with no brake that is the
+        arm coming down.
+
+        The timer's deadline is absolute, so the interval is the period whatever the work costs,
+        and a period the work *did* eat becomes a counted expiration instead of a silent lapse.
+        `overruns` is that count and the release reports it: an overrun here means the arm may
+        have gone unrefreshed past the ceiling, which is a finding about a session that appeared
+        to succeed.
+
+        A stop is seen up to one period late, because a blocked `read()` is not interruptible the
+        way `Event.wait` was. One period is 10 ms against the 2 s join bound, and the release
+        drops torque afterwards regardless — a stray re-send at a disabled motor moves nothing.
+        """
+        try:
+            pacer = TickPacer(self._period_sec)
+        except (ValueError, PacerError) as unavailable:
+            self.failure = unavailable
+            return
+        try:
+            while not self._stop_event.is_set():
+                try:
+                    self._rig.maintain_hold()
+                except BaseException as failure:  # noqa: BLE001 — a dead loop is the whole finding
+                    self.failure = failure
+                    return
+                self.ticks += 1
+                self.overruns = pacer.overruns
+                pacer.wait()
+                self.overruns = pacer.overruns
+        finally:
+            pacer.close()
 
     def stop(self) -> bool:
         """Stop re-sending, waiting a bounded time for the loop to leave the bus alone.
