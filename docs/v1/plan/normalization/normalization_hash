@@ -2,4 +2,4 @@
 # canonical 직렬화 콘텐츠 해시. 발행자 = WP-N1-04.
 # 모든 하류 WP 매니페스트는 normalization_hash로 이 값을 선언한다 — 불일치 = 착수 거부.
 # 재발행: python -m registry.normalization.cli --issue
-sha256:5e30c891daf24c082203916b0f95856358ba0a186ea95aab5d020bb1d638571f
+sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d

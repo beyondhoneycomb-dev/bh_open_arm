@@ -89,23 +89,19 @@ def test_origin_is_judged_before_anything_the_client_claims(ws: WsFixture) -> No
     assert refusal.code != WS_CLOSE_UNKNOWN_ROLE
 
 
-def test_no_policy_exists_for_the_plaintext_deployment_oa_serve_creates() -> None:
-    """`oa-serve`'s own transport cannot be described by the policy this route requires.
+def test_the_networked_policy_still_refuses_a_plaintext_scheme() -> None:
+    """`CTR-WS@v2` was not softened when `NORM-015` cleared the plaintext deployment.
 
-    This is the standing record of an unresolved disagreement between two canonical
-    documents, kept as a test so it cannot be forgotten and cannot be quietly worked
-    around:
+    This test used to be the standing record of an unresolved disagreement — `01` §2.17 giving the
+    web backend `HTTP / WS` on 8000 against `14` FR-OPS-090 forbidding `ws://` outright. `NORM-015`
+    resolved it by splitting the deployment rather than the scheme: a channel exposed on a network
+    is still WSS-only and this refusal is what holds that, while the loopback-bound research
+    deployment is described by `backend.ws.deployment.LoopbackDeployment` and pays for dropping TLS
+    with a refused non-loopback bind and a still-mandatory Origin allowlist
+    (`tests/wp3b15/test_loopback_deployment.py`).
 
-    - `01` §2.17 lists the web backend (SPA + REST + WebSocket, port 8000) as `HTTP / WS`,
-      and the row beneath it gives WebXR `HTTPS` — so the same [확정] table distinguishes a
-      TLS component from a plaintext one and assigns this port the plaintext form.
-    - `14` FR-OPS-090 requires the control channel on WSS/TLS only and forbids `ws://`
-      outright, with no loopback carve-out anywhere in `01`, `13`, `14` or `16`.
-
-    `oa-serve` binds plain HTTP on loopback, so a WebSocket mounted there is `ws://`, and
-    the policy `mount_realtime_channel` requires cannot be constructed to describe it. The
-    route is therefore not mounted in `backend/config/serve.py`. Deleting this test to make
-    the mount possible would be deciding the disagreement by removing its evidence.
+    So the assertion is unchanged and its meaning is not: it now pins that the carve-out did not
+    leak into the shape it was carved out of.
     """
     with pytest.raises(WsError) as refused:
         WsSecurityPolicy(

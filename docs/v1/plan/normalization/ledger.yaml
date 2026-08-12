@@ -417,6 +417,49 @@ rows:
         check: "WP-5-05"
         status: active
 
+  - norm_id: NORM-015
+    contradiction: >-
+      제어 채널의 전송 스킴을 두 정본이 반대로 배정한다. 01 §2.17 포트 맵은 웹 백엔드(SPA +
+      REST + WebSocket, 8000)를 `HTTP / WS`(평문)로 적고 바로 아랫줄 WebXR(8443)에는 `HTTPS`를
+      배정해, 같은 [확정] 표가 평문 컴포넌트와 TLS 컴포넌트를 구분해 놓았다. 반면 14
+      FR-OPS-090은 제어 채널을 WSS/TLS 위에서만 노출하라 하고 평문 `ws://`·`http://`를 명시적
+      으로 금지하며, loopback 예외가 01·13·14·16 어디에도 없다. CTR-WS@v2의 WsSecurityPolicy가
+      평문 스킴을 생성자에서 거부하므로 `oa-serve`(127.0.0.1:8000 평문)의 배치를 서술하는 정책
+      객체를 만들 수 없고, 그래서 WS 라우터가 마운트되지 않아 GUI STOP_HOLD가 백엔드에 닿지
+      않는다(FR-GUI-065가 [확정]으로 요구하는 관찰자 포함 상시 접근이 전송로 부재로 무력).
+    winners:
+      - FR-SYS-026
+      - FR-GUI-065
+    discarded:
+      - file: "14"
+        section: "3"
+        quote: '평문(ws://·http://)·와일드카드 Origin·Access-Control-Allow-Origin: *를 허용해서는 안 된다'
+        req: FR-OPS-090
+    contract: "CTR-WS@v2"
+    rationale: >-
+      두 문서가 서로 다른 배치를 서술하고 있고 둘 다 옳다. FR-OPS-090이 스스로 대는 근거는
+      암호화가 아니라 "인증·Origin 검증이 없으면 임의 브라우저·스크립트가 제어 명령을 쓸 수
+      있다"이며, 그 위협은 Origin allowlist가 닫는다 — WebSocket 핸드셰이크는 same-origin
+      policy 대상이 아니어서 브라우저가 그냥 보내고 서버가 판단하므로, 검사가 없으면 운영자가
+      열어둔 아무 페이지가 제어 소켓에 붙는다. TLS가 닫는 것은 전선 위의 도청·변조인데
+      loopback에는 그 전선이 없다(loopback을 엿볼 수 있는 프로세스는 이미 더 나쁜 일을 할 수
+      있다). 따라서 판정은 스킴이 아니라 배치를 기준으로 갈린다: 네트워크에 노출된 배치는
+      FR-OPS-090 그대로 WSS 전용이고, loopback 전용 연구 배치는 01 §2.17대로 평문을 쓰되
+      Origin allowlist를 그대로 요구한다. CTR-WS@v2는 무르게 하지 않는다 — 그 계약이 서술하는
+      것이 노출된 배치이고, 동결 본체의 security 블록이 바뀌면 소비자 11개가 함께 이동한다.
+      loopback 배치는 계약을 약화시키는 것이 아니라 마운트 지점에서 이름을 가진 두 번째 배치
+      형태로 갈라진다. 예외의 짝은 비-loopback 바인드 거부다 — `oa-serve --host`가 지금도
+      플래그이므로, 거부가 없으면 이것은 예외가 아니라 구멍이다.
+    enforcement:
+      - type: runtime_assert
+        predicate: "평문 배치는 바인드 주소가 loopback일 때만 성립하고, 비-loopback 바인드는 기동에서 거부된다"
+        check: "WP-3B-15"
+        status: planned
+      - type: runtime_assert
+        predicate: "평문 배치에서도 Origin allowlist는 필수이며 비어 있거나 와일드카드면 거부된다"
+        check: "WP-3B-15"
+        status: planned
+
 notes:
   - norm_id: NORM-005
     finding: >-

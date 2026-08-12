@@ -94,6 +94,36 @@ def test_section_body_is_absent_for_a_missing_section() -> None:
     assert section_body(path, "99.99") is None
 
 
+def test_a_top_level_section_is_addressable() -> None:
+    """`## N. <title>` resolves, and its body reaches an unnumbered subsection's requirement.
+
+    Every top-level section in the corpus writes the number with a trailing period while every
+    subsection writes it bare, so a matcher that demanded whitespace after the digits made the
+    whole top-level form uncitable. A row whose only honest citation is a whole section would then
+    have had to name a subsection it does not live in — which is a false citation reached by a
+    checker's limitation, not by a decision.
+
+    `14` FR-OPS-090 is the live case: it sits under an unnumbered subsection of `14#3`, so `3` is
+    the only correct address it has.
+    """
+    path = next(SPEC_DIR.glob("14-*.md"))
+    body = section_body(path, "3")
+
+    assert body is not None
+    assert "FR-OPS-090" in body
+
+
+def test_a_subsection_number_still_does_not_match_its_parent() -> None:
+    """Accepting the trailing period must not make `3` match `3.5`; the token is compared whole."""
+    path = next(SPEC_DIR.glob("13-*.md"))
+    parent = section_body(path, "3")
+    child = section_body(path, "3.5")
+
+    assert parent is not None
+    assert child is not None
+    assert len(child) < len(parent)
+
+
 def test_violation_renders_one_line() -> None:
     """A violation renders as a single attributable line."""
     line = Violation("NORM-001", "winner", "x has no single corpus definition").as_line()

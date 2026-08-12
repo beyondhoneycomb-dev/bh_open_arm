@@ -43,7 +43,13 @@ _CI_CHECK = re.compile(r"^CI-(\d+[a-z]?)$")
 _WP_CHECK = re.compile(r"^WP-[A-Z0-9-]+$")
 _CTR_CONTRACT = re.compile(r"^CTR-[A-Z]+@v\d+$")
 _GATE_REGISTRY_CONTRACT = re.compile(r"^gate-registry:(WP-[A-Z0-9-]+)$")
-_SECTION_NUMBER = re.compile(r"^(\d+(?:\.\d+)*[a-z]?)(?:\s|$)")
+# The number token a heading opens with. The trailing period is optional because the two forms sit
+# at different depths in the same document: every top-level section in `docs/v1/spec/*.md` is
+# written `## 3. <title>` and every subsection `### 3.9 <title>`. Requiring whitespace directly
+# after the number made the top-level form unmatchable, so no ledger row could cite a whole
+# section — and a row whose only honest citation is a top-level section would have had to name a
+# subsection it does not live in to pass this check.
+_SECTION_NUMBER = re.compile(r"^(\d+(?:\.\d+)*[a-z]?)\.?(?:\s|$)")
 
 
 @dataclass(frozen=True)

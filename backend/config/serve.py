@@ -39,6 +39,7 @@ from backend.config.constants import (
     SPA_MOUNT_PATH,
 )
 from backend.config.store import RuntimeConfigStore, default_store
+from backend.security.loopback import LoopbackBindError, assert_loopback_bind
 
 EXIT_OK = 0
 EXIT_REJECTED = 1
@@ -257,6 +258,16 @@ def main(argv: list[str] | None = None) -> int:
         (int): Process exit code; non-zero when the port was already taken.
     """
     args = build_parser().parse_args(argv)
+
+    # Checked before the port, and before anything binds. This process serves the control
+    # channel in plaintext under `NORM-015`, and that ruling holds only while the bind is
+    # loopback — so the refusal is a precondition of starting, not a warning printed beside a
+    # server that is already listening.
+    try:
+        assert_loopback_bind(args.host)
+    except LoopbackBindError as refused:
+        print(f"REJECTED: {refused}", file=sys.stderr)
+        return EXIT_REJECTED
 
     try:
         assert_port_available(args.host, args.port)
