@@ -26,14 +26,20 @@ fabricated here and shown to be refused, so the rig test asserts a predicate who
 is already established rather than a range every possible frame satisfies.
 
 `test_real_depth_capture_reverify` skips until `OPENARM_DEPTH_REAL_FIXTURE` names a real
-capture; `test_live_depth_per_family` skips with the reasons each family is unavailable —
-for the ZED fitted to this rig, `pyzed` is absent, LeRobot ships no ZED camera class, and
-the camera is cabled onto a link that carries no video interface (`PG-DEPTH-001`). No
-green is faked, none is dropped.
+capture; `test_live_depth_per_family` skips with the reasons each family is unavailable.
+No green is faked, none is dropped.
+
+Which blockers stand is a fact about the machine, not about the tree, and the tests are written
+so that it may differ per machine. `real_depth_supported` probes the running interpreter for the
+vendor SDK while every other input these tests supply is a fixture, so a test that leaves that
+probe live asserts a property of whatever happens to be installed. The SDK's presence is
+therefore pinned explicitly — absent for the multi-blocker cases, and asserted in both directions
+by `test_the_sdk_blocker_is_reported_exactly_when_the_sdk_is_absent`.
 """
 
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
 
@@ -567,14 +573,34 @@ def test_live_depth_per_family(device: DepthDevice) -> None:
     pytest.fail(f"live {device.value} depth must be exercised on the real rig, not synthesised")
 
 
-def test_the_zed_is_unavailable_for_three_separate_reasons(tmp_path: Path) -> None:
-    """The ZED deferral names the SDK, the missing backend and the cabling.
+def _without_the_zed_sdk(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Make the SDK probe report `pyzed` absent, whatever this machine has installed.
 
-    Each is independent, so any reason that named a subset would promise a fix that does
-    not arrive. The cabling is the one an operator cannot deduce from software: with
-    `pyzed` installed and a LeRobot ZED class in hand, a camera on a full-speed link is
+    The probe reads the running interpreter, and every other input these tests give
+    `real_depth_supported` is a fixture. Leaving that one live made the verdict a property of
+    the machine: installing the SDK flipped two tests red on a tree nobody had touched. Pinning
+    it here is what lets both the installed and the absent case be asserted at all.
+    """
+    real_find_spec = importlib.util.find_spec
+    sdk_module = DEPTH_SDK_MODULE[DepthDevice.STEREOLABS_ZED]
+
+    def absent(name: str, package: str | None = None) -> object | None:
+        return None if name == sdk_module else real_find_spec(name, package)
+
+    monkeypatch.setattr(importlib.util, "find_spec", absent)
+
+
+def test_the_zed_blockers_are_independent_and_each_is_reported(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With every blocker present, the deferral names the SDK, the backend AND the cabling.
+
+    Independence is the property, not the count: a reason that named a subset would promise a
+    fix that does not arrive. The cabling is the one an operator cannot deduce from software —
+    with `pyzed` installed and a LeRobot ZED class in hand, a camera on a full-speed link is
     exactly as mute as before, and the remedy is a different port rather than a download.
     """
+    _without_the_zed_sdk(monkeypatch)
     sysfs_root = _zed_sysfs(tmp_path, _FULL_SPEED_MBPS, (_USB_HID_INTERFACE_CLASS,))
     supported, reason = real_depth_supported(DepthDevice.STEREOLABS_ZED, sysfs_root)
 
@@ -585,12 +611,15 @@ def test_the_zed_is_unavailable_for_three_separate_reasons(tmp_path: Path) -> No
     assert "USB 3.0" in reason
 
 
-def test_a_superspeed_zed_clears_the_cabling_blocker_and_only_that_one(tmp_path: Path) -> None:
-    """Re-cabling removes the link blocker and leaves the two software ones standing.
+def test_a_superspeed_zed_clears_the_cabling_blocker_and_only_that_one(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Re-cabling removes the link blocker and leaves the software ones standing.
 
-    Without this the link blocker could be a sentence the deferral always prints, which
-    would make it a decoration rather than a judgment.
+    Without this the link blocker could be a sentence the deferral always prints, which would
+    make it a decoration rather than a judgment.
     """
+    _without_the_zed_sdk(monkeypatch)
     sysfs_root = _zed_sysfs(
         tmp_path, _SUPERSPEED_MBPS, (USB_VIDEO_INTERFACE_CLASS, _USB_HID_INTERFACE_CLASS)
     )
@@ -601,6 +630,32 @@ def test_a_superspeed_zed_clears_the_cabling_blocker_and_only_that_one(tmp_path:
     assert "no camera class" in reason
     assert "Mbit/s" not in reason
     assert "enumerated on USB" not in reason
+
+
+def test_the_sdk_blocker_is_reported_exactly_when_the_sdk_is_absent(tmp_path: Path) -> None:
+    """The blocker tracks the interpreter, in both directions, without skipping either.
+
+    Stated as a biconditional rather than as a fact about this machine. `pyzed` 5.4 is installed
+    here against ZED SDK 5.4.1 and the camera opens — 30.0 fps, 96.2% valid depth under
+    `NEURAL_LIGHT` — so today this asserts the blocker is gone; on a machine without it, it
+    asserts the blocker is named. Either way the test has bite, which a skip would have thrown
+    away on exactly the machines where the question is live.
+
+    The LeRobot camera class is asserted alongside in both branches, because clearing one
+    blocker clears none of the others — the reason every blocker is reported rather than the
+    first.
+    """
+    sysfs_root = _zed_sysfs(
+        tmp_path, _SUPERSPEED_MBPS, (USB_VIDEO_INTERFACE_CLASS, _USB_HID_INTERFACE_CLASS)
+    )
+    sdk_module = DEPTH_SDK_MODULE[DepthDevice.STEREOLABS_ZED]
+    sdk_installed = importlib.util.find_spec(sdk_module) is not None
+
+    supported, reason = real_depth_supported(DepthDevice.STEREOLABS_ZED, sysfs_root)
+
+    assert not supported
+    assert (sdk_module in reason) is not sdk_installed
+    assert "no camera class" in reason
 
 
 def _publishes_video_interface(entry: Path) -> bool:
