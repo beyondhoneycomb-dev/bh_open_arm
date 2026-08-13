@@ -233,6 +233,7 @@ class TranscodeWorker:
         self._failures: dict[int, BaseException] = {}
         self._latency_ns: list[int] = []
         self._outstanding = 0
+        self._peak_outstanding = 0
         self._backpressure_events = 0
         self._stopping = False
         self._cond = threading.Condition()
@@ -256,6 +257,20 @@ class TranscodeWorker:
         with self._cond:
             return self._backpressure_events
 
+    @property
+    def peak_outstanding(self) -> int:
+        """The highest outstanding count this worker ever held.
+
+        A high-water mark rather than a sample, because `outstanding` read after a run is
+        whatever the queue happened to drain to — usually zero, which reports nothing about how
+        deep it got. `PG-STO-001` acceptance ② asks for the encoder queue's maximum depth, and
+        the crossing count next door does not answer it either: crossing the threshold four
+        times says nothing about whether the queue reached five or five hundred, and it is the
+        depth that back-computes the disk-exhaustion time a `DEGRADED_ACCEPTED` verdict rests on.
+        """
+        with self._cond:
+            return self._peak_outstanding
+
     def submit(self, job: TranscodeJob) -> None:
         """Enqueue an episode's transcode and return without running it.
 
@@ -271,6 +286,7 @@ class TranscodeWorker:
             self._queue.append(job)
             self._outstanding += 1
             outstanding = self._outstanding
+            self._peak_outstanding = max(self._peak_outstanding, outstanding)
             over_threshold = outstanding > self._maxsize
             if over_threshold:
                 self._backpressure_events += 1
