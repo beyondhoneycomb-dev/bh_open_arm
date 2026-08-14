@@ -67,7 +67,16 @@ run "pytest (parallel)"      python3 -m pytest -q tests scripts -n auto --dist l
 printf '\n=== frontend ===\n'
 if [ -d frontend/node_modules ]; then
     (cd frontend && npx tsc --noEmit) || FAILED+=("tsc")
+    (cd frontend && npx eslint .) || FAILED+=("eslint")
     (cd frontend && npx vitest run) || FAILED+=("vitest")
+    # `vite build` rather than `npm run build`: that script is `tsc --noEmit && vite build`,
+    # and the typecheck above already ran. The bundle is what a type error cannot catch —
+    # a resolve failure, a transform error, an asset the CSP plugin cannot inject into.
+    #
+    # This writes frontend/dist/, and `oa-serve` mounts that bundle when it exists
+    # (backend/config/serve.py:195). Running the gate therefore changes what a subsequent
+    # `oa-serve` serves, from "no bundle" to the bundle of this working tree.
+    (cd frontend && npx vite build) || FAILED+=("vite build")
 else
     echo "SKIPPED — frontend/node_modules absent; run 'npm ci' in frontend/ first"
     FAILED+=("frontend (not installed)")

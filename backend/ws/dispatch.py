@@ -79,11 +79,6 @@ from contracts.ws import (
 )
 from ops.cancel.scheduler import LatchReason
 
-# What the dispatcher hands a well-formed, authorised `command` frame to. Required, not
-# optional: a default would let a server that consumes no command be indistinguishable
-# from one that does, and an operator would watch their command leave and nothing move.
-CommandSink = Callable[[WsSession, Mapping[str, Any]], None]
-
 
 @dataclass(frozen=True)
 class WsClosure:
@@ -97,6 +92,17 @@ class WsClosure:
 
     code: int
     reason: str
+
+
+# What the dispatcher hands a well-formed, authorised `command` frame to. Required, not
+# optional: a default would let a server that consumes no command be indistinguishable
+# from one that does, and an operator would watch their command leave and nothing move.
+#
+# The return type is the other half of that. A host whose process holds no arm session has
+# nowhere to route the frame, and the honest answer is neither an exception nor silence but
+# the close the client is owed — the same shape every other unacceptable frame earns here.
+# A sink that did route returns None, so a routing host reads exactly as it did before.
+CommandSink = Callable[[WsSession, Mapping[str, Any]], WsClosure | None]
 
 
 @dataclass(frozen=True)
@@ -143,7 +149,8 @@ class FrameDispatcher:
             clock: The server monotonic clock the latch timestamp is stamped from. The
                 same clock the deadman judges expiry on, so an audit can order a stop
                 against an expiry.
-            command_sink: Where an authorised command goes.
+            command_sink: Where an authorised command goes, or what closes the connection
+                when this process has no arm session to route it to.
         """
         self._latch_target = latch_target
         self._deadman = deadman
@@ -202,8 +209,7 @@ class FrameDispatcher:
         if frame_type is WsFrameType.REARM_CONFIRM:
             return self._rearm_confirm(session)
         if frame_type is WsFrameType.COMMAND:
-            self._command_sink(session, payload)
-            return DispatchOutcome()
+            return DispatchOutcome(closure=self._command_sink(session, payload))
         raise WsError(f"no route for client frame {frame_type.value!r}")
 
     def _stop_hold(self, session: WsSession) -> DispatchOutcome:

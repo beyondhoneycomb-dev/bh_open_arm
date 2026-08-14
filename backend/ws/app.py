@@ -26,7 +26,6 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from backend.actuation.clock import Clock
 from backend.deadman import DeadmanController, LatchTarget
-from backend.security.origin_policy import ControlChannelSecurity
 from backend.ws.constants import (
     ORIGIN_HEADER,
     REALTIME_ROUTE,
@@ -37,6 +36,7 @@ from backend.ws.constants import (
     WS_CLOSE_REASON_MAX_BYTES,
     WS_CLOSE_UNKNOWN_ROLE,
 )
+from backend.ws.deployment import ControlChannelDeployment, admitted_origins
 from backend.ws.dispatch import CommandSink, FrameDispatcher, WsClosure
 from backend.ws.session import WsSession
 from backend.ws.sink import WebSocketPreviewSink
@@ -118,15 +118,23 @@ def mount_realtime_channel(
     deadman: DeadmanController,
     clock: Clock,
     command_sink: CommandSink,
-    security: ControlChannelSecurity,
+    security: ControlChannelDeployment,
 ) -> FastAPI:
     """Mount the single realtime websocket route on an existing application.
 
     `security` is required rather than defaulted, and it is read on every handshake. Both
-    halves matter: `ControlChannelSecurity` cannot be constructed in a shape `FR-OPS-090`
-    forbids, so demanding one makes the policy's existence a precondition of mounting at
-    all; and checking the Origin against it in the handshake is what keeps the policy from
-    being an object the code holds and never consults.
+    halves matter: neither deployment shape can be constructed in a form its own ruling
+    forbids — `ControlChannelSecurity` refuses a plaintext scheme (`FR-OPS-090`) and
+    `LoopbackDeployment` refuses a routable bind or a non-loopback origin (`NORM-015`) — so
+    demanding one makes the policy's existence a precondition of mounting at all; and
+    checking the Origin against it in the handshake is what keeps the policy from being an
+    object the code holds and never consults.
+
+    The parameter is the union rather than the networked policy alone because `NORM-015`
+    split the deployment instead of softening the contract. A loopback-bound research host
+    admits the plaintext scheme and still owes the allowlist, and it needs a route to mount
+    on; narrowing this to `ControlChannelSecurity` would leave that host unable to describe
+    itself, which is why it had no route at all.
 
     Args:
         app: The application to add the route to. Supplied by the caller so the REST
@@ -134,9 +142,12 @@ def mount_realtime_channel(
         latch_target: The arm's shared latch surface — the same object `deadman` drives.
         deadman: The lease canon (`WP-2A-02`).
         clock: The server monotonic clock latch timestamps are stamped from.
-        command_sink: Where an authorised command frame goes.
-        security: The control-channel transport policy (`FR-OPS-090`). Its WS half names
-            the scheme and the Origin allowlist this route admits.
+        command_sink: Where an authorised command frame goes. A sink that cannot route
+            one returns the close the client is owed rather than swallowing it.
+        security: The control-channel deployment — the networked policy (`FR-OPS-090`) or
+            the loopback one (`NORM-015`). Only its Origin allowlist is read here; the
+            scheme is the deployment's own business and each shape already refused the
+            schemes it may not carry.
 
     Returns:
         (FastAPI) The same application, with the one realtime route mounted.
@@ -163,7 +174,7 @@ def mount_realtime_channel(
             websocket.query_params.get(ROLE_QUERY_PARAM),
             websocket.query_params.get(SESSION_QUERY_PARAM),
             websocket.headers.get(ORIGIN_HEADER),
-            security.ws.origin_allowlist,
+            admitted_origins(security),
             sink,
         )
         if isinstance(session, WsClosure):

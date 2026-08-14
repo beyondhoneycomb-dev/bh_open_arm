@@ -49,6 +49,11 @@ WS_CLOSE_UNAUTHORIZED_FRAME = 4404
 WS_CLOSE_WRONG_DIRECTION = 4405
 WS_CLOSE_REARM_NOT_ISSUED = 4406
 WS_CLOSE_FORBIDDEN_ORIGIN = 4407
+# The frame was well formed and the sender was entitled to send it; this process simply
+# holds no arm session to route it to. Distinct from `UNAUTHORIZED` on purpose — the two
+# tell the operator to do opposite things, and a client that reads "not allowed" when the
+# truth is "nothing is attached" goes looking for a permission it already has.
+WS_CLOSE_COMMAND_UNROUTABLE = 4408
 
 # The header the browser stamps the calling page's origin into. A WebSocket handshake is
 # not covered by the same-origin policy — the browser sends it and lets the server decide
@@ -78,6 +83,7 @@ __all__ = [
     "REALTIME_ROUTE",
     "ROLE_QUERY_PARAM",
     "SESSION_QUERY_PARAM",
+    "WS_CLOSE_COMMAND_UNROUTABLE",
     "WS_CLOSE_FORBIDDEN_ORIGIN",
     "WS_CLOSE_MALFORMED_FRAME",
     "WS_CLOSE_MISSING_SESSION",

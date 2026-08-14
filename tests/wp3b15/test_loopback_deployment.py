@@ -12,17 +12,39 @@ declined to do.
 
 from __future__ import annotations
 
-import pytest
+from collections.abc import Mapping
+from typing import Any
 
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from backend.actuation.clock import ManualClock
+from backend.actuation.latch import SafetyLatch
+from backend.actuation.lease import LeaseManager
 from backend.config.constants import DEFAULT_HTTP_HOST, DEFAULT_HTTP_PORT
+from backend.deadman import DEADMAN_LEASE_DURATION_SEC, DeadmanController
 from backend.security.loopback import LoopbackBindError, assert_loopback_bind
 from backend.security.origin_policy import ControlChannelSecurity, RestCorsPolicy
+from backend.ws import (
+    ENVELOPE_TYPE_FIELD,
+    ORIGIN_HEADER,
+    REALTIME_ROUTE,
+    WS_CLOSE_COMMAND_UNROUTABLE,
+    WS_CLOSE_FORBIDDEN_ORIGIN,
+    WS_CLOSE_UNAUTHORIZED_FRAME,
+    WsClosure,
+    WsSession,
+    mount_realtime_channel,
+)
 from backend.ws.deployment import (
     DeploymentError,
     LoopbackDeployment,
     admitted_origins,
 )
+from contracts.ws import LEASE_SESSION_FIELD, WsFrameType, WsRole
 from contracts.ws.schema import WsError, WsSecurityPolicy
+from tests.wp3b15.conftest import DEFAULT_SESSION_ID, SafetyLatchTarget, expect_close
 
 LOOPBACK_ORIGIN = f"http://{DEFAULT_HTTP_HOST}:{DEFAULT_HTTP_PORT}"
 
@@ -86,6 +108,136 @@ def test_the_networked_policy_still_refuses_plaintext() -> None:
     """`CTR-WS@v2` is not softened — a channel exposed on a network is still WSS-only."""
     with pytest.raises(WsError, match="wss"):
         WsSecurityPolicy(scheme="ws", origin_allowlist=(LOOPBACK_ORIGIN,), csrf_cors_enforced=True)
+
+
+def _mount_loopback_channel(allowlist: tuple[str, ...]) -> TestClient:
+    """Mount the realtime route over a loopback deployment, on the production safety objects.
+
+    Nothing safety-bearing is doubled: the latch is the production one-way `SafetyLatch` and
+    the lease is the production `DeadmanController`, for the reason `conftest` gives. What is
+    under test here is narrower — that the handshake reads THIS deployment's allowlist.
+
+    Args:
+        allowlist: The Origins the mounted route should admit.
+
+    Returns:
+        (TestClient) An in-process client over the mounted application; binds no port.
+    """
+    clock = ManualClock()
+    target = SafetyLatchTarget(SafetyLatch())
+    client = TestClient(FastAPI())
+    mount_realtime_channel(
+        client.app,
+        latch_target=target,
+        deadman=DeadmanController(
+            lease=LeaseManager(DEADMAN_LEASE_DURATION_SEC), latch_target=target, clock=clock
+        ),
+        clock=clock,
+        command_sink=_no_arm_session,
+        security=LoopbackDeployment(host=DEFAULT_HTTP_HOST, origin_allowlist=allowlist),
+    )
+    return client
+
+
+def _no_arm_session(session: WsSession, payload: Mapping[str, Any]) -> WsClosure:
+    """Refuse a command the way a host holding no arm must: visibly, never by dropping it."""
+    return WsClosure(
+        code=WS_CLOSE_COMMAND_UNROUTABLE,
+        reason=f"no arm session for {session.session_id}: {sorted(payload)}",
+    )
+
+
+def _connect(client: TestClient, origin: str) -> Any:
+    """Open one operator connection carrying the given Origin header."""
+    return client.websocket_connect(
+        f"{REALTIME_ROUTE}?role={WsRole.OPERATOR.value}&{LEASE_SESSION_FIELD}={DEFAULT_SESSION_ID}",
+        headers={ORIGIN_HEADER: origin},
+    )
+
+
+def test_the_loopback_deployment_can_actually_mount_the_route() -> None:
+    """The route mounts over the loopback shape and admits a page served from this machine.
+
+    Every other test in this file judges the type. This one judges the handshake, and it is
+    the one that fails if the mount reads the networked policy's `ws.origin_allowlist`
+    directly instead of asking the deployment: `LoopbackDeployment` has no `ws` attribute, so
+    that mount raises rather than admitting the wrong origin. Until this passed, `NORM-015`
+    described a deployment nothing could serve.
+    """
+    with _mount_loopback_channel((LOOPBACK_ORIGIN,)) as client, _connect(client, LOOPBACK_ORIGIN):
+        pass
+
+
+def test_the_mounted_loopback_route_still_refuses_a_remote_origin() -> None:
+    """Dropping TLS did not drop the check — the price is charged at the handshake, not only
+    in the constructor.
+
+    The allowlist passed here is a valid loopback one, so a refusal cannot come from the
+    deployment refusing to be built. It comes from the connecting page's Origin, which is the
+    threat `FR-OPS-090` names in its own rationale.
+    """
+    with (
+        _mount_loopback_channel((LOOPBACK_ORIGIN,)) as client,
+        _connect(client, "http://evil.example") as socket,
+    ):
+        refusal = expect_close(socket)
+
+    assert refusal.code == WS_CLOSE_FORBIDDEN_ORIGIN
+
+
+def test_a_command_a_host_cannot_route_closes_instead_of_vanishing() -> None:
+    """A sink with no arm behind it refuses where the operator can see it.
+
+    This is the branch `oa-serve` is in today: the process serves the GUI and the arm is held
+    by a separate CLI, so an authorised `command` reaches a host with nothing to command. The
+    frame is well formed and the sender is entitled to send it, so the failure is neither
+    malformed nor unauthorised — and if the dispatcher discarded what the sink returned, the
+    operator would watch the command leave and nothing move, which is the one outcome
+    `CommandSink` exists to make impossible.
+    """
+    with (
+        _mount_loopback_channel((LOOPBACK_ORIGIN,)) as client,
+        _connect(client, LOOPBACK_ORIGIN) as socket,
+    ):
+        socket.send_json({ENVELOPE_TYPE_FIELD: WsFrameType.COMMAND.value})
+        refusal = expect_close(socket)
+
+    assert refusal.code == WS_CLOSE_COMMAND_UNROUTABLE
+    assert refusal.code != WS_CLOSE_UNAUTHORIZED_FRAME
+
+
+def test_a_routing_host_is_unchanged_by_that_refusal_path() -> None:
+    """A sink that did route returns None, and the connection stays open.
+
+    The refusal above is a property of the sink, not of the frame type. A host that owns an
+    arm must not inherit a close from it, or wiring the arm in would be a regression on the
+    channel that already worked.
+    """
+    routed: list[str] = []
+
+    def _record(session: WsSession, payload: Mapping[str, Any]) -> None:
+        """The routing host's sink: consume the frame and refuse nothing."""
+        routed.append(session.session_id)
+
+    clock = ManualClock()
+    target = SafetyLatchTarget(SafetyLatch())
+    client = TestClient(FastAPI())
+    mount_realtime_channel(
+        client.app,
+        latch_target=target,
+        deadman=DeadmanController(
+            lease=LeaseManager(DEADMAN_LEASE_DURATION_SEC), latch_target=target, clock=clock
+        ),
+        clock=clock,
+        command_sink=_record,
+        security=LoopbackDeployment(host=DEFAULT_HTTP_HOST, origin_allowlist=(LOOPBACK_ORIGIN,)),
+    )
+
+    with client, _connect(client, LOOPBACK_ORIGIN) as socket:
+        socket.send_json({ENVELOPE_TYPE_FIELD: WsFrameType.COMMAND.value})
+        socket.send_json({ENVELOPE_TYPE_FIELD: WsFrameType.COMMAND.value})
+
+    assert routed == [DEFAULT_SESSION_ID, DEFAULT_SESSION_ID]
 
 
 def test_both_shapes_answer_the_same_question_about_origins() -> None:
