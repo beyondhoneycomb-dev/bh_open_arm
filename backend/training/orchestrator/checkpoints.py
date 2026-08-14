@@ -83,12 +83,40 @@ def read_step(checkpoint_dir: Path) -> int:
     return int(data["step"])
 
 
+def is_complete(checkpoint_dir: Path) -> bool:
+    """Whether a step directory holds a checkpoint that can be read.
+
+    A directory appears the moment the writer starts, and its training-state file appears when
+    the writer gets to it — two different instants. Treating the first as the second is what
+    makes a reader open a file the writer has not created yet, so completeness is the presence
+    of the file a reader actually needs rather than of the directory around it.
+
+    Args:
+        checkpoint_dir: A `<output_dir>/checkpoints/<step>` directory.
+
+    Returns:
+        (bool) True when the training-step file is there to be read.
+    """
+    return (checkpoint_dir / TRAINING_STATE_DIR / TRAINING_STEP_FILE).is_file()
+
+
 def _step_dirs(output_dir: Path) -> list[Path]:
-    """List the numeric step directories under a run's checkpoints root."""
+    """List the numeric step directories that hold a readable checkpoint.
+
+    Half-written directories are excluded rather than returned and handled downstream. The
+    training job writes checkpoints while anything watching the run reads them, so a directory
+    mid-write is the ordinary state rather than a corruption — and the caller's question is
+    "what is the newest checkpoint I can resume from", which a directory without its state file
+    is not an answer to.
+    """
     root = checkpoints_root(output_dir)
     if not root.is_dir():
         return []
-    return [child for child in root.iterdir() if child.is_dir() and child.name.isdigit()]
+    return [
+        child
+        for child in root.iterdir()
+        if child.is_dir() and child.name.isdigit() and is_complete(child)
+    ]
 
 
 def find_last(output_dir: Path) -> Checkpoint | None:
@@ -108,7 +136,13 @@ def find_last(output_dir: Path) -> Checkpoint | None:
     link = root / LAST_CHECKPOINT_LINK
     if link.is_dir():
         resolved = link.resolve()
-        return Checkpoint(path=resolved, step=read_step(resolved))
+        # The link is repointed atomically, but what it points AT is only complete once the
+        # writer has finished inside it. A link that has just been moved onto a directory still
+        # being filled resolves fine and reads nothing, so completeness is checked here too and
+        # the numeric scan below is the fallback for that window rather than only for a tree
+        # with no link at all.
+        if is_complete(resolved):
+            return Checkpoint(path=resolved, step=read_step(resolved))
 
     step_dirs = _step_dirs(output_dir)
     if not step_dirs:
