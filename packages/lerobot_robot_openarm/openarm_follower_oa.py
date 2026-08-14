@@ -714,7 +714,7 @@ class OaOpenArmFollower(OpenArmFollower):
                 tool has no motor 0x08.
         """
         _refuse_unknown_position_keys(action)
-        angles, guard_sample = self._poll_states()
+        angles, _reported_torque, guard_sample = self._poll_states()
         present = tuple(Deg(angle) for angle in angles)
         request = tuple(
             Deg(float(action.get(f"{motor}.pos", present[index].value)))
@@ -1009,8 +1009,8 @@ class OaOpenArmFollower(OpenArmFollower):
         """Read the current raw joint angles (degrees) in MOTOR_ORDER."""
         return self._poll_states()[0]
 
-    def _poll_states(self) -> tuple[list[float], GuardSample]:
-        """Read the joint angles once, and report what that read saw to the collision guard.
+    def _poll_states(self) -> tuple[list[float], list[float], GuardSample]:
+        """Read the joint angles and torques once, and report what that read saw to the guard.
 
         The poll names the fitted motors and the answer is widened back to the frozen layout, so
         a slot with no motor behind it reports the same zero it always did without a frame being
@@ -1019,6 +1019,12 @@ class OaOpenArmFollower(OpenArmFollower):
         sixteen unanswered frames took both channels to ERROR-PASSIVE. This read runs once per
         `send_action`, so the bare form was one unanswered frame per command, and the guard
         sample has to come out of the same single read rather than provoke a second one.
+
+        The torque rides out of that one read for the same reason the guard sample does.
+        `sync_read_all_states` fills position, velocity and torque from a single refresh cycle,
+        so carrying the torque costs no extra frame — and a torque fetched separately would
+        describe a different instant from the pose it is paired with, which is the one property
+        `ArmStateBoard` exists to hold.
 
         A fitted motor that answered nothing is refused rather than widened. The widening
         default reads as a missing key and is not one: `sync_read_all_states` returns an entry
@@ -1064,7 +1070,8 @@ class OaOpenArmFollower(OpenArmFollower):
             residual_exceeded=NO_RESIDUAL_DETECTION,
         )
         widened = [float(states.get(motor, {}).get("position", 0.0)) for motor in MOTOR_ORDER]
-        return widened, sample
+        widened_torque = [float(states.get(motor, {}).get("torque", 0.0)) for motor in MOTOR_ORDER]
+        return widened, widened_torque, sample
 
 
 def _refuse_unknown_position_keys(action: RobotAction) -> None:

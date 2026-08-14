@@ -28,15 +28,20 @@ that are the price of dropping it:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 from backend.security.loopback import LOOPBACK_HOSTS, is_loopback_host
 from backend.security.origin_policy import ControlChannelSecurity
 from contracts.ws.schema import WILDCARD_ORIGIN
 
-# The scheme prefixes an origin must open with to be a loopback origin. Both plaintext forms are
-# admitted here and only here — the whole point of this deployment — and the host that follows is
-# checked against `LOOPBACK_HOSTS` so `http://evil.example` cannot enter through this door.
-_ORIGIN_SCHEMES = ("http://", "ws://")
+# The schemes an entry may carry. An allowlist holds Origins — what a browser stamps on the
+# `Origin` header — and that value is the scheme, host and port of the *page*, never of the
+# socket it opens. So both HTTP forms belong here and `ws://` does not: an operator who writes
+# the URL their client connects to would build a deployment whose every handshake is refused
+# against an allowlist no browser can match. `https://` is admitted because a locally
+# TLS-terminated page is stricter than the `http://` this deployment already exists to take,
+# and the host that follows is checked against `LOOPBACK_HOSTS` either way.
+_ORIGIN_SCHEMES = ("http", "https")
 
 
 class DeploymentError(ValueError):
@@ -46,17 +51,30 @@ class DeploymentError(ValueError):
 def _origin_host(origin: str) -> str | None:
     """Return the host an origin names, or None when it is not one of the admitted schemes.
 
+    Parsed rather than sliced, because the two shapes that break a hand-written split are both
+    ones this validator has to get right. `http://[::1]:8000` writes an IPv6 host in brackets,
+    and `::1` is a bind `assert_loopback_bind` admits — a server that may bind it must be able
+    to name its own page. And in `http://127.0.0.1:8000@evil.example` everything before the `@`
+    is userinfo (RFC 3986 §3.2), so the host is `evil.example`; reading the userinfo as the host
+    admits a remote page, which is the one thing this check exists to refuse.
+
     Args:
         origin: An Origin header value.
 
     Returns:
-        (str | None) The host without its port, or None when the scheme is not admitted.
+        (str | None) The host without its port or brackets, or None when the scheme is not one
+        a browser can stamp on an Origin.
     """
-    for scheme in _ORIGIN_SCHEMES:
-        if origin.startswith(scheme):
-            authority = origin[len(scheme) :]
-            return authority.split("/")[0].rsplit(":", 1)[0] if ":" in authority else authority
-    return None
+    try:
+        split = urlsplit(origin)
+    except ValueError:
+        # An unclosed bracket (`http://[::1`) is rejected by the parser itself, before any
+        # field exists to judge. It is answered as "no host" so the caller's refusal names the
+        # origin the operator typed, rather than a URL-syntax traceback out of startup.
+        return None
+    if split.scheme not in _ORIGIN_SCHEMES:
+        return None
+    return split.hostname
 
 
 @dataclass(frozen=True)
@@ -106,12 +124,25 @@ ControlChannelDeployment = ControlChannelSecurity | LoopbackDeployment
 def admitted_origins(deployment: ControlChannelDeployment) -> tuple[str, ...]:
     """Return the Origin allowlist the handshake checks against, whichever shape was given.
 
+    Both shapes are matched by name rather than one being the fallback for "not the other".
+    Nothing type-checks this argument — `backend/` is in no mypy gate — so an object of a third
+    kind would otherwise reach `.ws` and raise `AttributeError` at the first handshake, inside
+    an accepted socket, naming a field instead of the argument the host got wrong.
+
     Args:
         deployment: The networked policy or the loopback one.
 
     Returns:
         (tuple[str, ...]) The exact Origins admitted.
+
+    Raises:
+        TypeError: If the argument is neither deployment shape.
     """
     if isinstance(deployment, LoopbackDeployment):
         return deployment.origin_allowlist
-    return deployment.ws.origin_allowlist
+    if isinstance(deployment, ControlChannelSecurity):
+        return deployment.ws.origin_allowlist
+    raise TypeError(
+        f"a control channel is deployed as a ControlChannelSecurity or a LoopbackDeployment; "
+        f"got {type(deployment).__name__}"
+    )

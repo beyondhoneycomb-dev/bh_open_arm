@@ -11,13 +11,18 @@ server would fail loudly here instead of hanging the suite on a live socket.
 from __future__ import annotations
 
 import socket
+import threading
+import time
 from pathlib import Path
 from typing import Any
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from backend.actuation.clock import WallClock
 from backend.config import serve
+from backend.config.arm import ARM_BACKEND_DUMMY, build_arm_session
 from backend.config.constants import (
     CONFIG_ROUTE,
     DEFAULT_HTTP_HOST,
@@ -27,10 +32,25 @@ from backend.config.constants import (
     SUBOBJECT_LAYOUT,
 )
 from backend.config.store import RuntimeConfigStore
+from backend.ws.deployment import LoopbackDeployment, admitted_origins
+from contracts.prim.schema import ARM_SIDES
 
 # The port `13` §2.7 and FR-GUI-006 fix as the browser<->backend default. Written out here, in the
 # test, so the constant is checked against the specification rather than against itself.
 SPEC_DEFAULT_PORT = 8000
+
+# The tick thread's name, as `ArmSessionRunner` sets it. Spelled here rather than imported so the
+# assertion is against the name a `ps` or a thread dump shows, not against the same constant the
+# runner used.
+RUNNER_NAME = "oa-arm-session"
+
+# Liveness bound on waiting for the first published frame. The passing path returns as soon as
+# the board has one.
+TICK_WAIT_TIMEOUT_SEC = 5.0
+
+# How long that wait sleeps between looks. Well under the 100 Hz default tick so no frame is
+# missed, and non-zero so the wait yields the GIL to the thread it is waiting on.
+BOARD_POLL_INTERVAL_SEC = 0.001
 
 ENTRY_MARKUP = "<!doctype html><title>OpenArm</title>"
 ASSET_BODY = "export const build = 1;\n"
@@ -209,22 +229,108 @@ def test_rest_survives_the_root_mount(store: RuntimeConfigStore, tmp_path: Path)
     assert response.json()[SUBOBJECT_LAYOUT] is not None
 
 
-def test_websocket_seam_mounts_nothing_yet(store: RuntimeConfigStore, tmp_path: Path) -> None:
-    """The seam reports False and puts no WebSocket route on the app (owner: WP-3B-15)."""
+def test_a_process_with_no_arm_mounts_no_realtime_channel(
+    store: RuntimeConfigStore, tmp_path: Path
+) -> None:
+    """No arm, no channel — because the channel's reason to exist is the stop path.
+
+    A route mounted here would accept a soft stop, engage a latch nobody owns, and answer the
+    browser as though something had happened. `frontend/src/app/backendLink.ts` refuses to
+    pretend about exactly that, and the server must not make the pretence true from its end.
+    """
     app, websocket_mounted, _ = serve.build_server_app(store, root=tmp_path)
+
     assert websocket_mounted is False
     # Matched on class name rather than an imported type so the assertion covers both the FastAPI
     # and the starlette route classes without this test naming starlette as a dependency.
-    assert [route for route in app.routes if "WebSocket" in type(route).__name__] == []
+    assert _websocket_routes(app) == []
 
 
-def test_serve_does_not_import_the_websocket_package() -> None:
-    """The seam is a seam: this module names no symbol from the WebSocket tree.
+def test_an_arm_session_brings_exactly_one_realtime_channel(
+    store: RuntimeConfigStore, tmp_path: Path
+) -> None:
+    """`CTR-WS@v2` D-2 permits one realtime socket, and the count is what proves it.
 
-    `backend/ws/**` belongs to WP-3B-15 and is under construction. An import from here would couple
-    this process's startup to a tree that may not import cleanly yet, and would make a broken
-    WebSocket package stop the REST surface and the bundle from serving at all.
+    Asserted as a count rather than as "at least one": a second realtime path would make the
+    stop path two places, and that is the failure `WP-3B-15` ⑤ classifies FAIL_BLOCKING.
     """
-    source = Path(serve.__file__).read_text(encoding="utf-8")
-    assert "backend.ws" not in source
-    assert "from backend import ws" not in source
+    clock = WallClock()
+    arm = build_arm_session(ARM_BACKEND_DUMMY, clock)
+
+    app, websocket_mounted, _ = serve.build_server_app(store, root=tmp_path, arm=arm, clock=clock)
+
+    assert websocket_mounted is True
+    assert len(_websocket_routes(app)) == 1
+
+
+def test_the_allowlist_names_every_loopback_spelling_of_the_served_port() -> None:
+    """The operator picks the spelling by typing it, and the bind address does not decide it.
+
+    A page reached as `http://localhost:8000` sends that as its Origin even when the server bound
+    `127.0.0.1`. An allowlist naming only the bound address refuses a page this very process
+    served — and the refusal reads as a security failure rather than a spelling one.
+    """
+    origins = serve.loopback_origins(DEFAULT_HTTP_PORT)
+
+    assert f"http://127.0.0.1:{DEFAULT_HTTP_PORT}" in origins
+    assert f"http://localhost:{DEFAULT_HTTP_PORT}" in origins
+    assert f"http://[::1]:{DEFAULT_HTTP_PORT}" in origins
+
+
+def test_every_admitted_origin_is_one_the_deployment_accepts() -> None:
+    """The allowlist is built here and judged there; a spelling mismatch would refuse startup.
+
+    `LoopbackDeployment` parses each entry and requires a loopback host, so a bare IPv6 address
+    built without brackets is rejected at construction — which is `oa-serve` failing to start
+    rather than a channel that quietly admits nobody.
+    """
+    deployment = LoopbackDeployment(
+        host=DEFAULT_HTTP_HOST, origin_allowlist=serve.loopback_origins(DEFAULT_HTTP_PORT)
+    )
+
+    assert admitted_origins(deployment) == serve.loopback_origins(DEFAULT_HTTP_PORT)
+
+
+def test_serving_ticks_the_arm_session_and_stops_it_afterwards(
+    store: RuntimeConfigStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The board has a writer only while the server is up, and none after it comes down.
+
+    Both halves are one test because they are one bug in two directions. Without the start, the
+    board this process publishes stays empty and the deadman is never polled — a mounted channel
+    over a session nothing drives. Without the stop, a thread outlives the server it was serving
+    and keeps reading an arm nobody is watching.
+    """
+    clock = WallClock()
+    arm = build_arm_session(ARM_BACKEND_DUMMY, clock)
+    assert arm is not None
+    app, _, _ = serve.build_server_app(store, arm=arm, clock=clock)
+    published_while_serving: list[object] = []
+
+    def observe_then_return(_app: Any, host: str, port: int) -> None:
+        """Stand in for the blocking server: watch the board, then let the caller unwind.
+
+        The wait sleeps rather than spins. A spin holds the GIL against the tick thread it is
+        waiting for, which on the parallel lane's twenty-four workers turns a healthy runner into
+        a timeout.
+        """
+        deadline = clock.now() + TICK_WAIT_TIMEOUT_SEC
+        while arm.board(ARM_SIDES[0]).view().state is None and clock.now() < deadline:
+            time.sleep(BOARD_POLL_INTERVAL_SEC)
+        published_while_serving.append(arm.board(ARM_SIDES[0]).view().state)
+
+    monkeypatch.setattr(serve.uvicorn, "run", observe_then_return)
+
+    assert serve.serve_until_stopped(app, arm, store, DEFAULT_HTTP_HOST, DEFAULT_HTTP_PORT) == 0
+
+    assert published_while_serving[0] is not None
+    assert [thread.name for thread in threading.enumerate() if thread.name == RUNNER_NAME] == []
+
+
+def _websocket_routes(app: FastAPI) -> list[object]:
+    """The app's realtime routes, matched by class name.
+
+    By name rather than by an imported type so the check covers both the FastAPI and the
+    starlette route classes without this test naming starlette as a dependency.
+    """
+    return [route for route in app.routes if "WebSocket" in type(route).__name__]

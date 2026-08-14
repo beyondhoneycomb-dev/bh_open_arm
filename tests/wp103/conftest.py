@@ -154,6 +154,10 @@ class FakeArmBus:
         self.omit_motors: set[str] = set()
         self.drop_motors: set[str] = set()
         self.cache_only_motors: set[str] = set()
+        # Per-motor reported torque, for the tests that read it. Keyed rather than a single
+        # scalar because a vector every motor shares passes against a torque tuple assembled in
+        # the wrong order.
+        self.torque_nm: dict[str, float] = {}
 
     def sync_read_all_states(self, motors: list[str] | None = None) -> dict[str, dict[str, float]]:
         """Return a readback frame for the named motors, or for every motor when none are named.
@@ -185,7 +189,7 @@ class FakeArmBus:
             else {
                 "position": self._position_deg,
                 "velocity": 0.0,
-                "torque": 0.0,
+                "torque": self.torque_nm.get(motor, 0.0),
                 "temp_mos": AMBIENT_TEMP_C,
                 "temp_rotor": AMBIENT_TEMP_C,
             }

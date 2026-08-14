@@ -101,7 +101,12 @@ class WsClosure:
 # The return type is the other half of that. A host whose process holds no arm session has
 # nowhere to route the frame, and the honest answer is neither an exception nor silence but
 # the close the client is owed — the same shape every other unacceptable frame earns here.
-# A sink that did route returns None, so a routing host reads exactly as it did before.
+# A sink that did route returns None.
+#
+# What this channel is NOT for: a command the arm received and refused. A latched arm is
+# reached, judges the frame, and holds; the operator learns that through telemetry, the same
+# way `_stop_hold` says the hold is observed. Routing that refusal through a closure would
+# take down the socket carrying the stop and the lease at the one moment they are needed.
 CommandSink = Callable[[WsSession, Mapping[str, Any]], WsClosure | None]
 
 
@@ -209,8 +214,33 @@ class FrameDispatcher:
         if frame_type is WsFrameType.REARM_CONFIRM:
             return self._rearm_confirm(session)
         if frame_type is WsFrameType.COMMAND:
-            return DispatchOutcome(closure=self._command_sink(session, payload))
+            return DispatchOutcome(closure=self._routed(session, payload))
         raise WsError(f"no route for client frame {frame_type.value!r}")
+
+    def _routed(self, session: WsSession, payload: Mapping[str, Any]) -> WsClosure | None:
+        """Hand one command to the host's sink and check what came back is a verdict.
+
+        The sink is the host's code and nothing in this process type-checks it: `scripts/gates.sh`
+        runs mypy over `registry ops dashboard` and `scripts`, and `backend/` is in none of them.
+        So a sink written against an older contract can return a bool, which is truthy, rides out
+        as `DispatchOutcome.closure`, and dies on `.code` inside the connection task — after
+        `accept()`, delivered to the browser as a drop with no code. Refused here it names the
+        sink's return instead, which is the same thing `_envelope` does for a reply whose fields
+        drifted from the contract.
+
+        Returns:
+            (WsClosure | None) The sink's verdict: a close, or None when it routed.
+
+        Raises:
+            WsError: If the sink returned anything else.
+        """
+        verdict = self._command_sink(session, payload)
+        if verdict is not None and not isinstance(verdict, WsClosure):
+            raise WsError(
+                f"the command sink returned {verdict!r}; a sink returns a WsClosure to refuse "
+                "a frame it could not route, or None when it routed one"
+            )
+        return verdict
 
     def _stop_hold(self, session: WsSession) -> DispatchOutcome:
         """Engage the shared safety latch, attributed to this GUI session.

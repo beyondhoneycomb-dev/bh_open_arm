@@ -42,15 +42,26 @@ from backend.ws.deployment import (
     LoopbackDeployment,
     admitted_origins,
 )
+from backend.ws.dispatch import CommandSink
 from contracts.ws import LEASE_SESSION_FIELD, WsFrameType, WsRole
 from contracts.ws.schema import WsError, WsSecurityPolicy
-from tests.wp3b15.conftest import DEFAULT_SESSION_ID, SafetyLatchTarget, expect_close
+from tests.wp3b15.conftest import (
+    DEFAULT_SESSION_ID,
+    SafetyLatchTarget,
+    expect_close,
+    stop_frame,
+)
 
 LOOPBACK_ORIGIN = f"http://{DEFAULT_HTTP_HOST}:{DEFAULT_HTTP_PORT}"
 
 # An address that reaches the network. This is what `oa-serve --host` accepts today, which is why
 # the refusal has to exist rather than being implied by a default.
 ROUTABLE_HOST = "0.0.0.0"
+
+# The IPv6 loopback, spelled out rather than indexed out of `LOOPBACK_HOSTS`: what these tests
+# pin is that this exact address survives the round trip through an Origin, and an index would
+# follow a reordering of that tuple to a different address without failing.
+IPV6_LOOPBACK_HOST = "::1"
 
 
 def test_the_deployment_oa_serve_creates_can_now_be_described() -> None:
@@ -110,7 +121,81 @@ def test_the_networked_policy_still_refuses_plaintext() -> None:
         WsSecurityPolicy(scheme="ws", origin_allowlist=(LOOPBACK_ORIGIN,), csrf_cors_enforced=True)
 
 
-def _mount_loopback_channel(allowlist: tuple[str, ...]) -> TestClient:
+def test_userinfo_does_not_pass_a_remote_host_off_as_a_loopback_one() -> None:
+    """The host of `http://127.0.0.1:8000@evil.example` is `evil.example` (RFC 3986 §3.2).
+
+    Everything before the `@` is userinfo. An allowlist check that reads it as the host admits
+    an entry whose page is served from anywhere, which is the single thing this validator exists
+    to refuse. Exact-string matching at the handshake is what keeps the hole from being a door
+    today — a defence this entry was never meant to need.
+    """
+    with pytest.raises(DeploymentError, match="not a loopback origin"):
+        LoopbackDeployment(
+            host=DEFAULT_HTTP_HOST,
+            origin_allowlist=(f"http://{DEFAULT_HTTP_HOST}:{DEFAULT_HTTP_PORT}@evil.example",),
+        )
+
+
+def test_an_ipv6_loopback_origin_is_admitted() -> None:
+    """`::1` is a bind `assert_loopback_bind` admits, so its page's Origin must build too.
+
+    A browser writes an IPv6 host in brackets. Refusing the bracketed form leaves a server that
+    may bind `::1` unable to name the page it serves, which is a deployment with no allowlist it
+    can pass — and `NORM-015` makes the allowlist the price of the plaintext scheme.
+    """
+    ipv6_origin = f"http://[{IPV6_LOOPBACK_HOST}]:{DEFAULT_HTTP_PORT}"
+
+    deployment = LoopbackDeployment(host=IPV6_LOOPBACK_HOST, origin_allowlist=(ipv6_origin,))
+
+    assert admitted_origins(deployment) == (ipv6_origin,)
+
+
+def test_a_tls_terminated_loopback_page_is_admitted() -> None:
+    """`https://` on loopback is stricter than the `http://` this deployment already takes.
+
+    The scheme set is about which Origins a browser can stamp, not about what the channel is
+    carried over: a page served over TLS on this machine sends `https://127.0.0.1:8000`, and
+    refusing it says "not a loopback origin" about an origin that plainly is one.
+    """
+    tls_origin = f"https://{DEFAULT_HTTP_HOST}:{DEFAULT_HTTP_PORT}"
+
+    deployment = LoopbackDeployment(host=DEFAULT_HTTP_HOST, origin_allowlist=(tls_origin,))
+
+    assert admitted_origins(deployment) == (tls_origin,)
+
+
+def test_an_unparsable_origin_is_refused_as_a_deployment_error() -> None:
+    """A malformed entry earns this class's own refusal, not a bare parser exception.
+
+    `http://[::1` — an unclosed IPv6 bracket, one keystroke from the form above — is what the
+    operator gets wrong. Every other bad entry here is answered with a message naming the
+    offending origin, and a `ValueError` escaping the parser instead would put a startup failure
+    in front of them whose text is about URL syntax rather than about the allowlist they wrote.
+    """
+    with pytest.raises(DeploymentError, match="not a loopback origin"):
+        LoopbackDeployment(
+            host=DEFAULT_HTTP_HOST,
+            origin_allowlist=(f"http://[{IPV6_LOOPBACK_HOST}",),
+        )
+
+
+def test_a_websocket_url_is_not_an_origin_and_is_refused() -> None:
+    """No browser ever stamps `ws://` on an `Origin` header — it names the page, not the socket.
+
+    Admitting the form is worse than useless: the operator writes the URL their client connects
+    to, the deployment builds, and every handshake is then refused against an allowlist that
+    matches no Origin any browser can produce.
+    """
+    with pytest.raises(DeploymentError, match="not a loopback origin"):
+        LoopbackDeployment(
+            host=DEFAULT_HTTP_HOST,
+            origin_allowlist=(f"ws://{DEFAULT_HTTP_HOST}:{DEFAULT_HTTP_PORT}",),
+        )
+
+
+def _mount_loopback_channel(
+    allowlist: tuple[str, ...], command_sink: CommandSink
+) -> tuple[TestClient, SafetyLatch]:
     """Mount the realtime route over a loopback deployment, on the production safety objects.
 
     Nothing safety-bearing is doubled: the latch is the production one-way `SafetyLatch` and
@@ -119,12 +204,18 @@ def _mount_loopback_channel(allowlist: tuple[str, ...]) -> TestClient:
 
     Args:
         allowlist: The Origins the mounted route should admit.
+        command_sink: Where a routed `command` frame goes. Passed rather than fixed because the
+            two hosts this file distinguishes — one holding an arm, one holding none — differ in
+            exactly this argument and in nothing else.
 
     Returns:
-        (TestClient) An in-process client over the mounted application; binds no port.
+        (tuple) An in-process client over the mounted application, binding no port, and the one
+        latch behind it. The latch is returned because a handshake that was admitted is only
+        observable through something the connection did.
     """
     clock = ManualClock()
-    target = SafetyLatchTarget(SafetyLatch())
+    latch = SafetyLatch()
+    target = SafetyLatchTarget(latch)
     client = TestClient(FastAPI())
     mount_realtime_channel(
         client.app,
@@ -133,10 +224,10 @@ def _mount_loopback_channel(allowlist: tuple[str, ...]) -> TestClient:
             lease=LeaseManager(DEADMAN_LEASE_DURATION_SEC), latch_target=target, clock=clock
         ),
         clock=clock,
-        command_sink=_no_arm_session,
+        command_sink=command_sink,
         security=LoopbackDeployment(host=DEFAULT_HTTP_HOST, origin_allowlist=allowlist),
     )
-    return client
+    return client, latch
 
 
 def _no_arm_session(session: WsSession, payload: Mapping[str, Any]) -> WsClosure:
@@ -163,9 +254,21 @@ def test_the_loopback_deployment_can_actually_mount_the_route() -> None:
     directly instead of asking the deployment: `LoopbackDeployment` has no `ws` attribute, so
     that mount raises rather than admitting the wrong origin. Until this passed, `NORM-015`
     described a deployment nothing could serve.
+
+    Admission is asserted through the latch rather than through the connection opening. A
+    refused handshake is refused *after* `accept()`, so opening the socket succeeds either way
+    and a test that only enters the context passes against a server that admits nobody — which
+    is what this one did. What separates the two is whether a frame sent on the connection was
+    acted on, and the soft stop is the frame this channel exists to carry.
     """
-    with _mount_loopback_channel((LOOPBACK_ORIGIN,)) as client, _connect(client, LOOPBACK_ORIGIN):
-        pass
+    client, latch = _mount_loopback_channel((LOOPBACK_ORIGIN,), _no_arm_session)
+
+    with client, _connect(client, LOOPBACK_ORIGIN) as socket:
+        socket.send_json(stop_frame())
+
+    assert latch.is_active
+    assert latch.reason is not None
+    assert DEFAULT_SESSION_ID in latch.reason.gate_id
 
 
 def test_the_mounted_loopback_route_still_refuses_a_remote_origin() -> None:
@@ -176,10 +279,9 @@ def test_the_mounted_loopback_route_still_refuses_a_remote_origin() -> None:
     deployment refusing to be built. It comes from the connecting page's Origin, which is the
     threat `FR-OPS-090` names in its own rationale.
     """
-    with (
-        _mount_loopback_channel((LOOPBACK_ORIGIN,)) as client,
-        _connect(client, "http://evil.example") as socket,
-    ):
+    client, _ = _mount_loopback_channel((LOOPBACK_ORIGIN,), _no_arm_session)
+
+    with client, _connect(client, "http://evil.example") as socket:
         refusal = expect_close(socket)
 
     assert refusal.code == WS_CLOSE_FORBIDDEN_ORIGIN
@@ -195,15 +297,23 @@ def test_a_command_a_host_cannot_route_closes_instead_of_vanishing() -> None:
     operator would watch the command leave and nothing move, which is the one outcome
     `CommandSink` exists to make impossible.
     """
-    with (
-        _mount_loopback_channel((LOOPBACK_ORIGIN,)) as client,
-        _connect(client, LOOPBACK_ORIGIN) as socket,
-    ):
+    client, _ = _mount_loopback_channel((LOOPBACK_ORIGIN,), _no_arm_session)
+
+    with client, _connect(client, LOOPBACK_ORIGIN) as socket:
         socket.send_json({ENVELOPE_TYPE_FIELD: WsFrameType.COMMAND.value})
         refusal = expect_close(socket)
 
     assert refusal.code == WS_CLOSE_COMMAND_UNROUTABLE
-    assert refusal.code != WS_CLOSE_UNAUTHORIZED_FRAME
+
+
+def test_the_unroutable_code_is_not_the_unauthorised_one() -> None:
+    """The two refusals send the operator in opposite directions, so they may not share a code.
+
+    Read as "unauthorised", a host with no arm sends the operator looking for a permission they
+    already hold. The distinctness belongs to the constants; asserting it on a response would
+    make the claim depend on which frame happened to be sent.
+    """
+    assert WS_CLOSE_COMMAND_UNROUTABLE != WS_CLOSE_UNAUTHORIZED_FRAME
 
 
 def test_a_routing_host_is_unchanged_by_that_refusal_path() -> None:
@@ -219,19 +329,7 @@ def test_a_routing_host_is_unchanged_by_that_refusal_path() -> None:
         """The routing host's sink: consume the frame and refuse nothing."""
         routed.append(session.session_id)
 
-    clock = ManualClock()
-    target = SafetyLatchTarget(SafetyLatch())
-    client = TestClient(FastAPI())
-    mount_realtime_channel(
-        client.app,
-        latch_target=target,
-        deadman=DeadmanController(
-            lease=LeaseManager(DEADMAN_LEASE_DURATION_SEC), latch_target=target, clock=clock
-        ),
-        clock=clock,
-        command_sink=_record,
-        security=LoopbackDeployment(host=DEFAULT_HTTP_HOST, origin_allowlist=(LOOPBACK_ORIGIN,)),
-    )
+    client, _ = _mount_loopback_channel((LOOPBACK_ORIGIN,), _record)
 
     with client, _connect(client, LOOPBACK_ORIGIN) as socket:
         socket.send_json({ENVELOPE_TYPE_FIELD: WsFrameType.COMMAND.value})

@@ -13,8 +13,13 @@ tree that opens a listening port.
 
 Nothing here is allowed to fail quietly, because every failure it can have looks like a working
 server from the outside. The port being taken is refused before anything is served; a missing
-bundle and an unmounted WebSocket are both reported on startup. An operator told the server came
-up, who then meets a blank tab, has no way to tell which of the three happened.
+bundle, an absent realtime channel and a synthetic arm are all reported on startup. An operator
+told the server came up, who then meets a blank tab or a board full of numbers from nothing, has
+no way to tell which of them happened.
+
+Which arm this process holds is `--arm`, and the realtime channel exists exactly when an arm
+session does. That ordering is the safety property: the channel carries the soft stop, and a stop
+is worth having only when something here reads the latch it engages.
 """
 
 from __future__ import annotations
@@ -29,7 +34,11 @@ import uvicorn
 from fastapi import FastAPI, Response
 from fastapi.staticfiles import StaticFiles
 
+from backend.actuation.clock import Clock, WallClock
+from backend.actuation.session import ArmSession
+from backend.actuation.session_runner import RUNNER_STOP_JOIN_TIMEOUT_SEC, ArmSessionRunner
 from backend.config.api import create_app
+from backend.config.arm import ARM_BACKEND_NONE, ARM_BACKENDS, build_arm_session
 from backend.config.constants import (
     DEFAULT_HTTP_HOST,
     DEFAULT_HTTP_PORT,
@@ -39,7 +48,11 @@ from backend.config.constants import (
     SPA_MOUNT_PATH,
 )
 from backend.config.store import RuntimeConfigStore, default_store
-from backend.security.loopback import LoopbackBindError, assert_loopback_bind
+from backend.security.constants import PLAINTEXT_HTTP_SCHEME
+from backend.security.loopback import LOOPBACK_HOSTS, LoopbackBindError, assert_loopback_bind
+from backend.ws.app import mount_realtime_channel
+from backend.ws.arm_channel import refuse_command
+from backend.ws.deployment import LoopbackDeployment
 
 EXIT_OK = 0
 EXIT_REJECTED = 1
@@ -156,26 +169,82 @@ def assert_port_available(host: str, port: int) -> None:
     )
 
 
-def mount_websocket_router(_app: FastAPI) -> bool:
-    """The single seam where the WebSocket router joins this process. Mounts nothing yet.
+def loopback_origins(port: int) -> tuple[str, ...]:
+    """Every Origin a page served by this machine on `port` can stamp.
 
-    Owner: `WP-3B-15`. That work package builds the server half of `CTR-WS@v2` and mounts its
-    router here, on the app passed in, so the WebSocket shares the one port `13` §2.7 gives the
-    browser. Until it lands this returns False and the process serves REST and the bundle only.
+    All three loopback spellings are admitted because the operator picks one by typing it, and
+    which one they type is not something the bind address decides: a server on `localhost` is
+    reached as `127.0.0.1` and as `[::1]` by the same browser. Naming only the bound address
+    would refuse a page this very process served.
 
-    The return value is what the startup report reads, so mounting the router and returning True
-    corrects that report in the same edit. A seam that announced "mounted" from a hardcoded string
-    would keep announcing it after the router was removed again.
+    None of them widens what is trusted. `NORM-015`'s allowlist exists to keep a page served from
+    *elsewhere* off the control socket, and every entry here is a page served from here.
 
     Args:
-        _app: The application the router mounts onto. Underscored because nothing reads it yet —
-            dropping the parameter instead would make WP-3B-15 change this signature and its call
-            site to land a router, which is the coupling a seam exists to avoid.
+        port: The port the SPA, REST and the WebSocket share.
+
+    Returns:
+        (tuple[str, ...]) The exact Origins the handshake admits.
+    """
+    return tuple(
+        f"{PLAINTEXT_HTTP_SCHEME}://{_as_url_host(host)}:{port}" for host in LOOPBACK_HOSTS
+    )
+
+
+def _as_url_host(host: str) -> str:
+    """Spell a bind address the way a URL does.
+
+    `LOOPBACK_HOSTS` holds bind addresses and an IPv6 address is bare there and bracketed in a
+    URL. Derived rather than kept as a second list: two copies of the same three hosts drift, and
+    the one that drifts is the one nobody tests, so an Origin built from the bind spelling would
+    match nothing a browser ever sends.
+
+    Args:
+        host: A bind address.
+
+    Returns:
+        (str) The host as a URL authority writes it.
+    """
+    return f"[{host}]" if ":" in host else host
+
+
+def mount_websocket_router(app: FastAPI, arm: ArmSession | None, clock: Clock, port: int) -> bool:
+    """Mount the realtime channel over this process's arm session, if it has one.
+
+    The order is the safety property, not a preference. The channel carries the soft stop, and a
+    stop is worth having only when something in this process reads the latch it engages — so the
+    route exists exactly when an arm session does. Mounting it over a latch with no owner would
+    hand the operator a control that reports success and changes nothing, which is what
+    `NORM-007` forbids and what `frontend/src/app/backendLink.ts` refuses to pretend about.
+
+    The session is passed rather than reached for: it is the same object that must be the
+    `latch_target` and the owner of the `deadman`, and passing one object is what makes a second
+    latch unconstructible here.
+
+    Args:
+        app: The application the route mounts onto, so the WebSocket shares the one port
+            `13` §2.7 gives the browser.
+        arm: This process's arm session, or None when it holds no arm.
+        clock: The server monotonic clock latch timestamps are stamped from — the same one the
+            session's boards and lease read.
+        port: The served port, used to build the Origin allowlist.
 
     Returns:
         (bool) Whether a WebSocket route is now on the app.
     """
-    return False
+    if arm is None:
+        return False
+    mount_realtime_channel(
+        app,
+        latch_target=arm,
+        deadman=arm.deadman,
+        clock=clock,
+        command_sink=refuse_command,
+        security=LoopbackDeployment(
+            host=DEFAULT_HTTP_HOST, origin_allowlist=loopback_origins(port)
+        ),
+    )
+    return True
 
 
 def mount_spa_bundle(app: FastAPI, root: Path | None = None) -> bool:
@@ -203,13 +272,24 @@ def mount_spa_bundle(app: FastAPI, root: Path | None = None) -> bool:
 
 
 def build_server_app(
-    store: RuntimeConfigStore, root: Path | None = None
+    store: RuntimeConfigStore,
+    root: Path | None = None,
+    arm: ArmSession | None = None,
+    clock: Clock | None = None,
+    port: int = DEFAULT_HTTP_PORT,
 ) -> tuple[FastAPI, bool, bool]:
     """Assemble the one served application.
 
     Args:
         store: Where runtime_config lives.
         root: Repository root to resolve the bundle against, or None for this checkout.
+        arm: This process's arm session, or None when it holds no arm. None is the default so a
+            caller that has not chosen a backend gets the REST surface and the bundle rather than
+            a control channel over a latch nobody owns.
+        clock: The server monotonic clock, or None for a fresh `WallClock`. Supplied by the
+            caller that also built `arm`, because the two must be the same clock — an expiry
+            judged on one and a latch stamped from another cannot be ordered against each other.
+        port: The served port, which decides the Origin allowlist.
 
     Returns:
         (tuple) The application, whether a WebSocket route is mounted, and whether the SPA bundle
@@ -217,7 +297,9 @@ def build_server_app(
             line the operator reads.
     """
     app = create_app(store)
-    websocket_mounted = mount_websocket_router(app)
+    websocket_mounted = mount_websocket_router(
+        app, arm, clock if clock is not None else WallClock(), port
+    )
     spa_mounted = mount_spa_bundle(app, root)
     return app, websocket_mounted, spa_mounted
 
@@ -244,6 +326,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--config-dir",
         default=None,
         help="directory holding runtime_config.json (default: the XDG config directory)",
+    )
+    parser.add_argument(
+        "--arm",
+        choices=ARM_BACKENDS,
+        default=ARM_BACKEND_NONE,
+        help=(
+            "which arm this process holds. 'none' serves REST and the bundle with no realtime "
+            "channel; 'dummy' opens no bus and puts synthetic readings on the board"
+        ),
     )
     return parser
 
@@ -278,7 +369,15 @@ def main(argv: list[str] | None = None) -> int:
     store = (
         default_store() if args.config_dir is None else RuntimeConfigStore(Path(args.config_dir))
     )
-    app, websocket_mounted, spa_mounted = build_server_app(store)
+    clock = WallClock()
+    try:
+        arm = build_arm_session(args.arm, clock)
+    except ValueError as unknown:
+        print(f"REJECTED: {unknown}", file=sys.stderr)
+        return EXIT_REJECTED
+    app, websocket_mounted, spa_mounted = build_server_app(
+        store, arm=arm, clock=clock, port=args.port
+    )
 
     print(f"config: {store.path}")
     if not spa_mounted:
@@ -289,10 +388,60 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
     if not websocket_mounted:
-        print("WebSocket router not mounted (WP-3B-15) — no realtime channel.", file=sys.stderr)
+        print(
+            "no arm session (--arm none) — no realtime channel, so the GUI has no stop path.",
+            file=sys.stderr,
+        )
+    else:
+        # Said on every start rather than once, and on stderr beside the other degradations. The
+        # board carries numbers that look exactly like a reading and came from no arm; an
+        # operator who missed one line at startup has no second chance to tell them apart.
+        print(
+            f"arm backend {args.arm!r} — the state board carries synthetic readings, not an arm.",
+            file=sys.stderr,
+        )
     print(f"serving on http://{args.host}:{args.port}")
 
-    uvicorn.run(app, host=args.host, port=args.port)
+    return serve_until_stopped(app, arm, store, args.host, args.port)
+
+
+def serve_until_stopped(
+    app: FastAPI, arm: ArmSession | None, store: RuntimeConfigStore, host: str, port: int
+) -> int:
+    """Run the server, with the arm session's tick running beside it for exactly as long.
+
+    The runner is started here rather than from an application startup hook, because the thing it
+    must not outlive is this call: `uvicorn.run` blocks until the server is done, and a `finally`
+    around it stops the tick on every exit — a clean shutdown, a bind that failed inside uvicorn,
+    or a KeyboardInterrupt. A startup hook would tie the tick to the ASGI lifespan instead, and a
+    `TestClient` entering that lifespan would start a real kernel timer inside a test.
+
+    Args:
+        app: The assembled application.
+        arm: The arm session to tick, or None when this process holds no arm.
+        store: Where the control tick rate is read from.
+        host: The interface to bind.
+        port: The port to bind.
+
+    Returns:
+        (int) The process exit code.
+    """
+    if arm is None:
+        uvicorn.run(app, host=host, port=port)
+        return EXIT_OK
+    runner = ArmSessionRunner(arm, store.load().document.control.control_tick_hz)
+    runner.start()
+    try:
+        uvicorn.run(app, host=host, port=port)
+    finally:
+        if not runner.stop():
+            print(
+                "the arm session tick did not stop within "
+                f"{RUNNER_STOP_JOIN_TIMEOUT_SEC}s; it is still reading the arm.",
+                file=sys.stderr,
+            )
+        if runner.failure is not None:
+            print(f"the arm session tick died: {runner.failure}", file=sys.stderr)
     return EXIT_OK
 
 
@@ -305,9 +454,11 @@ __all__ = [
     "build_parser",
     "build_server_app",
     "main",
+    "loopback_origins",
     "mount_spa_bundle",
     "mount_websocket_router",
     "port_is_available",
+    "serve_until_stopped",
     "spa_bundle_directory",
     "spa_bundle_is_built",
 ]

@@ -125,16 +125,20 @@ def mount_realtime_channel(
     `security` is required rather than defaulted, and it is read on every handshake. Both
     halves matter: neither deployment shape can be constructed in a form its own ruling
     forbids — `ControlChannelSecurity` refuses a plaintext scheme (`FR-OPS-090`) and
-    `LoopbackDeployment` refuses a routable bind or a non-loopback origin (`NORM-015`) — so
-    demanding one makes the policy's existence a precondition of mounting at all; and
-    checking the Origin against it in the handshake is what keeps the policy from being an
-    object the code holds and never consults.
+    `LoopbackDeployment` refuses a non-loopback origin (`NORM-015`) — so demanding one makes
+    the policy's existence a precondition of mounting at all; and checking the Origin against
+    it in the handshake is what keeps the policy from being an object the code holds and never
+    consults.
+
+    What the deployment does NOT prove is the address the process actually binds. It validates
+    its own `host` field, and a caller is free to describe a loopback deployment and then serve
+    the application on a routable interface. `NORM-015`'s other obligation is charged where the
+    socket is opened — `assert_loopback_bind` in `backend/config/serve.py` — so a host mounting
+    this route by itself owes that check itself.
 
     The parameter is the union rather than the networked policy alone because `NORM-015`
     split the deployment instead of softening the contract. A loopback-bound research host
-    admits the plaintext scheme and still owes the allowlist, and it needs a route to mount
-    on; narrowing this to `ControlChannelSecurity` would leave that host unable to describe
-    itself, which is why it had no route at all.
+    admits the plaintext scheme and still owes the allowlist, and it needs a route to mount on.
 
     Args:
         app: The application to add the route to. Supplied by the caller so the REST
