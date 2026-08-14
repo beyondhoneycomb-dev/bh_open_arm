@@ -32,6 +32,7 @@ from backend.config.constants import (
     SUBOBJECT_LAYOUT,
 )
 from backend.config.store import RuntimeConfigStore
+from backend.ws.constants import REALTIME_ROUTE
 from backend.ws.deployment import LoopbackDeployment, admitted_origins
 from contracts.prim.schema import ARM_SIDES
 
@@ -51,6 +52,11 @@ TICK_WAIT_TIMEOUT_SEC = 5.0
 # How long that wait sleeps between looks. Well under the 100 Hz default tick so no frame is
 # missed, and non-zero so the wait yields the GIL to the thread it is waiting on.
 BOARD_POLL_INTERVAL_SEC = 0.001
+
+# Where the shell declares the WebSocket path, and the export that holds it. Named here so the
+# cross-language check points at one file rather than scanning the frontend for a string.
+FRONTEND_ENDPOINTS_MODULE = "frontend/src/config/endpoints.ts"
+WS_PATH_EXPORT = "export const WS_ENDPOINT_PATH"
 
 ENTRY_MARKUP = "<!doctype html><title>OpenArm</title>"
 ASSET_BODY = "export const build = 1;\n"
@@ -325,6 +331,26 @@ def test_serving_ticks_the_arm_session_and_stops_it_afterwards(
 
     assert published_while_serving[0] is not None
     assert [thread.name for thread in threading.enumerate() if thread.name == RUNNER_NAME] == []
+
+
+def test_the_shell_names_the_path_the_server_actually_serves() -> None:
+    """The SPA's WS path and the mounted route are one string, checked across the two languages.
+
+    They are declared twice because they are written in two languages, and nothing until now
+    could disagree: the server mounted no route, so a wrong path in the shell was unobservable.
+    With the route mounted, a mismatch is a handshake that never happens — and it fails as a
+    connection error, which reads like a backend that is down rather than a constant that is
+    wrong.
+
+    Read out of the TypeScript source rather than imported, because that file is what the bundle
+    is built from; asserting against a Python copy of the same string would compare a constant
+    with itself.
+    """
+    declared = (Path(serve.__file__).parents[2] / FRONTEND_ENDPOINTS_MODULE).read_text(
+        encoding="utf-8"
+    )
+
+    assert f'{WS_PATH_EXPORT} = "{REALTIME_ROUTE}"' in declared
 
 
 def _websocket_routes(app: FastAPI) -> list[object]:

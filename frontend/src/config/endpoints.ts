@@ -6,7 +6,13 @@
 
 // The one realtime channel (CTR-WS@v2, D-2). Exactly one WebSocket multiplexes
 // telemetry + command + camera + soft stop + lease; the shell exposes only its path.
-export const WS_ENDPOINT_PATH = "/ws";
+//
+// It must equal `REALTIME_ROUTE` in backend/ws/constants.py, which is where the server mounts
+// the route. The two are written in different languages and there is no shared source for them,
+// so the equality is checked by a test that reads this file
+// (`tests/wpg00_backend/test_serve.py`) — a mismatch here is a handshake that never happens,
+// and it surfaces to the operator as a connection error, which reads like a backend that is down.
+export const WS_ENDPOINT_PATH = "/ws/realtime";
 
 // REST (CRUD, non-realtime). Config canon is the backend runtime_config.json;
 // the browser does REST get/set against this endpoint only.

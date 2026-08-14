@@ -1,5 +1,5 @@
 version: 1
-spine_ref: docs/v1/plan/00-실행계획-개요.md@f1394e8
+spine_ref: docs/v1/plan/00-실행계획-개요.md@e5ac09b
 entries:
 - req: FR-CAM-001
   spec_ref: 06#3.1
@@ -4741,7 +4741,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: FR-CON-062
   spec_ref: 02#3.4
   priority: M
@@ -4957,7 +4957,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: FR-CON-063
   spec_ref: 02#3.4
   priority: M
@@ -4979,7 +4979,7 @@ entries:
     wp_candidates:
     - WP-1-02
     - WP-G-S02
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: FR-CON-064
   spec_ref: 02#3.4
   priority: M
@@ -9391,7 +9391,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: FR-GUI-061
   spec_ref: 13#3.5
   priority: M
@@ -9689,7 +9689,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: FR-GUI-064
   spec_ref: 13#3.5
   priority: M
@@ -9888,7 +9888,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: FR-GUI-066
   spec_ref: 13#3.5
   priority: M
@@ -10087,7 +10087,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: FR-GUI-068
   spec_ref: 13#3.5
   priority: M
@@ -12599,7 +12599,7 @@ entries:
     wp_candidates:
     - WP-2C-07
     - WP-G-S12
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: FR-GUI-112
   spec_ref: 13#3.8
   priority: M
@@ -12997,7 +12997,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: FR-GUI-119
   spec_ref: 13#3.8.1
   priority: M
@@ -17654,7 +17654,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: FR-MAN-036
   spec_ref: 04#3.4
   priority: M
@@ -18096,7 +18096,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: FR-MAN-048
   spec_ref: 04#3.6
   priority: M
@@ -20935,7 +20935,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: FR-MOT-032
   spec_ref: 03#3.5
   priority: M
@@ -29225,7 +29225,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: FR-OPS-091
   spec_ref: 14#신규 요구사항 (v2 런타임)
   priority: M
@@ -34040,7 +34040,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: FR-SAF-021
   spec_ref: 12#3.3
   priority: M
@@ -34335,7 +34335,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: FR-SAF-032
   spec_ref: 12#3.4
   priority: M
@@ -34835,7 +34835,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: FR-SAF-046
   spec_ref: 12#3.6
   priority: M
@@ -35620,7 +35620,7 @@ entries:
     - WP-1-05
     - WP-G-S02
     - WP-N1-02
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: FR-SIM-001
   spec_ref: 09#3.1
   priority: M
@@ -45119,7 +45119,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: FR-SYS-027
   spec_ref: 01#3.6
   priority: M
@@ -51467,7 +51467,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: NFR-GUI-005
   spec_ref: 13#3.9
   priority: M
@@ -51491,7 +51491,7 @@ entries:
     - WP-2A-06
     - WP-5-05
     - WP-N1-02
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: NFR-GUI-008
   spec_ref: 13#3.9
   priority: M
@@ -51571,7 +51571,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: NFR-GUI-010
   spec_ref: 13#3.9
   priority: S
@@ -53227,7 +53227,7 @@ entries:
     wp_candidates:
     - WP-1-04
     - WP-N1-03
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: NFR-PRF-005
   spec_ref: 15#3.1
   priority: M
@@ -54691,7 +54691,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: NFR-PRF-055
   spec_ref: 15#3.7
   priority: M
@@ -54821,7 +54821,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: NFR-REC-001
   spec_ref: 07#3.11
   priority: M
@@ -54892,7 +54892,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: NFR-REC-002
   spec_ref: 07#3.11
   priority: M
@@ -55158,7 +55158,7 @@ entries:
     - WP-2B-05
     - WP-2C-02
     - WP-N1-03
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: NFR-SAF-002
   spec_ref: 12#3.9
   priority: S
@@ -55205,7 +55205,7 @@ entries:
   planned: true
   provenance:
     wp_rule: sole-citation
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: NFR-SAF-003
   spec_ref: 12#3.9
   priority: M
@@ -55451,7 +55451,7 @@ entries:
   planned: true
   provenance:
     wp_rule: doc06-section6
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: NFR-SAF-008
   spec_ref: 12#3.9
   priority: S
@@ -55518,7 +55518,7 @@ entries:
     - WP-N1-02
     - WP-OPS-05
     source: 'tag as written: (none)'
-  normalization: sha256:711a3fcbb7d53eea50b4105174f07572c552aa272405a1695821e66f1f8ae33d
+  normalization: sha256:e9c795e76f5868b58780bb338c71196b7d80beb14b652459f97883d8e56b3a05
 - req: NFR-SIM-001
   spec_ref: 09#3.12
   priority: M

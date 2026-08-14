@@ -454,11 +454,11 @@ rows:
       - type: runtime_assert
         predicate: "평문 배치는 바인드 주소가 loopback일 때만 성립하고, 비-loopback 바인드는 기동에서 거부된다"
         check: "WP-3B-15"
-        status: planned
+        status: active
       - type: runtime_assert
         predicate: "평문 배치에서도 Origin allowlist는 필수이며 비어 있거나 와일드카드면 거부된다"
         check: "WP-3B-15"
-        status: planned
+        status: active
 
 notes:
   - norm_id: NORM-005
