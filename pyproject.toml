@@ -104,6 +104,9 @@ oa-state = "ops.launch.cli:main"
 oa-contracts = "registry.contracts.cli:main"
 oa-env = "registry.env.cli:main"
 oa-serve = "backend.config.serve:main"
+# The PG-CAM-001 capture. A console script rather than a one-off, because that gate goes
+# SUPERSEDED whenever the camera set, the rig profile or the USB topology changes.
+oa-camcap = "backend.camera.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]
