@@ -19,7 +19,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  .oa-dash {
+  :root:not([data-theme="light"]) .oa-dash {
     --oa-ok: #3fb950;
     --oa-ok-bg: #12261a;
     --oa-stale: #b083f0;
@@ -28,6 +28,17 @@
     --oa-unavail-bg: #1c2230;
   }
 }
+
+/* The operator's explicit choice, which wins over the OS preference above. */
+:root[data-theme="dark"] .oa-dash {
+  --oa-ok: #3fb950;
+  --oa-ok-bg: #12261a;
+  --oa-stale: #b083f0;
+  --oa-stale-bg: #201830;
+  --oa-unavail: #8b949e;
+  --oa-unavail-bg: #1c2230;
+}
+
 
 .oa-dash__head {
   display: flex;

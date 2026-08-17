@@ -388,7 +388,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  .oa-trn {
+  :root:not([data-theme="light"]) .oa-trn {
     --oa-text: #e6edf3;
     --oa-muted: #8b949e;
     --oa-border: #30363d;
@@ -399,3 +399,16 @@
     --oa-danger-bg: #3c1618;
   }
 }
+
+/* The operator's explicit choice, which wins over the OS preference above. */
+:root[data-theme="dark"] .oa-trn {
+  --oa-text: #e6edf3;
+  --oa-muted: #8b949e;
+  --oa-border: #30363d;
+  --oa-surface: #0d1117;
+  --oa-code-bg: #161b22;
+  --oa-warn-bg: #341a00;
+  --oa-warn-text: #d29922;
+  --oa-danger-bg: #3c1618;
+}
+

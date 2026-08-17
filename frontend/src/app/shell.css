@@ -13,7 +13,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --oa-bg: #0d1117;
     --oa-surface: #161b22;
     --oa-text: #e6edf3;
@@ -21,6 +21,18 @@
     --oa-border: #30363d;
     --oa-accent: #3fb6cf;
   }
+}
+
+/* The operator's explicit choice wins over the OS preference: the media block is
+   guarded so a light choice switches it off, and the block below re-states dark for a
+   dark choice on a light-preferring machine. */
+:root[data-theme="dark"] {
+  --oa-bg: #0d1117;
+  --oa-surface: #161b22;
+  --oa-text: #e6edf3;
+  --oa-muted: #8b949e;
+  --oa-border: #30363d;
+  --oa-accent: #3fb6cf;
 }
 
 * {
