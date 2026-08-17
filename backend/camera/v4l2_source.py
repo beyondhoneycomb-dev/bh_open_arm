@@ -32,6 +32,15 @@ What this module does not do is decide *which* camera is which. `portpath.node_b
 resolves a bound port to the node on it, and refuses when nothing is there — that is where the
 identity lives, because the wrist pair shares one serial and the port is all that separates them.
 
+**Every failure here raises, and that is not a contradiction of tolerant connection.** `02b` §6.2
+gives `WP-3B-01` the rule that a dead camera must warn and be skipped rather than fail the arm's
+connect — and gives it the path `backend/sensing/connect/**`, describing it as reusing this tree
+by import. So the skip is owed one layer up, by the code that opens several cameras and decides
+what a rig with one missing can still do. A camera that cannot be opened at the format it was
+asked for is a fact this function knows and its caller does not; softening it into a return value
+would move the decision to the layer with the least information and leave the tolerant layer
+nothing to be tolerant about.
+
 `cv2` is imported inside the call rather than at module scope. It ships in the `robot` extra, and
 this tree is imported by callers that do not install it; the enumeration path
 (`backend.camera.enumerate_hw`) already treats it as optionally present for the same reason.
