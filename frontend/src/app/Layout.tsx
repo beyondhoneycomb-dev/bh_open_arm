@@ -11,6 +11,7 @@ import { NavLink, Outlet } from "react-router-dom";
 
 import { SCREENS, VIEWPORT_PATH } from "../routes/registry";
 import { useConfig } from "./ConfigContext";
+import { ControlLeaseHost } from "./ControlLeaseHost";
 import { SafetyBarHost } from "./SafetyBarHost";
 
 export function Layout() {
@@ -41,6 +42,7 @@ export function Layout() {
       </nav>
       <main className="oa-main">
         <SafetyBarHost />
+        <ControlLeaseHost />
         <div className="oa-main__content">
           <Outlet />
         </div>

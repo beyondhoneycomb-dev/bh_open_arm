@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AppRoutes } from "./AppRoutes";
 import { ConfigProvider } from "./ConfigContext";
+import { RealtimeProvider } from "./RealtimeContext";
 
 function okConfigFetch(): typeof fetch {
   return vi.fn(async () =>
@@ -24,12 +25,21 @@ function okConfigFetch(): typeof fetch {
   ) as unknown as typeof fetch;
 }
 
+// The shell reads the realtime client for the lease surface, so rendering it needs a provider.
+// This double never connects: it satisfies the lifetime and reports no lease, which is what a
+// page that has not been granted control looks like.
+function stubRealtimeClient() {
+  return { start: () => {}, dispose: () => {} };
+}
+
 function renderAt(path: string) {
   return render(
     <ConfigProvider fetchImpl={okConfigFetch()}>
-      <MemoryRouter initialEntries={[path]}>
-        <AppRoutes />
-      </MemoryRouter>
+      <RealtimeProvider createClient={() => stubRealtimeClient()}>
+        <MemoryRouter initialEntries={[path]}>
+          <AppRoutes />
+        </MemoryRouter>
+      </RealtimeProvider>
     </ConfigProvider>,
   );
 }

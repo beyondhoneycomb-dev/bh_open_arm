@@ -11,6 +11,7 @@
 // empty lease, no telemetry, nothing moving. A provider that reported "open" for a client it
 // could not construct would let a screen show an idle rig it is not connected to.
 
+import type { LeaseSnapshot } from "../ws/leaseRenewer";
 import {
   createContext,
   useContext,
@@ -26,6 +27,9 @@ import {
 export interface RealtimeLifecycle {
   start(): void;
   dispose(): void;
+  // The lease the renewer tracks. Optional because this provider drives the lifetime and a
+  // double that only needs to be started and disposed should not have to carry one.
+  readonly lease?: { snapshot(): LeaseSnapshot };
 }
 
 export type RealtimeStatus = "open" | "unavailable";
