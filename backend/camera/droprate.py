@@ -18,6 +18,9 @@ from dataclasses import dataclass
 
 from backend.camera.constants import DROP_DISCARD_FRACTION, DROP_WARN_FRACTION
 
+# Capture timestamps are recorded in nanoseconds, which is the unit `capture_ts.json` declares.
+NS_PER_SECOND = 1_000_000_000
+
 
 def expected_frame_count(target_fps: float, duration_s: float) -> int:
     """Return `round(target_fps × duration)` — the NFR-CAM-003 expected-frame count."""
@@ -53,6 +56,44 @@ def frame_number_continuity(
     for low, high in zip(ordered, ordered[1:], strict=False):
         missing.update(range(low + 1, high))
     return tuple(sorted(missing)), tuple(sorted(duplicates))
+
+
+def skipped_frames_from_timestamps(capture_ts_ns: Sequence[int], target_fps: float) -> int:
+    """Count the frames a device never delivered, from the gaps in its own timestamps.
+
+    `06` §2.6c wants a per-device drop signal that does not go through the raw count, and names
+    frame-number continuity as the mechanism. A `cv2.VideoCapture` over V4L2 exposes no counter —
+    `CAP_PROP_POS_FRAMES` reads `-1.0` on every grab — so `frame_number_continuity` has nothing
+    to read on a real run. The buffer timestamps carry the same fact: the driver stamps each
+    frame it captured, so an interval that spans two frame periods is one frame it did not.
+
+    Why the count alone will not do, measured over ten minutes on three cameras: all three
+    recorded exactly 17718 frames of 18001 expected, because the runner polls every slot once per
+    pass and the pass rate is the slowest slot's. Their own timestamps disagreed — 163, 168 and
+    204 over-long intervals — which is the part that belongs to each camera.
+
+    Rounding is what separates a skip from jitter, and it needs no tolerance: a healthy stream
+    held 33.24-33.51 ms against a 33.4 ms period, so the ratio rounds to 1 and contributes
+    nothing, while a skipped frame lands at 2.0.
+
+    Args:
+        capture_ts_ns: One slot's capture instants in nanoseconds, in arrival order.
+        target_fps: The rate the profile asked the camera for.
+
+    Returns:
+        (int) Frames missing from the intervals between the timestamps recorded.
+
+    Raises:
+        ValueError: If `target_fps` is not positive. There is no interval to divide by, and
+            every gap would read as infinitely many missing frames.
+    """
+    if target_fps <= 0:
+        raise ValueError("target_fps must be positive")
+    interval_ns = NS_PER_SECOND / target_fps
+    return sum(
+        max(round((later - earlier) / interval_ns) - 1, 0)
+        for earlier, later in zip(capture_ts_ns, capture_ts_ns[1:], strict=False)
+    )
 
 
 @dataclass(frozen=True)

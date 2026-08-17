@@ -62,6 +62,29 @@ ACCEPTANCE_DURATION_S = 600.0
 GRAB_TIMEOUT_S = 0.2
 
 
+@dataclass(frozen=True)
+class GrabbedFrame:
+    """One frame that arrived, and whatever its device could say about it.
+
+    Both fields are optional because a real device supplies neither by default and the two
+    absences mean different things. Folding either into a sentinel on the return channel is what
+    the old `int | None` did, and it made "a frame arrived without a number" unsayable — so the
+    only source that could satisfy the Protocol was one that invented a counter.
+
+    Attributes:
+        frame_number: The device's own frame counter, or None when it exposes none. A
+            `cv2.VideoCapture` over V4L2 exposes none: `CAP_PROP_POS_FRAMES` reads `-1.0` on
+            every grab of a live capture. A counter synthesised here would be a sequence that
+            can never show a gap, which is a device that cannot drop.
+        capture_ts_ns: The instant the device captured the frame, absolute monotonic
+            nanoseconds, or None when it does not stamp. V4L2 stamps every buffer on
+            `CLOCK_MONOTONIC` and `cv2` surfaces it as `CAP_PROP_POS_MSEC`.
+    """
+
+    frame_number: int | None = None
+    capture_ts_ns: int | None = None
+
+
 class FrameSource(Protocol):
     """The one capability this run needs from a camera, and nothing wider.
 
@@ -70,12 +93,12 @@ class FrameSource(Protocol):
     same accounting as a run driven by hardware — only the bytes differ.
     """
 
-    def grab(self) -> int | None:
-        """Take one frame and return its device frame number, or None when none arrived.
+    def grab(self) -> GrabbedFrame | None:
+        """Take one frame, or answer None when none arrived.
 
-        The frame number is the device's own counter when it exposes one. It is what makes a
-        drop distinguishable from a slow reader: a count that falls short says frames are
-        missing, and a sequence with a gap says which ones.
+        None is absence and nothing else: it is what `compute_drop` reads as a drop. A frame
+        that arrived says so by being a `GrabbedFrame`, whether or not its device could number
+        or stamp it.
         """
         ...
 
@@ -202,28 +225,38 @@ def run_capture(
     order = tuple(sources)
     stamps: dict[str, list[int]] = {slot: [] for slot in order}
     numbers: dict[str, list[int]] = {slot: [] for slot in order}
+    device_clocked: bool | None = None
     started = clock()
     now = started
     while now - started < duration_s:
         for slot in order:
             # Stamped immediately after this slot's grab returns and BEFORE the next slot is
-            # polled, so the recorded instant is when the frame arrived rather than when the
+            # polled, so a host-stamped run records when the frame arrived rather than when the
             # pass finished. Reading the clock once per pass and reusing it would give every
             # slot in the pass the same timestamp — and the difference between two slots in one
             # pass is exactly what the sync-slop report measures, so that shortcut reports a
             # perfectly synchronised rig whatever the cameras did.
-            frame_number = sources[slot].grab()
+            grabbed = sources[slot].grab()
             now = clock()
-            if frame_number is None:
+            if grabbed is None:
                 continue
-            stamps[slot].append(int((now - started) * NS_PER_SECOND))
-            numbers[slot].append(frame_number)
+            device_clocked = _one_time_base(device_clocked, grabbed, slot)
+            stamps[slot].append(
+                grabbed.capture_ts_ns
+                if grabbed.capture_ts_ns is not None
+                else int((now - started) * NS_PER_SECOND)
+            )
+            if grabbed.frame_number is not None:
+                numbers[slot].append(grabbed.frame_number)
         # Advanced once per pass as well as per slot, so the loop's exit does not depend on any
         # slot having been polled. Without it a pass that polls nothing never moves `now`, and
         # the window never closes — a termination that rests on an input guard rather than on
         # the loop's own structure is one bypassed guard away from a hang.
         now = clock()
     elapsed = now - started
+
+    if device_clocked:
+        stamps = _rebased_to_run_start(stamps)
 
     return CaptureRun(
         duration_s=elapsed,
@@ -237,6 +270,58 @@ def run_capture(
             for slot in order
         ),
     )
+
+
+def _one_time_base(device_clocked: bool | None, grabbed: GrabbedFrame, slot: str) -> bool:
+    """Return whether this run is device-clocked, refusing the first frame that disagrees.
+
+    A document holding some slots on the driver's clock and others on this host's is one whose
+    between-slot differences are arithmetic across two unrelated origins. The number it yields is
+    shaped exactly like a sync slop and describes nothing, so it is refused rather than reported —
+    and refused on the frame that reveals it, because the run it would otherwise spoil is ten
+    minutes long.
+
+    Args:
+        device_clocked: What earlier frames established, or None before any arrived.
+        grabbed: The frame that just arrived.
+        slot: The slot it arrived on, named in the refusal.
+
+    Returns:
+        (bool) True when this run's timestamps come from the devices.
+
+    Raises:
+        CaptureRunError: When this frame's time base is not the one the run already has.
+    """
+    stamped = grabbed.capture_ts_ns is not None
+    if device_clocked is None or device_clocked == stamped:
+        return stamped
+    raise CaptureRunError(
+        f"{slot!r} answered on a different time base from the slots before it: this run is "
+        f"{'device' if device_clocked else 'host'}-clocked and that frame is "
+        f"{'device' if stamped else 'host'}-clocked. A capture must keep one clock, or the "
+        "spread between two slots is a subtraction across two origins"
+    )
+
+
+def _rebased_to_run_start(stamps: Mapping[str, list[int]]) -> dict[str, list[int]]:
+    """Shift device timestamps to start near zero, keeping the offsets between slots.
+
+    One base for the whole run, never one per slot. The offset between two cameras' capture
+    instants is the thing `PG-CAM-001` ③ measures; subtracting each slot's own first stamp sets
+    every slot's first frame to zero and reports a pair that is perfectly in phase, whatever the
+    cameras did.
+
+    Args:
+        stamps: Per-slot absolute device timestamps in nanoseconds.
+
+    Returns:
+        (dict[str, list[int]]) The same timestamps relative to the run's earliest frame.
+    """
+    arrivals = [slot_stamps[0] for slot_stamps in stamps.values() if slot_stamps]
+    if not arrivals:
+        return {slot: list(slot_stamps) for slot, slot_stamps in stamps.items()}
+    base = min(arrivals)
+    return {slot: [stamp - base for stamp in slot_stamps] for slot, slot_stamps in stamps.items()}
 
 
 def slot_order_is_stable(passes: Sequence[Sequence[str]]) -> bool:

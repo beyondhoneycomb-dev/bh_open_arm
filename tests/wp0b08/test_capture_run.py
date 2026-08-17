@@ -19,6 +19,7 @@ import pytest
 from backend.camera.capture_run import (
     NS_PER_SECOND,
     CaptureRunError,
+    GrabbedFrame,
     run_capture,
     slot_order_is_stable,
 )
@@ -66,15 +67,21 @@ class _Source:
         self._calls = 0
         self._number = 0
 
-    def grab(self) -> int | None:
-        """Spend one frame interval, then return the next device number or None on a drop."""
+    def grab(self) -> GrabbedFrame | None:
+        """Spend one frame interval, then answer the next device number or nothing on a drop.
+
+        This models a device that numbers its frames and never loses one itself: the drop
+        happens at the reader, so the counter stays contiguous while the arrival count falls
+        short. A `cv2` capture is the other shape — it numbers nothing — and
+        `test_grab_outcome.py` is where that one is pinned.
+        """
         call = self._calls
         self._calls += 1
         self._time.spend_one_frame()
         if call in self._drop_on:
             return None
         self._number += 1
-        return self._number
+        return GrabbedFrame(frame_number=self._number)
 
 
 def _fps_for(*slots: str) -> dict[str, float]:
