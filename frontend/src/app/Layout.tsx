@@ -12,7 +12,6 @@ import { NavLink, Outlet } from "react-router-dom";
 import { SCREENS, VIEWPORT_PATH } from "../routes/registry";
 import { useConfig } from "./ConfigContext";
 import { ControlLeaseHost } from "./ControlLeaseHost";
-import { DocumentTheme } from "./documentTheme";
 import { SafetyBarHost } from "./SafetyBarHost";
 
 export function Layout() {
@@ -21,9 +20,6 @@ export function Layout() {
 
   return (
     <div className={`oa-shell oa-shell--${config.layout.density}`}>
-      {/* The choice goes on <html>, not here: every rule that reads it is written
-          `:root[data-theme=...]`, and a shell div is not `:root`. */}
-      <DocumentTheme mode={config.theme.mode} />
       <nav className={`oa-nav${collapsed ? " oa-nav--collapsed" : ""}`} aria-label="주 메뉴">
         <p className="oa-nav__brand">OpenArm</p>
         <ul className="oa-nav__list">

@@ -1,6 +1,6 @@
 /* S-01 dashboard styles. Self-hosted only — no url() to any external origin, so
    the bundle stays air-gapped (FR-GUI-008). Reuses the shell/safety design tokens
-   with literal fallbacks and inherits the viewer's light/dark theme. The four
+   with literal fallbacks. The four
    diagnostic states plus UNAVAILABLE each get a distinct visual — UNAVAILABLE is
    deliberately NOT green, so a not-landed source never reads as OK (CG-G-S01e). */
 
@@ -17,28 +17,6 @@
   --oa-unavail: #57606a;
   --oa-unavail-bg: #eef1f4;
 }
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .oa-dash {
-    --oa-ok: #3fb950;
-    --oa-ok-bg: #12261a;
-    --oa-stale: #b083f0;
-    --oa-stale-bg: #201830;
-    --oa-unavail: #8b949e;
-    --oa-unavail-bg: #1c2230;
-  }
-}
-
-/* The operator's explicit choice, which wins over the OS preference above. */
-:root[data-theme="dark"] .oa-dash {
-  --oa-ok: #3fb950;
-  --oa-ok-bg: #12261a;
-  --oa-stale: #b083f0;
-  --oa-stale-bg: #201830;
-  --oa-unavail: #8b949e;
-  --oa-unavail-bg: #1c2230;
-}
-
 
 .oa-dash__head {
   display: flex;

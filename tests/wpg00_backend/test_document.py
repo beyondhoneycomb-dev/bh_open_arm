@@ -18,7 +18,6 @@ from backend.config.constants import (
     CONTROL_TICK_HZ_MIN,
     FIELD_CONTROL_TICK_HZ,
     FIELD_DENSITY,
-    FIELD_MODE,
     FIELD_SIDEBAR_COLLAPSED,
     FIELD_TOOL_ID,
     FIELD_TOOL_MASS_KG,
@@ -27,7 +26,6 @@ from backend.config.constants import (
     SUBOBJECT_END_EFFECTOR,
     SUBOBJECT_LAYOUT,
     SUBOBJECT_PRESETS,
-    SUBOBJECT_THEME,
 )
 from backend.config.model import (
     SUBOBJECT_KEYS,
@@ -61,11 +59,10 @@ def test_default_document_puts_both_arms_on_the_no_gripper_tool() -> None:
 
 
 def test_default_document_matches_the_client_side_defaults() -> None:
-    """The three shell subobjects default to what `frontend/src/config/schema.ts` defaults to."""
+    """The two shell subobjects default to what `frontend/src/config/schema.ts` defaults to."""
     wire = default_document().to_wire()
 
     assert wire[SUBOBJECT_LAYOUT] == {FIELD_SIDEBAR_COLLAPSED: False, FIELD_DENSITY: "comfortable"}
-    assert wire[SUBOBJECT_THEME] == {FIELD_MODE: "system"}
     assert wire[SUBOBJECT_PRESETS] == {FIELD_VIEW_PRESETS: {}}
 
 

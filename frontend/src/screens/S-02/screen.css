@@ -111,35 +111,3 @@
   flex-direction: column;
   gap: 0.75rem;
 }
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .oa-s02-side__warning,
-  :root:not([data-theme="light"]) .oa-s02-bringup__gate,
-  :root:not([data-theme="light"]) .oa-s02-rezero__warning,
-  :root:not([data-theme="light"]) .oa-s02-can__startup--blocked,
-  :root:not([data-theme="light"]) .oa-s02-can__fd--bad,
-  :root:not([data-theme="light"]) .oa-s02-wizard__errors {
-    color: #ff8a80;
-  }
-  :root:not([data-theme="light"]) .oa-s02-can__startup--clear,
-  :root:not([data-theme="light"]) .oa-s02-can__fd--ok,
-  :root:not([data-theme="light"]) .oa-s02-rezero__done {
-    color: #7ee08a;
-  }
-}
-
-/* The operator's explicit choice, which wins over the OS preference above. */
-:root[data-theme="dark"] .oa-s02-side__warning,
-:root[data-theme="dark"] .oa-s02-bringup__gate,
-:root[data-theme="dark"] .oa-s02-rezero__warning,
-:root[data-theme="dark"] .oa-s02-can__startup--blocked,
-:root[data-theme="dark"] .oa-s02-can__fd--bad,
-:root[data-theme="dark"] .oa-s02-wizard__errors {
-  color: #ff8a80;
-}
-:root[data-theme="dark"] .oa-s02-can__startup--clear,
-:root[data-theme="dark"] .oa-s02-can__fd--ok,
-:root[data-theme="dark"] .oa-s02-rezero__done {
-  color: #7ee08a;
-}
-

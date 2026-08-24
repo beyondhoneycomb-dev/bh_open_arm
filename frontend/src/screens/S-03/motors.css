@@ -1,6 +1,6 @@
 /* Motor-setup screen (S-03) styles. Scoped under .oa-motors so the screen never
-   restyles the shell or a sibling. Theme-neutral: colours come from the shell's
-   CSS custom properties where they exist, with local fallbacks. */
+   restyles the shell or a sibling. Colours come from the shell's CSS custom
+   properties where they exist, with local fallbacks. */
 
 .oa-motors {
   display: flex;

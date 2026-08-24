@@ -2,6 +2,11 @@
    fetch) and no url() to any external origin, so the bundle stays air-gapped. */
 
 :root {
+  /* The page has one palette, so the widgets the UA paints for itself must have the
+     same one. Without this a browser on a dark desktop still draws checkboxes, range
+     inputs and the scrollbar dark, on a page that is now unconditionally light. */
+  color-scheme: light;
+
   --oa-bg: #f6f8fa;
   --oa-surface: #ffffff;
   --oa-text: #1b1f24;
@@ -10,29 +15,6 @@
   --oa-accent: #0b7285;
   --oa-nav-width: 232px;
   --oa-font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --oa-bg: #0d1117;
-    --oa-surface: #161b22;
-    --oa-text: #e6edf3;
-    --oa-muted: #8b949e;
-    --oa-border: #30363d;
-    --oa-accent: #3fb6cf;
-  }
-}
-
-/* The operator's explicit choice wins over the OS preference: the media block is
-   guarded so a light choice switches it off, and the block below re-states dark for a
-   dark choice on a light-preferring machine. */
-:root[data-theme="dark"] {
-  --oa-bg: #0d1117;
-  --oa-surface: #161b22;
-  --oa-text: #e6edf3;
-  --oa-muted: #8b949e;
-  --oa-border: #30363d;
-  --oa-accent: #3fb6cf;
 }
 
 * {

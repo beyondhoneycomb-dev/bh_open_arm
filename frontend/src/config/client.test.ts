@@ -21,7 +21,7 @@ describe("REST config client", () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse({
         layout: { sidebarCollapsed: true, density: "compact" },
-        theme: { mode: "dark" },
+        control: { controlTickHz: 120 },
         presets: { viewPresets: {} },
       }),
     );
@@ -33,18 +33,18 @@ describe("REST config client", () => {
       expect.objectContaining({ method: "GET" }),
     );
     expect(defaulted).toEqual([]);
-    expect(config.theme.mode).toBe("dark");
+    expect(config.control.controlTickHz).toBe(120);
     expect(config.layout.density).toBe("compact");
   });
 
   it("isolates a malformed subobject in the GET response", async () => {
     const fetchImpl = vi.fn(async () =>
-      jsonResponse({ layout: { sidebarCollapsed: false, density: "comfortable" }, theme: 7 }),
+      jsonResponse({ layout: { sidebarCollapsed: false, density: "comfortable" }, control: 7 }),
     );
 
     const { config, defaulted } = await fetchConfig(asFetch(fetchImpl));
 
-    expect(defaulted).toEqual(["theme"]);
+    expect(defaulted).toEqual(["control"]);
     expect(config.layout.density).toBe("comfortable");
   });
 
@@ -52,7 +52,7 @@ describe("REST config client", () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse({
         layout: { sidebarCollapsed: true, density: "comfortable" },
-        theme: { mode: "system" },
+        control: { controlTickHz: 100 },
         presets: { viewPresets: {} },
       }),
     );

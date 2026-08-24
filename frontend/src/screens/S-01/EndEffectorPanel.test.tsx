@@ -36,7 +36,6 @@ interface StandInBackend {
 function standInBackend(endEffector: EndEffectorConfig, writeStatus = 200): StandInBackend {
   const document: Record<string, unknown> = {
     layout: { sidebarCollapsed: false, density: "comfortable" },
-    theme: { mode: "system" },
     presets: { viewPresets: {} },
     endEffector,
   };
@@ -112,8 +111,16 @@ describe("wired end-effector control", () => {
       left: { toolId: "gripper", toolMassKg: null },
       right: { toolId: "fixed_spatula", toolMassKg: null },
     });
-    // Nothing else was written: layout and theme never appear in a request body.
-    expect(backend.calls.every((call) => call.url !== `${CONFIG_ENDPOINT}/layout`)).toBe(true);
+    // Nothing else was written. Stated as "no other subobject path" rather than by naming
+    // one: the panel owns endEffector alone, and a check that lists its siblings stops
+    // covering the rule the moment a sibling is added or removed.
+    const otherWrites = backend.calls.filter(
+      (call) =>
+        call.method === "PUT" &&
+        call.url.startsWith(`${CONFIG_ENDPOINT}/`) &&
+        call.url !== END_EFFECTOR_WRITE_URL,
+    );
+    expect(otherWrites).toEqual([]);
 
     await waitFor(() => {
       expect(radio(container, "left", "gripper").checked).toBe(true);

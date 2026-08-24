@@ -32,14 +32,12 @@ XDG_CONFIG_HOME_FALLBACK = ".config"
 
 # The closed set of top-level subobject keys, and the `{subobject}` path segment a PUT names.
 SUBOBJECT_LAYOUT = "layout"
-SUBOBJECT_THEME = "theme"
 SUBOBJECT_PRESETS = "presets"
 SUBOBJECT_END_EFFECTOR = "endEffector"
 SUBOBJECT_CONTROL = "control"
 
 FIELD_SIDEBAR_COLLAPSED = "sidebarCollapsed"
 FIELD_DENSITY = "density"
-FIELD_MODE = "mode"
 FIELD_VIEW_PRESETS = "viewPresets"
 FIELD_TOOL_ID = "toolId"
 FIELD_TOOL_MASS_KG = "toolMassKg"
@@ -66,14 +64,12 @@ CONTROL_TICK_HZ_MAX = 200.0
 FIELD_LABEL = "label"
 FIELD_GRIPPER_MOTOR = "gripperMotor"
 
-# The two shell appearance vocabularies, mirrored from `frontend/src/config/schema.ts`. Declared
-# as types so an unlisted value is a validation failure rather than a string that reaches the
+# The shell's layout-density vocabulary, mirrored from `frontend/src/config/schema.ts`. Declared
+# as a type so an unlisted value is a validation failure rather than a string that reaches the
 # browser and renders nothing.
 LayoutDensity = Literal["comfortable", "compact"]
-ThemeMode = Literal["light", "dark", "system"]
 
 DENSITY_DEFAULT: LayoutDensity = "comfortable"
-THEME_MODE_DEFAULT: ThemeMode = "system"
 SIDEBAR_COLLAPSED_DEFAULT = False
 
 # REST paths, served same-origin. The browser's copy of the base lives in

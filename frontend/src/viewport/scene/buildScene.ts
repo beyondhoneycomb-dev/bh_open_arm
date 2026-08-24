@@ -35,8 +35,8 @@ const GRID_SIZE_M = 4;
 const GRID_DIVISIONS = 16;
 const DEFAULT_ASPECT = 16 / 9;
 
-// Assemble the scene graph. `background` is a Three.js color the caller may theme;
-// the default is a neutral dark that reads in both light and dark shells.
+// Assemble the scene graph. `background` is a Three.js color the caller supplies;
+// the default is a neutral dark that keeps the robot legible against the grid.
 export function buildViewportScene(background: Color = new Color(0x10151b)): ViewportScene {
   const scene = new Scene();
   scene.background = background;

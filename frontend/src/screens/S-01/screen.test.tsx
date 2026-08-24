@@ -34,7 +34,6 @@ function configFetch(): typeof fetch {
       new Response(
         JSON.stringify({
           layout: { sidebarCollapsed: false, density: "comfortable" },
-          theme: { mode: "system" },
           presets: { viewPresets: {} },
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },

@@ -1,8 +1,7 @@
 /* Camera console styling. Quiet and dense like the other operator screens; the
    one deliberate colour decision is a status language shared with the rest of the
    app — WARN/stale/blocked are amber-to-red, OK/fresh are calm — so a camera
-   problem reads the same way a safety or connection problem does. Themed for both
-   colour schemes off the shell tokens. */
+   problem reads the same way a safety or connection problem does. */
 
 .oa-cam {
   --oa-cam-bg: #f5f6f8;
@@ -27,40 +26,6 @@
   max-width: 1320px;
   margin: 0 auto;
 }
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .oa-cam {
-    --oa-cam-bg: #10151b;
-    --oa-cam-panel: #171e26;
-    --oa-cam-border: #2a333f;
-    --oa-cam-ink: #e6ebf2;
-    --oa-cam-muted: #93a0b1;
-    --oa-cam-calm: #3fd0b8;
-    --oa-cam-warn: #e0a03a;
-    --oa-cam-warn-bg: #2a2110;
-    --oa-cam-danger: #ff6b64;
-    --oa-cam-danger-bg: #2c1614;
-    --oa-cam-accent: #3fb6cf;
-    --oa-cam-grid: #232c37;
-  }
-}
-
-/* The operator's explicit choice, which wins over the OS preference above. */
-:root[data-theme="dark"] .oa-cam {
-  --oa-cam-bg: #10151b;
-  --oa-cam-panel: #171e26;
-  --oa-cam-border: #2a333f;
-  --oa-cam-ink: #e6ebf2;
-  --oa-cam-muted: #93a0b1;
-  --oa-cam-calm: #3fd0b8;
-  --oa-cam-warn: #e0a03a;
-  --oa-cam-warn-bg: #2a2110;
-  --oa-cam-danger: #ff6b64;
-  --oa-cam-danger-bg: #2c1614;
-  --oa-cam-accent: #3fb6cf;
-  --oa-cam-grid: #232c37;
-}
-
 
 .oa-cam__head {
   display: flex;

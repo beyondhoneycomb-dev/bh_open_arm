@@ -8,15 +8,10 @@
 // user's whole layout.
 
 export type LayoutDensity = "comfortable" | "compact";
-export type ThemeMode = "light" | "dark" | "system";
 
 export interface LayoutConfig {
   sidebarCollapsed: boolean;
   density: LayoutDensity;
-}
-
-export interface ThemeConfig {
-  mode: ThemeMode;
 }
 
 // The control loop's tick rate. The band mirrors backend.config.constants:
@@ -72,7 +67,6 @@ export interface EndEffectorConfig {
 
 export interface RuntimeConfig {
   layout: LayoutConfig;
-  theme: ThemeConfig;
   presets: PresetsConfig;
   endEffector: EndEffectorConfig;
   control: ControlConfig;
@@ -95,13 +89,6 @@ const LAYOUT_SPEC: SubobjectSpec<LayoutConfig> = {
     typeof value.sidebarCollapsed === "boolean" &&
     (value.density === "comfortable" || value.density === "compact"),
   makeDefault: () => ({ sidebarCollapsed: false, density: "comfortable" }),
-};
-
-const THEME_SPEC: SubobjectSpec<ThemeConfig> = {
-  validate: (value): value is ThemeConfig =>
-    isObject(value) &&
-    (value.mode === "light" || value.mode === "dark" || value.mode === "system"),
-  makeDefault: () => ({ mode: "system" }),
 };
 
 const PRESETS_SPEC: SubobjectSpec<PresetsConfig> = {
@@ -158,7 +145,6 @@ const END_EFFECTOR_SPEC: SubobjectSpec<EndEffectorConfig> = {
 // the incoming document is dropped, mirroring the backend's extra="forbid".
 const CONFIG_SCHEMA: { [K in ConfigSubobjectKey]: SubobjectSpec<RuntimeConfig[K]> } = {
   layout: LAYOUT_SPEC,
-  theme: THEME_SPEC,
   presets: PRESETS_SPEC,
   endEffector: END_EFFECTOR_SPEC,
   control: CONTROL_SPEC,
@@ -169,7 +155,6 @@ const SUBOBJECT_KEYS = Object.keys(CONFIG_SCHEMA) as ConfigSubobjectKey[];
 export function defaultConfig(): RuntimeConfig {
   return {
     layout: LAYOUT_SPEC.makeDefault(),
-    theme: THEME_SPEC.makeDefault(),
     presets: PRESETS_SPEC.makeDefault(),
     endEffector: END_EFFECTOR_SPEC.makeDefault(),
     control: CONTROL_SPEC.makeDefault(),

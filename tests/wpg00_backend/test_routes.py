@@ -21,7 +21,6 @@ from backend.config.constants import (
     SUBOBJECT_END_EFFECTOR,
     SUBOBJECT_LAYOUT,
     SUBOBJECT_PRESETS,
-    SUBOBJECT_THEME,
     TOOLS_ROUTE,
 )
 from backend.config.store import RuntimeConfigStore
@@ -48,7 +47,6 @@ def test_get_returns_the_whole_document(client: TestClient) -> None:
 
     assert set(body) == {
         SUBOBJECT_LAYOUT,
-        SUBOBJECT_THEME,
         SUBOBJECT_PRESETS,
         SUBOBJECT_END_EFFECTOR,
         SUBOBJECT_CONTROL,

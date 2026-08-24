@@ -1,5 +1,5 @@
 // Shared runtime-config state for the whole SPA. Config is cross-cutting shell
-// state (layout, theme, presets), so it lives in one Context read by every
+// state (layout, presets), so it lives in one Context read by every
 // screen rather than a per-component hook that would fetch it many times. The
 // canon is the backend; this holds the in-memory copy and the REST get/set path,
 // and never persists to localStorage (CG-G-00e).

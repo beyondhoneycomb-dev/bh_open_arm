@@ -1,6 +1,6 @@
 /* S-10 training-screen styles. Self-hosted only — no url() to any external origin, so
    the bundle stays air-gapped (FR-GUI-008). Colours reuse the shell/safety design
-   tokens with literal fallbacks and inherit the viewer's light/dark theme. */
+   tokens with literal fallbacks. */
 
 .oa-trn {
   padding: 1.25rem;
@@ -386,29 +386,3 @@
   margin: 0 0 0.4rem;
   font-size: 0.85rem;
 }
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .oa-trn {
-    --oa-text: #e6edf3;
-    --oa-muted: #8b949e;
-    --oa-border: #30363d;
-    --oa-surface: #0d1117;
-    --oa-code-bg: #161b22;
-    --oa-warn-bg: #341a00;
-    --oa-warn-text: #d29922;
-    --oa-danger-bg: #3c1618;
-  }
-}
-
-/* The operator's explicit choice, which wins over the OS preference above. */
-:root[data-theme="dark"] .oa-trn {
-  --oa-text: #e6edf3;
-  --oa-muted: #8b949e;
-  --oa-border: #30363d;
-  --oa-surface: #0d1117;
-  --oa-code-bg: #161b22;
-  --oa-warn-bg: #341a00;
-  --oa-warn-text: #d29922;
-  --oa-danger-bg: #3c1618;
-}
-

@@ -1,8 +1,20 @@
 /* S-11 inference/eval-screen styles. Self-hosted only — no url() to any external origin, so
    the bundle stays air-gapped (FR-GUI-008). Colours reuse the shell/safety design tokens
-   with literal fallbacks and inherit the viewer's light/dark theme. */
+   with literal fallbacks. */
 
 .oa-inf {
+  --oa-text: #1b1f24;
+  --oa-muted: #57606a;
+  --oa-border: #d8dee4;
+  --oa-surface: #ffffff;
+  --oa-track: #eaeef2;
+  --oa-accent: #0969da;
+  --oa-accent-bg: #ddf4ff;
+  --oa-danger: #b02a37;
+  --oa-danger-bg: #ffebe9;
+  --oa-warn: #9a6700;
+  --oa-warn-bg: #fff8c5;
+
   padding: 1.25rem;
   color: var(--oa-text, #1b1f24);
   display: grid;
@@ -404,48 +416,4 @@
 .oa-inf__success-items dd {
   margin: 0.1rem 0 0;
   font-weight: 600;
-}
-
-@media (prefers-color-scheme: dark) {
-  .oa-inf {
-    --oa-text: #e6edf3;
-    --oa-muted: #8b949e;
-    --oa-border: #30363d;
-    --oa-surface: #0d1117;
-    --oa-track: #21262d;
-    --oa-accent: #58a6ff;
-    --oa-accent-bg: #0b2942;
-    --oa-danger: #ff7b72;
-    --oa-danger-bg: #3d1518;
-    --oa-warn: #d29922;
-    --oa-warn-bg: #352a0f;
-  }
-}
-
-:root[data-theme="dark"] .oa-inf {
-  --oa-text: #e6edf3;
-  --oa-muted: #8b949e;
-  --oa-border: #30363d;
-  --oa-surface: #0d1117;
-  --oa-track: #21262d;
-  --oa-accent: #58a6ff;
-  --oa-accent-bg: #0b2942;
-  --oa-danger: #ff7b72;
-  --oa-danger-bg: #3d1518;
-  --oa-warn: #d29922;
-  --oa-warn-bg: #352a0f;
-}
-
-:root[data-theme="light"] .oa-inf {
-  --oa-text: #1b1f24;
-  --oa-muted: #57606a;
-  --oa-border: #d8dee4;
-  --oa-surface: #ffffff;
-  --oa-track: #eaeef2;
-  --oa-accent: #0969da;
-  --oa-accent-bg: #ddf4ff;
-  --oa-danger: #b02a37;
-  --oa-danger-bg: #ffebe9;
-  --oa-warn: #9a6700;
-  --oa-warn-bg: #fff8c5;
 }

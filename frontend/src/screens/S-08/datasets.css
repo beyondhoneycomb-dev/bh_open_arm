@@ -1,6 +1,6 @@
 /* S-08 dataset-screen styles. Self-hosted only — no url() to any external origin, so
    the bundle stays air-gapped (FR-GUI-008). Colours reuse the shell/safety design
-   tokens with literal fallbacks and inherit the viewer's light/dark theme. */
+   tokens with literal fallbacks. */
 
 .oa-ds {
   padding: 1.25rem;

@@ -3,21 +3,27 @@
 
 import { describe, expect, it } from "vitest";
 
-import { ARM_SIDES, DEFAULT_TOOL_ID, defaultConfig, parseConfig } from "./schema";
+import {
+  ARM_SIDES,
+  CONTROL_TICK_HZ_DEFAULT,
+  DEFAULT_TOOL_ID,
+  defaultConfig,
+  parseConfig,
+} from "./schema";
 
 describe("CG-G-00d config blast-radius isolation", () => {
   it("keeps valid subobjects and defaults only the malformed one", () => {
     const raw = {
       layout: { sidebarCollapsed: true, density: "compact" },
-      theme: { mode: "not-a-mode" }, // malformed
+      control: { controlTickHz: 9999 }, // malformed — outside the band
       presets: { viewPresets: { manual: { camera: "wrist" } } },
     };
 
     const { config, defaulted } = parseConfig(raw);
 
-    expect(defaulted).toEqual(["theme"]);
+    expect(defaulted).toEqual(["control"]);
     // The malformed subobject fell back to its default...
-    expect(config.theme).toEqual({ mode: "system" });
+    expect(config.control).toEqual({ controlTickHz: CONTROL_TICK_HZ_DEFAULT });
     // ...and the untouched ones survived exactly.
     expect(config.layout).toEqual({ sidebarCollapsed: true, density: "compact" });
     expect(config.presets).toEqual({ viewPresets: { manual: { camera: "wrist" } } });
@@ -26,25 +32,25 @@ describe("CG-G-00d config blast-radius isolation", () => {
   it("defaults independently when two subobjects are malformed", () => {
     const raw = {
       layout: 42, // malformed
-      theme: { mode: "dark" },
+      control: { controlTickHz: 120 },
       presets: null, // malformed
     };
 
     const { config, defaulted } = parseConfig(raw);
 
     expect(new Set(defaulted)).toEqual(new Set(["layout", "presets"]));
-    expect(config.theme).toEqual({ mode: "dark" });
+    expect(config.control).toEqual({ controlTickHz: 120 });
     expect(config.layout).toEqual(defaultConfig().layout);
     expect(config.presets).toEqual(defaultConfig().presets);
   });
 
   it("drops unknown top-level fields (extra=forbid mirror)", () => {
     const { config } = parseConfig({
-      theme: { mode: "light" },
+      control: { controlTickHz: 50 },
       bogus: { anything: 1 },
     });
     expect(config).not.toHaveProperty("bogus");
-    expect(config.theme).toEqual({ mode: "light" });
+    expect(config.control).toEqual({ controlTickHz: 50 });
   });
 
   it("returns all defaults for a non-object document without throwing", () => {

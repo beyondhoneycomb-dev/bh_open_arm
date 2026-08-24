@@ -1,6 +1,6 @@
 """The runtime_config canon and the REST surface the GUI reads it through (FR-GUI-004).
 
-Four subobjects — `layout`, `theme`, `presets`, `endEffector` — persisted as one JSON document
+Four subobjects — `layout`, `presets`, `endEffector`, `control` — persisted as one JSON document
 under the XDG config directory, written atomically, and read with per-subobject blast-radius
 isolation: a malformed subobject falls back to its defaults and the other three are preserved
 (CG-G-00d). `frontend/src/config/schema.ts` implements the mirror image for the browser copy.
@@ -22,7 +22,6 @@ from backend.config.constants import (
     SUBOBJECT_END_EFFECTOR,
     SUBOBJECT_LAYOUT,
     SUBOBJECT_PRESETS,
-    SUBOBJECT_THEME,
     TOOLS_ROUTE,
 )
 from backend.config.model import (
@@ -33,7 +32,6 @@ from backend.config.model import (
     ParsedDocument,
     PresetsConfig,
     RuntimeConfigDocument,
-    ThemeConfig,
     default_document,
     parse_document,
     rig_from_document,
@@ -57,7 +55,6 @@ __all__ = [
     "SUBOBJECT_KEYS",
     "SUBOBJECT_LAYOUT",
     "SUBOBJECT_PRESETS",
-    "SUBOBJECT_THEME",
     "TOOLS_ROUTE",
     "ArmEndEffectorConfig",
     "EndEffectorConfig",
@@ -66,7 +63,6 @@ __all__ = [
     "PresetsConfig",
     "RuntimeConfigDocument",
     "RuntimeConfigStore",
-    "ThemeConfig",
     "UnknownSubobjectError",
     "config_path_for",
     "create_app",

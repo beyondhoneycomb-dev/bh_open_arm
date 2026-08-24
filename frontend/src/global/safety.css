@@ -14,29 +14,6 @@
   --oa-soft-stop: #475467;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --oa-danger: #f04438;
-    --oa-danger-fg: #1b1f24;
-    --oa-warning: #f79009;
-    --oa-warning-bg: #2b2113;
-    --oa-nominal: #4ea45a;
-    --oa-soft-stop: #98a2b3;
-  }
-}
-
-/* The operator's explicit choice wins over the OS preference: the media block is
-   guarded so a light choice switches it off, and the block below re-states dark for a
-   dark choice on a light-preferring machine. */
-:root[data-theme="dark"] {
-  --oa-danger: #f04438;
-  --oa-danger-fg: #1b1f24;
-  --oa-warning: #f79009;
-  --oa-warning-bg: #2b2113;
-  --oa-nominal: #4ea45a;
-  --oa-soft-stop: #98a2b3;
-}
-
 /* The safety bar sticks to the top so the stop controls and the standing drop
    warning stay visible regardless of screen scroll (CG-G-03a). */
 .oa-safety-bar {

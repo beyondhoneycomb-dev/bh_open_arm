@@ -1,7 +1,6 @@
 /* S-07 data-collection styles. Self-hosted only — no url() to any external origin,
    so the bundle stays air-gapped (FR-GUI-008). Colours reuse the shell/safety
-   design tokens (shell.css, safety.css) with literal fallbacks, and inherit the
-   viewer's light/dark theme through those tokens. */
+   design tokens (shell.css, safety.css) with literal fallbacks. */
 
 .oa-collect {
   padding: 1.25rem;

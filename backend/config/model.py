@@ -36,7 +36,6 @@ from backend.config.constants import (
     DENSITY_DEFAULT,
     FIELD_CONTROL_TICK_HZ,
     FIELD_DENSITY,
-    FIELD_MODE,
     FIELD_SIDEBAR_COLLAPSED,
     FIELD_TOOL_ID,
     FIELD_TOOL_MASS_KG,
@@ -46,10 +45,7 @@ from backend.config.constants import (
     SUBOBJECT_END_EFFECTOR,
     SUBOBJECT_LAYOUT,
     SUBOBJECT_PRESETS,
-    SUBOBJECT_THEME,
-    THEME_MODE_DEFAULT,
     LayoutDensity,
-    ThemeMode,
 )
 from backend.endeffector import (
     DEFAULT_TOOL_ID,
@@ -89,14 +85,6 @@ class LayoutConfig(BaseModel):
         if not isinstance(value, bool):
             raise ValueError(f"{FIELD_SIDEBAR_COLLAPSED} must be true or false, got {value!r}")
         return value
-
-
-class ThemeConfig(BaseModel):
-    """Light/dark selection, or deference to the host."""
-
-    model_config = WIRE_MODEL_CONFIG
-
-    mode: ThemeMode = Field(default=THEME_MODE_DEFAULT, alias=FIELD_MODE)
 
 
 class PresetsConfig(BaseModel):
@@ -219,7 +207,6 @@ class RuntimeConfigDocument(BaseModel):
     model_config = WIRE_MODEL_CONFIG
 
     layout: LayoutConfig = Field(default_factory=LayoutConfig, alias=SUBOBJECT_LAYOUT)
-    theme: ThemeConfig = Field(default_factory=ThemeConfig, alias=SUBOBJECT_THEME)
     presets: PresetsConfig = Field(default_factory=PresetsConfig, alias=SUBOBJECT_PRESETS)
     end_effector: EndEffectorConfig = Field(
         default_factory=EndEffectorConfig, alias=SUBOBJECT_END_EFFECTOR
@@ -249,7 +236,6 @@ class SubobjectSpec:
 
 SUBOBJECT_SPECS: tuple[SubobjectSpec, ...] = (
     SubobjectSpec(SUBOBJECT_LAYOUT, "layout", LayoutConfig),
-    SubobjectSpec(SUBOBJECT_THEME, "theme", ThemeConfig),
     SubobjectSpec(SUBOBJECT_PRESETS, "presets", PresetsConfig),
     SubobjectSpec(SUBOBJECT_END_EFFECTOR, "end_effector", EndEffectorConfig),
     SubobjectSpec(SUBOBJECT_CONTROL, "control", ControlConfig),
@@ -327,7 +313,6 @@ __all__ = [
     "PresetsConfig",
     "RuntimeConfigDocument",
     "SubobjectSpec",
-    "ThemeConfig",
     "default_document",
     "parse_document",
     "rig_from_document",
