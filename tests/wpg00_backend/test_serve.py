@@ -10,9 +10,11 @@ server would fail loudly here instead of hanging the suite on a live socket.
 
 from __future__ import annotations
 
+import os
 import socket
 import threading
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -176,6 +178,32 @@ def test_bundle_directory_without_an_entry_is_not_built(tmp_path: Path) -> None:
     """
     (tmp_path / SPA_BUNDLE_DIRECTORY).mkdir(parents=True)
     assert serve.spa_bundle_is_built(tmp_path) is False
+
+
+def test_absent_bundle_has_no_build_time(tmp_path: Path) -> None:
+    """No bundle, no timestamp.
+
+    The caller must not be handed a time for a file that is not there.
+    """
+    assert serve.spa_bundle_built_at(tmp_path) is None
+
+
+def test_bundle_build_time_is_the_entry_document_s_mtime(tmp_path: Path) -> None:
+    """The reported time is the entry file's, which is what an operator compares against.
+
+    The gate builds into a scratch directory and never writes here, so a checkout can serve a
+    bundle from before the working tree moved and look identical to a fresh one. This value is
+    the only thing on the start-up line that can tell those apart.
+    """
+    bundle = build_bundle(tmp_path)
+    entry = bundle / SPA_ENTRY_FILENAME
+    stamped = 1_600_000_000
+    os.utime(entry, (stamped, stamped))
+
+    built_at = serve.spa_bundle_built_at(tmp_path)
+
+    assert built_at is not None
+    assert built_at == datetime.fromtimestamp(stamped)
 
 
 def test_absent_bundle_leaves_rest_serving(store: RuntimeConfigStore, tmp_path: Path) -> None:

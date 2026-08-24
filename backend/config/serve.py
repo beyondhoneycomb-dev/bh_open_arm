@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import socket
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -119,6 +120,26 @@ def spa_bundle_is_built(root: Path | None = None) -> bool:
         (bool) True when the bundle can be served.
     """
     return (spa_bundle_directory(root) / SPA_ENTRY_FILENAME).is_file()
+
+
+def spa_bundle_built_at(root: Path | None = None) -> datetime | None:
+    """When the bundle on disk was written, or None when there is none.
+
+    The entry document's mtime, for the same reason `spa_bundle_is_built` reads that file rather
+    than the directory. Reported because nothing else can tell an operator that the bundle is old:
+    the gate deliberately no longer writes here, so a checkout can serve a bundle from before the
+    working tree moved and look exactly like one built a minute ago.
+
+    Args:
+        root: Repository root to resolve against, or None for this checkout.
+
+    Returns:
+        (datetime | None) Local modification time of the entry document.
+    """
+    entry = spa_bundle_directory(root) / SPA_ENTRY_FILENAME
+    if not entry.is_file():
+        return None
+    return datetime.fromtimestamp(entry.stat().st_mtime)
 
 
 def port_is_available(host: str, port: int) -> bool:
@@ -380,6 +401,9 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     print(f"config: {store.path}")
+    built_at = spa_bundle_built_at()
+    if spa_mounted and built_at is not None:
+        print(f"SPA bundle: {spa_bundle_directory()} (built {built_at:%Y-%m-%d %H:%M:%S})")
     if not spa_mounted:
         print(
             f"SPA bundle not built — nothing to serve at {SPA_MOUNT_PATH} "
@@ -456,6 +480,7 @@ __all__ = [
     "main",
     "loopback_origins",
     "mount_spa_bundle",
+    "spa_bundle_built_at",
     "mount_websocket_router",
     "port_is_available",
     "serve_until_stopped",
