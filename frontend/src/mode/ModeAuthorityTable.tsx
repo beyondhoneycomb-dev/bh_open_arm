@@ -1,13 +1,18 @@
 // The eight-mode authority table (FR-GUI-080). One row per mode, naming who holds
 // send_action, whether the mode drives the real CAN bus, and — for MOTOR_SETUP
 // only — that an external CAN client is permitted because the bus is not held
-// (FR-GUI-086, CG-G-04e). The active mode is marked. The table renders the frozen
-// catalog from modes.ts; it decides no authority itself.
+// (FR-GUI-086, CG-G-04e). The table renders the frozen catalog from modes.ts; it
+// decides no authority itself.
+//
+// The active mode is marked when one is known and no row is marked when it is not.
+// Null is a state the shell is actually in — nothing in this build reports a mode, and
+// StatusBadgeBar already renders that as unobserved — so a caller forced to name a mode
+// would have to pick one, and a marked row is read as "the rig is in this mode".
 
 import { HOLDER_LABELS, MODES, type ModeId } from "./modes";
 
 export interface ModeAuthorityTableProps {
-  activeMode: ModeId;
+  activeMode: ModeId | null;
 }
 
 export function ModeAuthorityTable({ activeMode }: ModeAuthorityTableProps) {

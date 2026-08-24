@@ -176,6 +176,59 @@ body {
   margin: 0;
 }
 
+/* The mode-authority reference, collapsed in the shell chrome. Its own styles rather
+   than the screens': src/mode/ ships no stylesheet, and an unstyled table here would be
+   as wide as its longest cell on every route. */
+.oa-authority {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+}
+
+.oa-authority__summary {
+  cursor: pointer;
+  color: var(--oa-muted);
+}
+
+.oa-authority-table {
+  margin-top: 0.5rem;
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 720px;
+}
+
+.oa-authority-table th,
+.oa-authority-table td {
+  border: 1px solid var(--oa-border);
+  padding: 0.3rem 0.5rem;
+  text-align: left;
+  font-weight: 400;
+}
+
+.oa-authority-table thead th {
+  background: var(--oa-bg);
+  font-weight: 600;
+}
+
+.oa-authority-table tbody th {
+  font-weight: 600;
+}
+
+.oa-authority-table tr[aria-current="true"] {
+  outline: 2px solid var(--oa-accent);
+}
+
+.oa-screen-error__detail {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--oa-border);
+  border-radius: 4px;
+  background: var(--oa-bg);
+  color: var(--oa-muted);
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
 .oa-scaffold__spec-link {
   color: var(--oa-accent);
 }

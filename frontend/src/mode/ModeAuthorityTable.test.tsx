@@ -24,4 +24,13 @@ describe("ModeAuthorityTable (FR-GUI-080)", () => {
     const activeRow = screen.getByRole("row", { name: /INFERENCE/ });
     expect(activeRow).toHaveAttribute("aria-current", "true");
   });
+
+  it("marks no row when the mode is unobserved", () => {
+    render(<ModeAuthorityTable activeMode={null} />);
+    const table = screen.getByRole("table", { name: "8모드 제어권 표" });
+    const marked = within(table)
+      .getAllByRole("row")
+      .filter((row) => row.getAttribute("aria-current") !== null);
+    expect(marked).toHaveLength(0);
+  });
 });
