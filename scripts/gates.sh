@@ -73,10 +73,25 @@ if [ -d frontend/node_modules ]; then
     # and the typecheck above already ran. The bundle is what a type error cannot catch —
     # a resolve failure, a transform error, an asset the CSP plugin cannot inject into.
     #
-    # This writes frontend/dist/, and `oa-serve` mounts that bundle when it exists
-    # (backend/config/serve.py:195). Running the gate therefore changes what a subsequent
-    # `oa-serve` serves, from "no bundle" to the bundle of this working tree.
-    (cd frontend && npx vite build) || FAILED+=("vite build")
+    # It builds into a scratch directory rather than frontend/dist/, and that is the whole
+    # point of the two extra lines: `oa-serve` mounts frontend/dist/ when it exists
+    # (backend/config/serve.py), so a gate that wrote there would silently change what a
+    # running deployment serves — a check would become a deploy. Producing the served
+    # bundle is `npm run build`, deliberately a different command.
+    #
+    # The `-n` guard is not defensive habit. This script does not `set -e`, so a failed
+    # `mktemp -d` leaves GATE_BUNDLE_DIR set to the empty string rather than unset, and
+    # `--outDir ""` resolves to the Vite root — `frontend/` itself. Vite calls that a
+    # warning, not an error ("build.outDir must not be the same directory of root"), and
+    # then `--emptyOutDir` empties it. A full temp filesystem would delete src/.
+    if GATE_BUNDLE_DIR="$(mktemp -d)" && [ -n "$GATE_BUNDLE_DIR" ]; then
+        (cd frontend && npx vite build --outDir "$GATE_BUNDLE_DIR" --emptyOutDir) \
+            || FAILED+=("vite build")
+        rm -rf "$GATE_BUNDLE_DIR"
+    else
+        echo "SKIPPED — mktemp -d failed; refusing to build into the source tree"
+        FAILED+=("vite build (no scratch dir)")
+    fi
 else
     echo "SKIPPED — frontend/node_modules absent; run 'npm ci' in frontend/ first"
     FAILED+=("frontend (not installed)")
