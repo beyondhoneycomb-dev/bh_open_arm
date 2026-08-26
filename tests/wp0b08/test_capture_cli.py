@@ -12,6 +12,7 @@ how each measured number is judged, and whether an unjudged run can report succe
 from __future__ import annotations
 
 import json
+from dataclasses import fields
 
 import pytest
 
@@ -45,16 +46,23 @@ def test_the_rig_table_names_the_three_registered_slots() -> None:
     assert set(RIG_SLOTS) == {"wrist_left", "wrist_right", "scene_stereo"}
 
 
-def test_every_slot_is_bound_by_port_and_not_by_device_node() -> None:
-    """The wrist pair shares one serial and device nodes renumber between boots.
+def test_no_slot_profile_names_a_device() -> None:
+    """A slot says how it is opened. Which camera answers it is not the source's to know.
 
-    This bench has had the ZED-M and an Arducam swap device numbers while both `bus_info` ports
-    stayed put, so a table naming nodes would have been silently wrong about which camera is
-    which — and left and right wrist swapped is not visible in the footage.
+    The wrist pair shares one serial and device nodes renumber between boots — this bench has had
+    the ZED-M and an Arducam swap numbers while both `bus_info` ports stayed put. A port compiled
+    in here is the same failure as a device node one step further out: an answer that was true
+    when someone typed it, checked by nothing since, and wrong in a way that does not show in the
+    footage because left and right wrist look alike.
+
+    Asserted over the profile's whole field set rather than over a named attribute, so a port
+    added back under any name fails this rather than passing by not being called `port_path`.
     """
-    for slot, binding in RIG_SLOTS.items():
-        assert binding.port_path.startswith("usb-"), slot
-        assert "/dev/video" not in binding.port_path, slot
+    for slot, profile in RIG_SLOTS.items():
+        for field in fields(profile):
+            rendered = repr(getattr(profile, field.name))
+            assert "usb-" not in rendered, f"{slot}.{field.name}"
+            assert "/dev/video" not in rendered, f"{slot}.{field.name}"
 
 
 def test_a_run_inside_every_bar_passes() -> None:

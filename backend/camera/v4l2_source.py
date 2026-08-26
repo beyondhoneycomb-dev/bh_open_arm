@@ -85,6 +85,12 @@ NS_PER_MS = 1_000_000
 # four-deep buffer those frames sat in.
 PRERUN_DRAIN_FRAMES = 8
 
+# Frames averaged per brightness reading during identification. Enough to ride over one
+# auto-exposure step — which is the failure this averaging exists for, since an exposure
+# adjustment between two readings is a brightness change nobody made — and short enough that the
+# operator is not holding a hand over a lens for a noticeable time.
+PROBE_FRAMES = 5
+
 
 class V4l2OpenError(RuntimeError):
     """A camera could not be opened in the configuration that was asked for."""
@@ -436,15 +442,102 @@ def _lock_controls(
     return plan.skipped, format_finding
 
 
+class BrightnessProbe:
+    """Opens a node just far enough to answer "how bright is this view right now?".
+
+    Ownership: owns the capture and closes it. Used by the bind flow, never by a run.
+
+    It deliberately does NOT go through `open_frame_source`. That path forces a declared format
+    and verifies declared controls, and both are properties of the SLOT — which is the thing bind
+    is trying to work out. A camera that will not take 1920x1200 must still be identifiable, or
+    the operator is told to fix a binding they cannot record.
+
+    Frames are averaged rather than sampled once: a single frame catches the auto-exposure
+    mid-adjust, and an exposure step reads as a covered lens.
+    """
+
+    def __init__(self, capture: CaptureDevice, frames: int) -> None:
+        """Wrap an open capture.
+
+        Args:
+            capture: The open device.
+            frames: Frames to average per reading.
+        """
+        self._capture = capture
+        self._frames = frames
+
+    def __call__(self) -> float:
+        """Return the mean brightness of the next frames, normalised to 0..1.
+
+        Returns:
+            (float) Mean sample value over the device's full range, or 0.0 when no frame
+                arrived — which the caller reads as a black baseline and refuses on, rather than
+                as a camera that happens to be dark.
+        """
+        import numpy
+
+        means: list[float] = []
+        for _ in range(self._frames):
+            ok, frame = self._capture.read()
+            if not ok or frame is None:
+                continue
+            array = numpy.asarray(frame)
+            # The device's own full scale, not a hardcoded 255: a 10-bit camera surfaced as
+            # uint16 would otherwise read four times too bright and never clear any threshold.
+            full_scale = (
+                float(numpy.iinfo(array.dtype).max)
+                if numpy.issubdtype(array.dtype, numpy.integer)
+                else 1.0
+            )
+            means.append(float(array.mean()) / full_scale)
+        if not means:
+            return 0.0
+        return sum(means) / len(means)
+
+    def close(self) -> None:
+        """Release the device."""
+        self._capture.release()
+
+
+def open_brightness_probe(
+    node: CaptureNode,
+    frames: int = PROBE_FRAMES,
+    open_capture: Callable[[str], CaptureDevice] | None = None,
+) -> BrightnessProbe:
+    """Open a node at whatever format it defaults to, for identification only.
+
+    Args:
+        node: The capture node to open.
+        frames: Frames to average per reading.
+        open_capture: How to open the device, injected so the bind flow is drivable with no
+            camera. None uses cv2's V4L2 backend.
+
+    Returns:
+        (BrightnessProbe) The probe, which owns the device until closed.
+
+    Raises:
+        V4l2OpenError: If the device does not open.
+    """
+    opener = _default_open if open_capture is None else open_capture
+    capture = opener(str(node.device))
+    if not capture.isOpened():
+        capture.release()
+        raise V4l2OpenError(f"{node.card} at {node.port_path} ({node.device}) did not open")
+    return BrightnessProbe(capture, frames)
+
+
 __all__ = [
     "CONTROL_ABSENT",
     "NS_PER_MS",
     "PRERUN_DRAIN_FRAMES",
+    "PROBE_FRAMES",
     "WARMUP_FRAMES",
+    "BrightnessProbe",
     "CaptureDevice",
     "CaptureFormat",
     "V4l2FrameSource",
     "V4l2OpenError",
     "drain_stale_frames",
+    "open_brightness_probe",
     "open_frame_source",
 ]
