@@ -1,6 +1,6 @@
 # STATUS — 지금 무엇이 도는가
 
-작성 2026-08-24 · 기준 커밋 `649123e` + 미커밋 작업트리
+작성 2026-08-24 · 갱신 2026-08-26(§3.3·§6·§6b·§8) · 기준 커밋 `385c8cd` + 미커밋 작업트리
 
 ---
 
@@ -37,19 +37,21 @@
 
 ## 2. 측정 방법 (재현 가능)
 
-진입점 14개에서 `import` 를 이행적으로 따라가 도달 집합을 구한다. 재현:
+진입점에서 `import` 를 이행적으로 따라가 도달 집합을 구한다. 재현:
 
 ```python
 # 저장소 루트에서. tests/ 와 */_tests/ 는 제외.
-# 진입점 = pyproject [project.scripts] 8개 + scripts/*.py 5개 (+ ops.launch.cli)
-#   backend.config.serve  backend.camera.cli  registry.check  registry.ingest.cli
-#   registry.generate.cli registry.contracts.cli registry.env.cli
-#   registry.normalization.cli ops.launch.cli
+# 진입점 = pyproject [project.scripts] 3개 + scripts/*.py 5개
+#   backend.config.serve  backend.camera.cli  registry.env.cli
 #   scripts.torque_session scripts.jog_joint scripts.can_node_watch
 #   scripts.canbind_session scripts.rig_session
 ```
 
-한계 둘, 그대로 적는다: ① 동적 import·plugin 등록은 못 본다(`registry.checks` 가 처음 오탐이었고 `from registry.checks import (...)` 를 잡아 해소했다) ② 도달 못 해도 **곧 이을 코드**일 수 있다 — §5 가 그 목록이다.
+🔴 **§1 의 도달 29% / 미도달 71% 는 2026-08-24 측정치다.** 2026-08-26 에 조율 기계 14,272줄이
+삭제되면서 분모가 줄었고(258,728 → 244,456), 삭제분은 **거의 전부 도달하던 코드**였다 — 즉 도달
+비율은 실제로 **내려갔다**. 다시 재기 전까지 §1 숫자를 인용하지 말 것.
+
+한계 둘, 그대로 적는다: ① 동적 import·plugin 등록은 못 본다 ② 도달 못 해도 **곧 이을 코드**일 수 있다 — §5 가 그 목록이다.
 
 ---
 
@@ -72,12 +74,14 @@
 |---|---|---|
 | `oa-serve` | FastAPI + SPA + WebSocket 1개 | `--arm` 이 `none`·`dummy` **뿐**. 실기 백엔드 없음 |
 | — REST | `GET /api/tools` · `GET /api/config` · `PUT /api/config/{서브객체}` | 서브객체 4개(`layout`·`presets`·`endEffector`·`control`) |
-| — WS `/ws/realtime` | 리스 갱신·재무장 핸드셰이크·`stop_hold` 수용 | **서버가 먼저 보내는 프레임 0종.** §6 참조 |
+| — WS `/ws/realtime` | 리스 갱신·재무장 핸드셰이크·`stop_hold` 수용 · 거절은 닫힘 코드 4400–4408 로 답한다(§8.1) | **서버가 먼저 보내는 프레임 0종.** §6 참조 |
 | — SPA | 13화면 + `/viewport` | 값 전량 픽스처. 실시간 구독 0 |
 
 ### 3.3 저장소 도구
 
-`oa-check`(CI 규칙 35종) · `oa-registry` · `oa-index` · `oa-contracts` · `oa-env` · `oa-state` · `./scripts/gates.sh` — 검사 18종(파이썬 레인 14 + 프런트 `tsc`·`eslint`·`vitest`·`vite build`), 약 110초.
+`oa-env` · `./scripts/gates.sh` — 검사 **13종**(파이썬 레인 9 + 프런트 `tsc`·`eslint`·`vitest`·`vite build`), 약 100초.
+
+`oa-check`·`oa-registry`·`oa-index`·`oa-contracts`·`oa-state` 는 2026-08-26 에 삭제됐다(§6b). 남은 진입점은 `oa-serve`·`oa-camcap`·`oa-env` 셋이다.
 
 ---
 
@@ -151,29 +155,116 @@
 | 무엇 | 막힌 이유 |
 |---|---|
 | **`oa-serve` 실기 백엔드** | `ARM_BACKENDS = ("none", "dummy")`. 실기를 서버 프로세스에 붙이는 작업이 통째로 남았다 |
-| **텔레메트리 흐름** | `ArmStateBoard` 가 100 Hz 로 쓰는데 `board.view()` 프로덕션 소비자 0. `CTR-WS@v2` 의 `telemetry` 프레임 **필드가 0개**로 동결돼 있어 본문을 못 싣는다 → `CTR-WS@v3` 결정 대기 |
+| **텔레메트리 흐름** | `ArmStateBoard` 가 100 Hz 로 쓰는데 `board.view()` 프로덕션 소비자 0. `CTR-WS@v2` 의 `telemetry` 프레임은 **필드가 0개**다. 잠금은 사라졌으므로 막는 것은 이제 기계가 아니라 **형상 결정** — 프런트에 이미 갈라진 형상 둘 중 무엇을 정본으로 하느냐다(§6 아래) |
 | **정지 명령 루프** | `STOP_HOLD_SENDER = null` (`frontend/src/app/backendLink.ts`). `ArmSession` 은 읽고 게시할 뿐 **보내지 않는다** — 버스 핸들도 engage 시퀀스도 없다. 채우면 GUI 가 `{sent:true}` 를 받고 팔은 그대로다 (NORM-007) |
 | **`/api/system/report`** | S-13 이 부르는데 백엔드 0건 |
-| **`PG-*` 게이트 판정 봉인** | `registry/state/store/state.json` 이 **존재한 적 없다.** 177 WP 전부 형식상 `not_started`, 게이트 판정 레코드 0건. `oa-state` CLI 는 구현돼 있으나 호출된 적 없다 |
+| **`PG-*` 게이트 판정 봉인** | 봉인할 기계가 없다. `registry/state/store/state.json` 은 **존재한 적이 없고**, 그것을 쓰던 `oa-state` 는 2026-08-26 에 삭제됐다(§6b). 게이트 통과 여부는 실기 캡처와 작업로그가 들고 있다 |
 | **Isaac Tier-2** | `WP-5-09`~`14`. 코드 0줄. `Isaac` 문자열은 `ops/versionpin` 승급 차단기에만 있다 |
 | **전원상실 복구 상태머신** | 사용자 확정 — 안 짓는다 (§7) |
 
-### 동결된 계약 13종 (`registry/build/contract_index.json`)
+### 계약 13종 — 이름이지, 잠금이 아니다
 
 `CTR-ACT@v1` `CTR-CAL@v2` `CTR-CAM@v1` `CTR-CAP@v1` `CTR-ERR@v2` `CTR-GW@v1` `CTR-OWN@v1`
 `CTR-PLUG@v1` `CTR-PRIM@v1` `CTR-REC@v1` `CTR-TEL@v1` `CTR-UNIT@v1` `CTR-WS@v2`
 
-동결 규칙(`plan/06` §4.3): **동결 후 어떤 필드 추가도 `@v(n+1)` 발행이다.** 선택 필드도 예외 없다.
-집행은 `CI-09`(내용 해시 대조) + `CR-2`(미동결 계약 소비 금지) + `CR-3`(발행 절차).
+**2026-08-26: 동결 기계를 삭제했다.** 없어진 것 — 동결 장부(`registry/contracts/freeze_ledger.yaml`),
+계약 인덱스, `CI-09`(내용 해시 대조), `oa-contracts` CLI, `CONTRACT_FROZEN` 집행.
+`@vN` 은 **이름의 일부로 남는다.** 계약을 바꾸는 것은 이제 파일을 고치는 일이고, git 이 그 기록이다.
 
-### 계약이 비어 있는 동안 자란 것 — 🔴 `@v3` 때 정리할 것
+왜 지웠나 — `plan/01` §6.2 는 계약을 *"두 병렬 워크플로우 사이의 뮤텍스"* 라고 정의한다. 뮤텍스는
+동시에 쓰는 쪽이 둘 이상일 때만 뜻이 있다. 병렬 fan-out 은 끝났고 지금은 순차로 짓는다.
+한 명이 쓰는 뮤텍스가 하는 일은 `git diff` 가 이미 한다.
 
-`telemetry` 본문 형상이 프런트에 **둘** 생겼고 서로 다르다:
+**대신 남은 것 — 이게 실제로 드리프트를 잡던 절반이다.**
+
+| 무엇 | 어디 |
+|---|---|
+| 프런트 미러 ↔ 백엔드 원본 대조 | `ws/errors.contract.test.ts` · `global/contracts/errorCodes.test.ts` · `ws/closeCodes.contract.test.ts` · `ws/envelope.contract.test.ts` |
+| 계약별 `reverify` — 실린 JSON ↔ 타입 표면 | `contracts/*/reverify.py` |
+| 형상 검사(차원·단위·시계 도메인 등) | `contracts/recorder/reverify.py:59-65` 외 |
+
+지운 것은 **세대 번호를 내용 해시에 묶는 층** 하나다. 그 층이 한 일은 오늘까지 0건이었고,
+그것이 만든 것은 고칠 수 없는 라벨과 종료하지 않는 카스케이드였다.
+
+### 어제까지 여기 적혀 있던 카스케이드·순환
+
+`CTR-ERR@v2` 아티팩트가 자기를 `@v1` 이라 부르던 문제, 그것을 고치면 `CTR-PRIM` → 3A 계약 5종으로
+번지고 `prim ↔ ws` 순환에서 멈추지 않던 문제 — **전부 사라졌다.** 원인이 잠금이었기 때문이다.
+라벨은 편집 한 줄로 맞췄고 미러 27파일이 따라왔다. 경위는
+`work_log/2026-08-25_거절은-…md` §7 이 들고 있다.
+
+### `telemetry` 본문 형상이 프런트에 둘이다 — 🔴 아직 유효하다
 
 - `screens/S-03/motorDomain.ts:269-289` — `body["motor_states"]` = `{joint_name, temp_mos_c, temp_rotor_c, err_nibble}[]`
 - `ws/synthetic.ts:52` — `{sequence, observation:{"observation.state":[]}}`
 
-둘 다 `CTR-WS@v2` 에 없다. **필드를 비워둔 동결은 동결이 아니었다.**
+둘 다 `CTR-WS@v2` 의 `telemetry` 프레임에 없다 — 그 프레임은 **필드가 0개**다. 잠금을 지운 것이
+이 문제를 고치지는 않는다. 형상이 둘이면 소비자가 둘로 갈리고, 그건 잠금이 있든 없든 결함이다.
+텔레메트리를 실제로 흘릴 때 **하나로 정해야 한다**.
+
+---
+
+### 6b. 2026-08-26 — 조율 기계를 지웠다
+
+사용자 판정: *"계약이니 게이트니 뭐니 하는거 다 좇같은데, 꼭 필요한것만 있으면 되잖아."*
+
+**전제가 사라졌기 때문이다.** `plan/01` §6.2 는 계약을 *"두 병렬 워크플로우 사이의 뮤텍스"* 라고
+정의한다. 뮤텍스는 동시에 쓰는 쪽이 둘 이상일 때만 뜻이 있다. 병렬 fan-out 은 끝났고 지금은
+순차로 짓는다. 한 명이 쓰는 뮤텍스가 하는 일은 `git diff` 가 이미 한다.
+
+저장소가 스스로 말한 증거 — `registry/state/store/state.json` 은 **존재한 적이 없고**, 177 WP 전부
+형식상 `not_started` 이며, `CI-18` 은 `sites=0` 이었다. **WP 상태머신은 한 번도 안 돌았다.**
+
+#### 지운 것
+
+| | 규모 |
+|---|---|
+| `registry/traceability.yaml` | **57,489줄** |
+| `registry/checks/**` — CI 규칙 28종 + 픽스처 | 5,089줄 |
+| `registry/ingest/**` — 계획문서 → 레지스트리 파서 | 2,361줄 |
+| `registry/contracts/**` — 동결 장부·계약 인덱스 | 1,942줄 |
+| `registry/generate/**` — 인덱스 185파일 생성 | 898줄 |
+| `registry/normalization/{validator,gate_map,cli,seed}.py` | 792줄 |
+| `ops/launch/**` — WP 스포너 | 753줄 |
+| `ops/cancel/{executor,policy,staticcheck}.py` | 413줄 |
+| `ownership/**` · `dashboard/**` · `registry/schema/**` · `registry/state/**` | — |
+| `contracts/fixtures/contract_regression.py` · `contracts/plugin_api/freeze.py` | 호출자 0이었다 |
+| 테스트 (`boot01`~`boot05`, `n1`, 기계 시험분) | ~270건 |
+
+**파일 162개 삭제. `registry` 11,125 → 2,003줄. 게이트 14 → 9. 진입점 6 → 3.**
+파이썬 258,728 → 244,456줄. **로봇을 시험하는 테스트는 0건 삭제** — 5,324건 그대로 초록이다.
+
+#### 안 지운 것과 그 이유
+
+- **`contracts/**` 전체** — 이건 부기가 아니라 **공유 타입**이다. `units` 49곳, `action` 47곳,
+  `ws` 28곳, `prim` 20곳이 import 한다. 지우면 로봇이 멈춘다.
+- **`ops/cancel/scheduler.py` 의 `LatchReason`** — 39곳이 쓰고 **그중에 정지 경로가 있다**(WS
+  디스패처·충돌 가드·데드맨·감사 링).
+- **`registry/env` + `normalization/content_hash`** — 학습 산출물의 provenance 스탬프
+  (`backend/learning`, `backend/policy_matrix`, `sim/harness` 가 "어느 환경/어느 정규화에서
+  나왔나"를 찍는다).
+- **미러 대조 테스트 전량** — 두 표현이 한 사실을 말하는지 보는 것. 드리프트를 잡던 진짜 절반이다.
+
+#### 지우면서 실제로 고친 것
+
+1. **라벨.** 잠금이 사라지자 `CTR-ERR@v2`·`CTR-CAL@v2` 가 **편집 한 줄**로 맞았다(미러 27파일).
+   전날 회차를 막았던 카스케이드와 `prim ↔ ws` 순환은 개념 자체가 없어졌다.
+2. **안전 래치의 두 번째 문.** 워크플로우 취소기를 지우니 `ActuationScheduler.latch_to_hold` 가
+   고아가 됐다 — 아무도 안 여는 문인데 남아 있으면 다음 사람은 둘 다 살아있다고 읽는다.
+   `engage_safety_latch` 하나만 남았다.
+3. **`CI-03b`**(삭제 전 마지막 수리). 죽은 게 아니라 **없는 파일**을 읽고 있었고 매 실행마다
+   *"이 파일이 없어서 아무것도 안 봤다"* 고 출력했다. 실재 파일로 돌리자 정규식이 16진수 코드를
+   형식 위반으로 잡는 것과, 감시하던 불변식(「한 도메인에 발행처 하나」)이 데이터에 의해 반증된다는
+   것이 드러났다.
+
+#### 규율은 `CLAUDE.md` §4b 로 옮겼다
+
+> 이 기계가 막는 충돌을 대라. 그 충돌을 일으킬 수 있는 쓰는 쪽 둘을 대라.
+> 둘 중 하나라도 미래형이면 아직 짓지 마라.
+
+그리고 검사의 판정 기준 — **모든 검사는 오늘의 데이터에서 실패할 수 있어야 한다.** 없는 파일이나
+빈 축을 가리키는 검사는 통과하는 검사와 구분되지 않고, 세어지고 신뢰받고 조용하기 때문에 검사가
+없는 것보다 나쁘다.
 
 ---
 
@@ -188,6 +279,7 @@
 | GitHub Actions 삭제 | 07-28 | 게이트는 `./scripts/gates.sh` 뿐. **다시 만들지 말 것** |
 | 다크 모드 없음 | 08-24 | `theme` runtime_config 서브객체째 삭제. 명세에 테마 FR 0건이었다 |
 | 도달 안 되는 코드 전부 유지 | 08-24 | 곧 다 짓는다. 지우지 말고 이 문서로 표시만 |
+| 조율 기계는 최소로 | 08-26 | 계약·레지스트리·게이트는 **동시에 쓰는 쪽이 둘 이상일 때만** 짓는다. 규율은 `~/.claude/CLAUDE.md` §4b. 위 08-24 확정은 **제품 코드**에 적용되고 그것을 관리하는 기계에는 적용되지 않는다 |
 
 ---
 
@@ -197,11 +289,34 @@
 
 | | 무엇 | 크기 | 비고 |
 |---|---|---|---|
-| 1 | **`onError` 배선** | 작음 | `wsClient.ts:362-364` 가 `onError` 를 부르는데 `ws/defaults.ts` 가 안 넘긴다. 백엔드 결함 프레임이 도착해서 **버려지고 있다.** 계약 변경 불필요. 이걸 이으면 `CG-G-03g`(ERROR 이상 ack 전까지 배지 유지)가 처음으로 성립 가능해진다 |
+| 1 | ~~**`onError` 배선**~~ | — | **전제가 틀렸다. 2026-08-25 폐기.** error 프레임은 존재하지 않으므로 도착하지도, 버려지지도 않는다 — `CTR-WS@v2` 프레임 열 종에 error 가 없고(`contracts/ws/schema.py:223-338`), 백엔드 송신 경로는 `sink.py:121`·`app.py:198` 둘뿐이다. `onError` 는 생산자 0인 소비자이며 `CG-G-03g` 는 `CTR-WS@v3` 없이는 열리지 않는다. 그 자리에 있던 실제 결함은 §8.1 로 옮겼고 고쳤다 |
 | 2 | **`oa-serve` 실기 백엔드** | 큼 | `--arm real`. 이게 되기 전에는 텔레메트리를 열어도 합성값만 흐른다 |
-| 3 | **`CTR-WS@v3`** | 중간 + 결정 | 2번 뒤. 파이썬 표 + `envelope.schema.json`(CONTRACT_FROZEN, `CI-09` 대조) + 프런트 표 셋이 함께 움직인다 |
+| 3 | **`telemetry` 프레임에 본문을 준다** | 중간 + 결정 | 2번 뒤. 세대 범프가 아니라 **형상 결정**이다 — 파이썬 표·`envelope.schema.json`·프런트 표 셋이 같은 것을 말하게 하고, 위의 갈라진 형상 둘 중 하나를 고른다 |
 | 4 | 정지 명령 루프 | 중간 | 3번 뒤. 선행은 토크-ON 이고 **사람이 팔 옆에 있어야 한다** |
 | 5 | `/api/system/report` | 중간 | 포트 정본이 `spec/01`:456-462 마크다운 표뿐이라 상수로 박으면 세 번째 정본이 된다 — 읽는 방법 결정 필요 |
+
+### 8.1 이미 이었다 — 서버 거절은 닫힘 코드로 온다 (2026-08-25)
+
+`CTR-WS@v2` 에 error 프레임이 없으므로 백엔드는 거절을 **WebSocket 닫힘**으로 답한다. 코드
+아홉 종(4400–4408)을 `backend/ws/constants.py:44-56` 이 소유하고, `app.py:171-176` 은 브라우저가
+읽을 수 있도록 **`accept()` 뒤에** 닫으며, `app.py:46-64` 는 사유를 RFC 6455 한계인 123 바이트로
+자른다 — 넘기면 사유가 아예 도착하지 않기 때문이다.
+
+브라우저는 그 코드와 사유를 `wsClient.ts` 의 `socket.onclose = () => handlers.onClose()` 에서
+버리고 있었고, 그 뒤 **조건 없이 1초마다 재접속**했다. 영구 거절(예: 4407 origin, 4408 이 프로세스는
+팔을 명령하지 않는다)이 끝나지 않는 재접속 루프가 되고 운영자에게는 아무것도 안 보였다.
+
+지금은 이렇다.
+
+| | 지금 |
+|---|---|
+| 분류 | `ws/closeCodes.ts` — 4400–4499 는 거절(범위), 그중 **4400·4401·4407 만 재접속 무의미**(열거). `closeCodes.contract.test.ts` 가 `backend/ws/constants.py` 의 `__all__` 과 `app.py` 의 `handshake_session` 본문을 읽어 대조한다 |
+| 재시도 | **핸드셰이크 거절만** 안 한다(role·session·Origin 은 클라이언트 생성 시 고정이라 다음 소켓도 같은 판정을 받는다). 프레임 거절 6종과 transport 닫힘은 재시도 — **이 소켓이 소프트 스톱을 나르므로**(`FR-GUI-065`, `backend/ws/arm_channel.py:13-15`) 명령 하나가 거절됐다고 채널을 끊으면 정지가 리로드까지 사라진다 |
+| 표면 | 핸드셰이크 거절이면 `RealtimeProvider` 가 `status="unavailable"` + `reason="4407: <서버 사유>"`. `ControlLeaseHost`(`Layout.tsx:50`, 전 화면)가 이미 그린다. 프레임 거절은 `stats().refusalCount` 로만 센다 — 화면 표면은 아직 없다 |
+
+알림 센터에는 붙이지 않았다 — `Notification` 은 `OA-*` 코드를 요구하는데 4404 는 `OA-*` 가 아니고,
+닫힘 코드로 `OA-*` 를 지어내는 것은 `wsClient.ts:327-330`·`decoder.ts:4-6` 가 명시적으로 금한다.
+`CG-G-03g` 는 여전히 `CTR-WS@v3` 대기다.
 
 ### 착수 전 알아야 할 함정
 
