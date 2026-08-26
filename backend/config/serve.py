@@ -39,7 +39,14 @@ from backend.actuation.clock import Clock, WallClock
 from backend.actuation.session import ArmSession
 from backend.actuation.session_runner import RUNNER_STOP_JOIN_TIMEOUT_SEC, ArmSessionRunner
 from backend.config.api import create_app
-from backend.config.arm import ARM_BACKEND_NONE, ARM_BACKENDS, build_arm_session
+from backend.config.arm import (
+    ARM_BACKEND_NONE,
+    ARM_BACKENDS,
+    ARM_BACKENDS_ON_HARDWARE,
+    ArmBackend,
+    ArmChannelsUnavailableError,
+    build_arm_backend,
+)
 from backend.config.constants import (
     DEFAULT_HTTP_HOST,
     DEFAULT_HTTP_PORT,
@@ -392,10 +399,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     clock = WallClock()
     try:
-        arm = build_arm_session(args.arm, clock)
-    except ValueError as unknown:
-        print(f"REJECTED: {unknown}", file=sys.stderr)
+        backend = build_arm_backend(args.arm, clock)
+    except (ValueError, ArmChannelsUnavailableError) as refused:
+        print(f"REJECTED: {refused}", file=sys.stderr)
         return EXIT_REJECTED
+    arm = backend.session
     app, websocket_mounted, spa_mounted = build_server_app(
         store, arm=arm, clock=clock, port=args.port
     )
@@ -416,6 +424,16 @@ def main(argv: list[str] | None = None) -> int:
             "no arm session (--arm none) — no realtime channel, so the GUI has no stop path.",
             file=sys.stderr,
         )
+    elif args.arm in ARM_BACKENDS_ON_HARDWARE:
+        # The other direction of the same duty. Nothing here is synthetic, and the line an
+        # operator needs is the one about the motors: the vendor bus's connect handshake enabled
+        # every one of them, and they stay enabled for as long as this process runs.
+        print(
+            f"arm backend {args.arm!r} — the bus is OPEN and every motor is ENERGIZED. "
+            "Nothing commands them and they hold nothing, so the arm is limp and one frame "
+            "from moving. Support it before you start this and until you stop it.",
+            file=sys.stderr,
+        )
     else:
         # Said on every start rather than once, and on stderr beside the other degradations. The
         # board carries numbers that look exactly like a reading and came from no arm; an
@@ -426,11 +444,11 @@ def main(argv: list[str] | None = None) -> int:
         )
     print(f"serving on http://{args.host}:{args.port}")
 
-    return serve_until_stopped(app, arm, store, args.host, args.port)
+    return serve_until_stopped(app, backend, store, args.host, args.port)
 
 
 def serve_until_stopped(
-    app: FastAPI, arm: ArmSession | None, store: RuntimeConfigStore, host: str, port: int
+    app: FastAPI, backend: ArmBackend, store: RuntimeConfigStore, host: str, port: int
 ) -> int:
     """Run the server, with the arm session's tick running beside it for exactly as long.
 
@@ -440,9 +458,14 @@ def serve_until_stopped(
     or a KeyboardInterrupt. A startup hook would tie the tick to the ASGI lifespan instead, and a
     `TestClient` entering that lifespan would start a real kernel timer inside a test.
 
+    The backend is closed after the tick stops and never before: closing it disables torque and
+    shuts the buses, and a tick still running would then be reading a socket that is gone. The
+    close runs even when the runner would not stop, because a thread that outlived its join is
+    the case where the motors most need to be told.
+
     Args:
         app: The assembled application.
-        arm: The arm session to tick, or None when this process holds no arm.
+        backend: The built arm backend — the session to tick, and what closing it takes.
         store: Where the control tick rate is read from.
         host: The interface to bind.
         port: The port to bind.
@@ -450,8 +473,12 @@ def serve_until_stopped(
     Returns:
         (int) The process exit code.
     """
+    arm = backend.session
     if arm is None:
-        uvicorn.run(app, host=host, port=port)
+        try:
+            uvicorn.run(app, host=host, port=port)
+        finally:
+            backend.close()
         return EXIT_OK
     runner = ArmSessionRunner(arm, store.load().document.control.control_tick_hz)
     runner.start()
@@ -466,6 +493,7 @@ def serve_until_stopped(
             )
         if runner.failure is not None:
             print(f"the arm session tick died: {runner.failure}", file=sys.stderr)
+        backend.close()
     return EXIT_OK
 
 

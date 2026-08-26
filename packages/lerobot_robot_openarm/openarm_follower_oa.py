@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import math
 import time
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -56,6 +57,7 @@ from backend.actuation import (
     is_cache_initialiser,
 )
 from backend.actuation.config import FRESHNESS_WINDOW_SEC, MIT_HOLD_KD, MIT_HOLD_KP
+from backend.actuation.session import ArmFrame
 from backend.calibration.atomic_io import (
     calibration_path_for,
     load_calibration,
@@ -871,6 +873,33 @@ class OaOpenArmFollower(OpenArmFollower):
         observation[DROP_COUNTER_META] = self._drop_counter.count
         return observation
 
+    def read_frame(self) -> ArmFrame:
+        """Read pose, torque and the guard's view of that read, in the board's units.
+
+        `get_observation` cannot serve a board writer. It answers a flat channel map, and the
+        guard sample is not a channel — so a caller building an `ArmFrame` from it has to
+        invent one, and the only sample it could invent is a healthy one. On a CAN-free double
+        that is honest (`backend/config/arm.py` states why). On this class every field the
+        guard carries is a thing the bus does fail at, so a fabricated healthy sample would
+        hide exactly the faults the deadman and the latch exist to act on.
+
+        One read per call, which is the same single `sync_read_all_states` refresh
+        `send_action` uses: pose, torque and the sample all describe one instant.
+
+        Returns:
+            (ArmFrame) The pose, the torque and the guard sample from this poll.
+
+        Raises:
+            BusReadRefusedError: If a fitted motor answered nothing. Propagated rather than
+                widened to zero — `_poll_states` explains why that zero is a move command.
+        """
+        joint_deg, torque_nm, sample = self._poll_states()
+        return (
+            tuple(Deg(value) for value in joint_deg),
+            tuple(Nm(value) for value in torque_nm),
+            sample,
+        )
+
     def enable_drop_counting(self) -> None:
         """Start surfacing the CAN packet-drop count (attach the logger counter)."""
         self._drop_counter.attach()
@@ -1174,6 +1203,7 @@ class BiOaOpenArmFollower(OpenArmRobot):
         left: OaOpenArmFollower | None = None,
         right: OaOpenArmFollower | None = None,
         publisher: AcceptedTargetPublisher | None = None,
+        ports: Mapping[str, str] | None = None,
     ) -> None:
         """Construct the bimanual follower and its two arms without opening any bus.
 
@@ -1184,6 +1214,12 @@ class BiOaOpenArmFollower(OpenArmRobot):
             publisher: The shared publisher onto the scheduler's mailbox, given to the arms
                 this constructor builds. An injected arm arrives with its own, the way it
                 arrives with its own bus and clock.
+            ports: Side name to the CAN interface that side opens on, from the operator's
+                persisted identification. Forwarded to the arms this constructor builds; a
+                side absent from it falls back to `PORT_BY_SIDE`, which is a placeholder and
+                never evidence. Taken here rather than on the config so the pair and one arm
+                are given the port the same way, and so the shared drop counter stays in
+                `_build_arm` rather than moving out to every caller that needs a port.
         """
         super().__init__(config)
         # One counter for the pair, not one per arm. The vendor bus logs every drop to a
@@ -1196,12 +1232,12 @@ class BiOaOpenArmFollower(OpenArmRobot):
         self.left_arm = (
             left
             if left is not None
-            else self._build_arm(config, Side.LEFT, publisher, drop_counter)
+            else self._build_arm(config, Side.LEFT, publisher, drop_counter, ports)
         )
         self.right_arm = (
             right
             if right is not None
-            else self._build_arm(config, Side.RIGHT, publisher, drop_counter)
+            else self._build_arm(config, Side.RIGHT, publisher, drop_counter, ports)
         )
         self._connected = False
 
@@ -1211,6 +1247,7 @@ class BiOaOpenArmFollower(OpenArmRobot):
         side: Side,
         publisher: AcceptedTargetPublisher | None,
         drop_counter: DropCounter,
+        ports: Mapping[str, str] | None,
     ) -> OaOpenArmFollower:
         """Build one arm's follower from the bimanual config, namespaced by side."""
         arm_config = OaOpenArmFollowerConfig(
@@ -1219,7 +1256,12 @@ class BiOaOpenArmFollower(OpenArmRobot):
             side=side,
             use_velocity_and_torque=config.use_velocity_and_torque,
         )
-        return OaOpenArmFollower(arm_config, publisher=publisher, drop_counter=drop_counter)
+        return OaOpenArmFollower(
+            arm_config,
+            publisher=publisher,
+            drop_counter=drop_counter,
+            port=None if ports is None else ports.get(side.value),
+        )
 
     @property
     def is_connected(self) -> bool:

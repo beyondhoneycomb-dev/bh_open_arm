@@ -14,6 +14,7 @@ import os
 import socket
 import threading
 import time
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -24,7 +25,7 @@ from fastapi.testclient import TestClient
 
 from backend.actuation.clock import WallClock
 from backend.config import serve
-from backend.config.arm import ARM_BACKEND_DUMMY, build_arm_session
+from backend.config.arm import ARM_BACKEND_DUMMY, ARM_BACKEND_NONE, build_arm_backend
 from backend.config.constants import (
     CONFIG_ROUTE,
     DEFAULT_HTTP_HOST,
@@ -289,7 +290,8 @@ def test_an_arm_session_brings_exactly_one_realtime_channel(
     stop path two places, and that is the failure `WP-3B-15` ⑤ classifies FAIL_BLOCKING.
     """
     clock = WallClock()
-    arm = build_arm_session(ARM_BACKEND_DUMMY, clock)
+    backend = build_arm_backend(ARM_BACKEND_DUMMY, clock)
+    arm = backend.session
 
     app, websocket_mounted, _ = serve.build_server_app(store, root=tmp_path, arm=arm, clock=clock)
 
@@ -336,7 +338,8 @@ def test_serving_ticks_the_arm_session_and_stops_it_afterwards(
     and keeps reading an arm nobody is watching.
     """
     clock = WallClock()
-    arm = build_arm_session(ARM_BACKEND_DUMMY, clock)
+    backend = build_arm_backend(ARM_BACKEND_DUMMY, clock)
+    arm = backend.session
     assert arm is not None
     app, _, _ = serve.build_server_app(store, arm=arm, clock=clock)
     published_while_serving: list[object] = []
@@ -355,10 +358,66 @@ def test_serving_ticks_the_arm_session_and_stops_it_afterwards(
 
     monkeypatch.setattr(serve.uvicorn, "run", observe_then_return)
 
-    assert serve.serve_until_stopped(app, arm, store, DEFAULT_HTTP_HOST, DEFAULT_HTTP_PORT) == 0
+    assert serve.serve_until_stopped(app, backend, store, DEFAULT_HTTP_HOST, DEFAULT_HTTP_PORT) == 0
 
     assert published_while_serving[0] is not None
     assert [thread.name for thread in threading.enumerate() if thread.name == RUNNER_NAME] == []
+
+
+def test_serving_closes_the_backend_after_the_tick_has_stopped(
+    store: RuntimeConfigStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Order is the assertion, not just that both happened.
+
+    Closing disables torque and shuts the buses. A close that ran while the tick was still going
+    would leave the reader on a socket that is gone, and the loop would die on the way out of a
+    shutdown that was otherwise clean. And a close that never ran at all is a served process that
+    exits with fourteen motors still enabled, waiting on the comm-loss timeout to drop them.
+    """
+    clock = WallClock()
+    built = build_arm_backend(ARM_BACKEND_DUMMY, clock)
+    assert built.session is not None
+    app, _, _ = serve.build_server_app(store, arm=built.session, clock=clock)
+    events: list[str] = []
+
+    class RecordingClose:
+        """Stands in for the teardown, recording when it ran relative to the runner."""
+
+        def __call__(self) -> None:
+            """Record that the close ran, and whether a tick thread was still alive."""
+            alive = [t.name for t in threading.enumerate() if t.name == RUNNER_NAME]
+            events.append("closed_with_runner_alive" if alive else "closed")
+
+    recorded = replace(built, close=RecordingClose())
+    monkeypatch.setattr(serve.uvicorn, "run", lambda _app, host, port: events.append("served"))
+
+    serve.serve_until_stopped(app, recorded, store, DEFAULT_HTTP_HOST, DEFAULT_HTTP_PORT)
+
+    assert events == ["served", "closed"]
+
+
+def test_the_armless_backend_is_closed_too(
+    store: RuntimeConfigStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The no-arm path has its own return, so a close written on the other one skips it."""
+    built = build_arm_backend(ARM_BACKEND_NONE, WallClock())
+    app, _, _ = serve.build_server_app(store)
+    closed: list[bool] = []
+
+    class RecordingClose:
+        """Stands in for the teardown so the armless path's close is observable."""
+
+        def __call__(self) -> None:
+            """Record that the close ran."""
+            closed.append(True)
+
+    monkeypatch.setattr(serve.uvicorn, "run", lambda _app, host, port: None)
+
+    serve.serve_until_stopped(
+        app, replace(built, close=RecordingClose()), store, DEFAULT_HTTP_HOST, DEFAULT_HTTP_PORT
+    )
+
+    assert closed == [True]
 
 
 def test_the_shell_names_the_path_the_server_actually_serves() -> None:
