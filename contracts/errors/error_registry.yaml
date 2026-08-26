@@ -1,4 +1,4 @@
-# CTR-ERR@v1 — OA-* canonical error-code registry.
+# CTR-ERR@v2 — OA-* canonical error-code registry.
 #
 # Owner: WP-OPS-06 (06 §3.2). This file is the frozen declaration; the
 # loader, severity enum, Damiao parser and checkers live in contracts/errors/
@@ -8,7 +8,7 @@
 # Canon: 14 §2.10 is the single source (not 13). severity is the 4-level
 # diagnostic_msgs semantics (14 FR-OPS-017), no ROS 2 runtime dependency.
 # The 10 domain prefixes are a closed set: a new domain is a contract bump.
-contract: CTR-ERR@v1
+contract: CTR-ERR@v2
 
 # The 4 fixed severity levels. A value outside this set is rejected.
 severity_levels:

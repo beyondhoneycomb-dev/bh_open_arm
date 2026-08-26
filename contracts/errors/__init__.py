@@ -1,4 +1,4 @@
-"""CTR-ERR@v1 — the OA-* canonical error-code registry (14 §2.10).
+"""CTR-ERR@v2 — the OA-* canonical error-code registry (14 §2.10).
 
 The public surface: `REGISTRY` and `codes` for consumers naming a code by symbol,
 `emit`/`make_error`/`OaError` for the sanctioned emission path, `Severity` for the

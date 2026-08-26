@@ -12,7 +12,7 @@ and must not restate any of them (`02b` §5.0b):
   the authority) and the PC receive instant is the SERVER `CLOCK_MONOTONIC`; both
   are preserved (`05` §2.7, `WP-3B-07`). The ownership pin is `CTR-PRIM@v1`'s.
 - **error envelope** — link-loss, STALE and INVALID tracking surface through the one
-  `CTR-ERR@v1`-wrapping envelope, keyed on the frozen `OA-TEL-*` codes.
+  `CTR-ERR@v2`-wrapping envelope, keyed on the frozen `OA-TEL-*` codes.
 
 The contract also fixes what the plugin must be, independent of the primitives:
 `get_action()` is NON-BLOCKING (`FR-TEL-005`), a non-abstract `sync_state(obs)` is
@@ -338,9 +338,9 @@ class TeleopValidity(IntEnum):
 
 
 # The `OA-TEL-*` code each non-OK validity surfaces through the shared error envelope.
-# `OK` has no code. STALE and INVALID map to the frozen `CTR-ERR@v1` teleop rows
+# `OK` has no code. STALE and INVALID map to the frozen `CTR-ERR@v2` teleop rows
 # (`14` §2.10): tracking STALE and tracking INVALID. The string constants are resolved
-# to their registry rows, so the severities are the ones `CTR-ERR@v1` froze.
+# to their registry rows, so the severities are the ones `CTR-ERR@v2` froze.
 VALIDITY_ERROR_CODES: dict[TeleopValidity, ErrorCode] = {
     TeleopValidity.STALE: REGISTRY.get(codes.OA_TEL_003),
     TeleopValidity.INVALID: REGISTRY.get(codes.OA_TEL_002),

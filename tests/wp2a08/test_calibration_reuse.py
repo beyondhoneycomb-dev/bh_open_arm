@@ -1,6 +1,6 @@
 """`GripperEndpointCapture.from_calibration` reads the CTR-CAL endpoints (no re-capture).
 
-The per-arm zero calibration (`OpenArmCalibration`, CTR-CAL@v1) already persists the
+The per-arm zero calibration (`OpenArmCalibration`, CTR-CAL@v2) already persists the
 gripper open/close endpoint rads. This WP reads them through the bridge rather than
 maintaining a second endpoint source, so the norm-map anchors and the calibration can
 never disagree.

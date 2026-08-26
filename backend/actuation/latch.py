@@ -7,13 +7,10 @@ latch, zero releases succeed until the operator acks — so there is deliberatel
 `release()`, no timeout, no "clear once the gate passes again" path. A latch that
 could clear itself would defeat its reason for existing.
 
-`latch_to_hold` is the call contract owned by `ops/cancel` (WP-BOOT-04), which
-builds only the minimal latch interface and delegates the physical executor to
-this package (`02a` §-2.3: "the latch's physical executor is owned by WP-0A-01").
-Engaging through that method — and typing its reason as the `ops.cancel`
-`LatchReason` — is what lets a `SafetyLatch` (and the scheduler that embeds it)
-stand in wherever BOOT-04's cancellation path expects an `ActuationScheduler`,
-without either side reimplementing the other.
+The reason is typed as `ops.cancel.LatchReason` — gate id, the state either side of
+the transition, and the time. A latch with no attributable cause cannot be audited
+afterwards, which is the whole of why the type carries those four fields and not a
+free-text string.
 """
 
 from __future__ import annotations

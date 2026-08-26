@@ -137,12 +137,7 @@ class FaultInjectionHarness:
         self.scheduler.renew_lease()
 
     def latch(self) -> None:
-        """Engage the safety latch through the executor's native control.
-
-        Uses `engage_safety_latch`, not the `ops.cancel` `latch_to_hold` contract:
-        the bench is inside the actuation domain, and the cancellation contract's
-        call site is reserved for `ops/cancel` (`05` §5.2.1).
-        """
+        """Engage the safety latch through the executor's native control."""
         self.scheduler.engage_safety_latch(_bench_latch_reason(self.clock.now()))
 
     def acknowledge(self) -> None:

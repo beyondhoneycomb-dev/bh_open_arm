@@ -1,7 +1,7 @@
-// CTR-CAL@v1 calibration record, RENDER ONLY (WP-G-S02 contract). The calibration
-// canon is CTR-CAL@v1, owned by WP-1-02: this screen displays its fields and never
+// CTR-CAL@v2 calibration record, RENDER ONLY (WP-G-S02 contract). The calibration
+// canon is CTR-CAL@v2, owned by WP-1-02: this screen displays its fields and never
 // computes, edits or re-derives them. The field set mirrors the frozen schema
-// (01 §6.2 CTR-CAL@v1): signs, gripper open/close in radians, captured flag,
+// (01 §6.2 CTR-CAL@v2): signs, gripper open/close in radians, captured flag,
 // timestamps, zero_method, urdf_zero_offset, motor_zero_raw. Angles are radians;
 // the browser does not convert (CTR-UNIT@v1). This module holds only the shape and
 // a label map — no logic, because logic would be a second source of truth.

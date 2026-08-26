@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://openarm/contracts/CTR-CAL@v1",
-  "title": "OpenArm follower calibration (CTR-CAL@v1)",
+  "$id": "https://openarm/contracts/CTR-CAL@v2",
+  "title": "OpenArm follower calibration (CTR-CAL@v2)",
   "description": "Frozen on-disk calibration schema for one OpenArm follower arm. The joint zero itself lives in motor NV via 0xFE and is not represented here; motor_zero_raw is the readback witness and urdf_zero_offset the reference the residual is measured against (16 M-1, 02 FR-CON-064/065).",
   "type": "object",
   "additionalProperties": false,
@@ -116,7 +116,7 @@
     "schema_version": {
       "type": "integer",
       "const": 1,
-      "description": "Frozen generation (always 1 for CTR-CAL@v1)."
+      "description": "On-disk record version, always 1 \u2014 the record shape, not the contract name."
     },
     "checksum": {
       "type": "string",

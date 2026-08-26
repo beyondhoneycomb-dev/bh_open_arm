@@ -2,7 +2,7 @@
 
 The Damiao feedback frame carries an ERR nibble the upstream `MotorState` discards
 (`14` FR-OPS-018). `contracts.errors.damiao_map` already extracts it and maps the
-known nibbles to `OA-MOT` codes from the frozen CTR-ERR@v1 registry. This module is
+known nibbles to `OA-MOT` codes from the frozen CTR-ERR@v2 registry. This module is
 the thin actuation-side wrapper that adds the one thing the gateway needs and the
 raw map deliberately does not enforce: an **unknown** nibble is an explicit error,
 never a silent "not a fault".

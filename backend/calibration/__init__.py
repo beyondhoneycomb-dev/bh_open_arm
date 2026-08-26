@@ -1,4 +1,4 @@
-"""OpenArm follower calibration: the frozen CTR-CAL@v1 schema and its atomic I/O.
+"""OpenArm follower calibration: the frozen CTR-CAL@v2 schema and its atomic I/O.
 
 `schema` is the CONTRACT_FROZEN shape of the on-disk calibration JSON (the disk SoT of
 02 FR-CON-064 / 16 M-1); `atomic_io` is its only writer (persist-then-swap); `verify`

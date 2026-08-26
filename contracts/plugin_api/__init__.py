@@ -7,7 +7,6 @@ statements of that surface:
 
 - `convention` — the distribution-name convention and the no-fork check. Pure
   stdlib, so the light lane can import it.
-- `freeze` — CTR-PLUG@v1 registration re-confirmation against the freeze authority.
   Light lane (reads JSON only).
 - `surface` — the frozen Robot ABC surface, derived from the shared ABC.
 - `extension` — the LeRobot extension mechanism and its zero-edit proofs.
@@ -27,17 +26,12 @@ from contracts.plugin_api.convention import (
     is_convention_compliant,
     require_convention,
 )
-from contracts.plugin_api.freeze import CONTRACT_ID, OWNER_WP, Registration, registration
 
 __all__ = [
-    "CONTRACT_ID",
     "OPENARM_ROBOT_DIST",
-    "OWNER_WP",
     "PLUGIN_DIST_PREFIXES",
     "PluginConventionError",
-    "Registration",
     "forks_no_lerobot",
     "is_convention_compliant",
-    "registration",
     "require_convention",
 ]

@@ -1,6 +1,6 @@
 // Test-only loaders that pull S-13's canon from the frozen sources on disk so the
 // lane consumes the real contracts, not values re-authored in the screen:
-// contracts/errors/error_registry.yaml (CTR-ERR@v1, canon 14 §2.10) and the port
+// contracts/errors/error_registry.yaml (CTR-ERR@v2, canon 14 §2.10) and the port
 // tables of docs/v1/spec/01 §2.17 + docs/v1/spec/14 §2.1. Regex parsing keeps a YAML
 // dependency out of the frontend, matching errors.contract.test.ts. Imported only
 // by *.test.tsx; never part of the shipped bundle.

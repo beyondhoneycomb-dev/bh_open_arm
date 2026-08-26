@@ -1,4 +1,4 @@
-"""CTR-CAL@v1 shape invariants and the residual arithmetic.
+"""CTR-CAL@v2 shape invariants and the residual arithmetic.
 
 These pin the frozen schema's guarantees the field types cannot: per-motor vector
 widths, the sign domain, the side domain, checksum integrity, and unknown-field

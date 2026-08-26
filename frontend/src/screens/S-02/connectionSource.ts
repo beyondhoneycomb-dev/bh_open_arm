@@ -1,7 +1,7 @@
 // The backend-derived inputs S-02 renders from, plus an offline default fixture.
 // S-02 is a window onto the CON domain (02): every number here — the CAN interface
 // status, the discovered motors, the URDF joint names and rest pose, the live
-// telemetry pose, the profiles, the CTR-CAL@v1 calibration — originates in the
+// telemetry pose, the profiles, the CTR-CAL@v2 calibration — originates in the
 // backend (WP-1-02, WP-0B-02, WP-0B-05). This module names that bundle and gives
 // an honest offline default: CAN-FD unverified, no telemetry, no calibration, so
 // the screen reads "not ready" rather than "fine" before a backend connects (the
@@ -55,7 +55,7 @@ export interface ConnectionSource {
   readonly currentPositionsRad: Readonly<Record<string, number>> | null;
   // Selectable robot profiles.
   readonly profiles: readonly RobotProfile[];
-  // The persisted CTR-CAL@v1 calibration record, or null when uncalibrated.
+  // The persisted CTR-CAL@v2 calibration record, or null when uncalibrated.
   readonly calibration: CalibrationRecord | null;
   // Injectable monotonic clock reading (ms) for deterministic audit timestamps.
   readonly nowMonoMs: number;

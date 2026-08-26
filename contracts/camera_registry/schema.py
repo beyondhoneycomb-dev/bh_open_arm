@@ -275,7 +275,7 @@ def camera_error(code: ErrorCode, reason: str) -> ErrorEnvelope:
     only — an unregistered code is refused by the envelope itself.
 
     Args:
-        code: A registered `CTR-ERR@v1` code (e.g. `REGISTRY.get(codes.OA_CAM_001)`).
+        code: A registered `CTR-ERR@v2` code (e.g. `REGISTRY.get(codes.OA_CAM_001)`).
         reason: The human-readable reason to attach.
 
     Returns:

@@ -1,20 +1,19 @@
-"""The latch call contract owed to the actuation scheduler.
+"""Why a hold latch was applied, and when.
 
-Ownership boundary: the PHYSICAL latch executor belongs to `WP-0A-01` (the ActuationScheduler),
-which does not exist yet. This package owns only the call and its ordering, so the interface is
-kept as narrow as the contract requires — one method, one argument. Anything wider would be this
-package guessing at a design it does not own.
+This is a type, not a contract. It was the argument of a `latch_to_hold` call that
+`ops/cancel` made into the scheduler; that caller is gone and the call with it, but the
+reason outlives both — the latch itself still needs a cause it can be audited by, and
+the deadman controller, the WS dispatcher, the collision guard and the audit ring all
+stamp one.
 
-Release is deliberately absent. `05` §5.2.1 states that clearing a hold latch is an explicit
-re-arm handshake with a new generation id and operator intent, never an automatic consequence of
-the gate later turning PASS. Offering a `release()` here would put that decision behind a call
-this package has no standing to make.
+Release is deliberately absent, and that has not changed with the caller: clearing a
+hold is an explicit re-arm handshake with a new generation id and operator intent, never
+an automatic consequence of a condition later clearing itself.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
 
 
 @dataclass(frozen=True)
@@ -30,19 +29,3 @@ class LatchReason:
     previous_state: str
     new_state: str
     latched_at: float
-
-
-class ActuationScheduler(Protocol):
-    """The one call this package makes into the scheduler owned by `WP-0A-01`."""
-
-    def latch_to_hold(self, reason: LatchReason) -> None:
-        """Emit the safety hold latch immediately.
-
-        The scheduler keeps emitting the hold every tick afterwards; the latch is a hold
-        emission, not a stream stop, because cutting the command stream would drop the arm
-        (`00` §2-1, §2-3).
-
-        Args:
-            reason: Cause and timestamp of the latch.
-        """
-        ...

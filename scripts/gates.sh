@@ -28,18 +28,13 @@ run() {
 
 run "ruff (lint)"            ruff check .
 run "ruff (format)"          ruff format --check .
-run "mypy"                   mypy registry ops dashboard
+run "mypy"                   mypy registry ops
 # `scripts/` is a separate invocation, not another word on the line above. It has no
 # `__init__.py`, so mypy needs `--explicit-package-bases` to name `scripts.torque_session` the
 # way the shell entry point imports it; and its imports reach `backend`, `sim`, `packages` and
 # `contracts`, which carry errors of their own and are not in any mypy gate — `--follow-imports`
 # keeps those analyzed for types and out of this verdict.
 run "mypy (scripts)"         mypy --explicit-package-bases --follow-imports=silent scripts
-run "registry corpus"        python3 -m registry.ingest.cli --check
-run "registry indexes"       python3 -m registry.generate.cli --check
-run "registry rules"         python3 -m registry.check --all
-run "normalization ledger"   python3 -m registry.normalization.cli --check
-run "contract index"         python3 -m registry.contracts.cli verify
 run "env hash"               python3 -m registry.env.cli --verify-issued
 run "declared imports"       python3 -m registry.env.declared_imports
 run "lockfile is current"    uv lock --check

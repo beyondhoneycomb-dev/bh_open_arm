@@ -1,5 +1,5 @@
 // OA-* error-code lookup (CG-G-S13f). The canon is 14 §2.10, frozen as
-// contracts/errors/error_registry.yaml (CTR-ERR@v1). S-13 authors no code table:
+// contracts/errors/error_registry.yaml (CTR-ERR@v2). S-13 authors no code table:
 // the backend serves the registry and this module resolves a code against it,
 // reusing the browser mirror of the CTR-ERR grammar (isValidErrorCode) rather
 // than re-deriving it. A well-formed but unknown code and a malformed code both

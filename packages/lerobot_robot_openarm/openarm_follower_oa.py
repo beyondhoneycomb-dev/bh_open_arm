@@ -19,7 +19,7 @@ WP-1-02 owns is the SAFE bring-up and the explicit zero flow:
   calibration atomically. `0xAA` flash-store is never emitted (firmware-unreliable).
 
 The joint zero lives in motor NV (written by 0xFE), not on disk; the disk JSON is the
-SoT for signs, scale, gripper endpoints, and the residual witness (16 M-1, CTR-CAL@v1).
+SoT for signs, scale, gripper endpoints, and the residual witness (16 M-1, CTR-CAL@v2).
 The bus is injectable so the whole flow runs against a fixture with no CAN present; the
 hardware acceptances (torque-OFF on 16 motors, readback residual, power-cycle
 persistence) are deferred to a real fixture and re-verified at `RESUME-1-02-ZERO`.
@@ -291,7 +291,7 @@ class OaOpenArmFollower(OpenArmFollower):
     `robot.bus` write path exists outside the gateway (acceptance ①).
 
     Ownership: owns its `DamiaoMotorsBus` (`self.bus`, injectable for fixtures), the
-    on-disk CTR-CAL@v1 calibration for this instance id, its `ActuationGateway` (built
+    on-disk CTR-CAL@v2 calibration for this instance id, its `ActuationGateway` (built
     lazily, injectable for fixtures), and a `DropCounter` surfacing the CAN packet-drop
     count. Torque state is tracked in `_torque_enabled`; this class never sets it True
     — guarded torque-ON is WP-1-05, after `PG-SAFE-001`.
@@ -454,13 +454,13 @@ class OaOpenArmFollower(OpenArmFollower):
         """Whether a completed set-zero calibration exists for this instance.
 
         Overrides the stock follower's motor-NV check: the SoT for "has this arm been
-        zeroed" is the disk calibration with a recorded `last_zero_at` (CTR-CAL@v1).
+        zeroed" is the disk calibration with a recorded `last_zero_at` (CTR-CAL@v2).
         """
         return self._calibration is not None and self._calibration.last_zero_at is not None
 
     @property
     def calibration_model(self) -> OpenArmCalibration | None:
-        """The loaded CTR-CAL@v1 calibration for this instance, or None if unzeroed."""
+        """The loaded CTR-CAL@v2 calibration for this instance, or None if unzeroed."""
         return self._calibration
 
     def connect_readonly(self, lock_manager: LockManager | None = None) -> None:
@@ -979,7 +979,7 @@ class OaOpenArmFollower(OpenArmFollower):
         self._calibration = save_calibration_atomic(self._calibration_path(), calibration)
 
     def _calibration_path(self) -> Path:
-        """Return the CTR-CAL@v1 calibration file path for this instance."""
+        """Return the CTR-CAL@v2 calibration file path for this instance."""
         return calibration_path_for(self.calibration_dir, self.id)
 
     def _load_oa_calibration(self) -> OpenArmCalibration | None:

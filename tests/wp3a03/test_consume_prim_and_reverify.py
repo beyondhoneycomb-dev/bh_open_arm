@@ -17,7 +17,6 @@ import contracts.teleop as tel
 from contracts.teleop import schema
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-AUTHORITY = REPO_ROOT / "registry" / "contracts" / "contract_index.json"
 
 
 def test_consumes_exactly_ctr_prim() -> None:
@@ -46,15 +45,6 @@ def test_timestamp_roles_are_ctr_prim_clock_roles() -> None:
     assert isinstance(schema.RECEIVE_TS_ROLE, prim.ClockRole)
 
 
-def test_the_authority_registers_ctr_tel_as_frozen_owned_by_this_wp() -> None:
-    """CTR-TEL@v1 is FROZEN in the freeze authority, still owned by WP-3A-03; WP-3A-06 locked it."""
-    index = json.loads(AUTHORITY.read_text(encoding="utf-8"))
-    row = next(r for r in index["contracts"] if r["contract_id"] == "CTR-TEL@v1")
-    assert row["status"] == "FROZEN"
-    assert row["owner_wp"] == "WP-3A-03"
-    assert row["canonical_hash"] is not None
-
-
 def test_render_frozen_json_is_deterministic_and_canonical() -> None:
     """The mirror renders identically across calls, with sorted keys and a trailing newline."""
     first = tel.render_frozen_json()
@@ -77,24 +67,16 @@ def test_frozen_schema_carries_every_acceptance_fact() -> None:
     assert body["timestamp_domain"]["source_ts_role"] == "client"  # type: ignore[index]
 
 
-def test_reverify_confirms_the_frozen_mirror_matches_the_source() -> None:
-    """After the freeze the mirror is present and reverify confirms it equals the source."""
+def test_reverify_confirms_the_shipped_mirror_matches_the_source() -> None:
+    """The JSON shipped on disk still says what the typed surface says."""
     result = tel.reverify(REPO_ROOT)
-    assert result.registered
-    assert result.status == "FROZEN"
-    assert result.owner_wp == "WP-3A-03"
     assert result.mirror_present
     assert result.mirror_matches is True
 
 
-def test_reverify_would_detect_mirror_drift_once_frozen(tmp_path: Path) -> None:
-    """Once the mirror exists, reverify compares it byte-for-byte to the rendered contract."""
+def test_reverify_detects_mirror_drift(tmp_path: Path) -> None:
+    """Reverify compares the shipped mirror byte-for-byte to the rendered contract."""
     (tmp_path / "contracts" / "teleop").mkdir(parents=True)
-    (tmp_path / "registry" / "contracts").mkdir(parents=True)
-    (tmp_path / "registry" / "contracts" / "contract_index.json").write_text(
-        json.dumps({"contracts": [{"contract_id": "CTR-TEL@v1", "status": "FROZEN"}]}),
-        encoding="utf-8",
-    )
     mirror = tmp_path / tel.FROZEN_MIRROR_PATH
     mirror.write_text(tel.render_frozen_json(), encoding="utf-8")
     assert tel.reverify(tmp_path).mirror_matches is True

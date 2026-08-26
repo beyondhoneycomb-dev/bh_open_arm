@@ -97,11 +97,6 @@ robot = [
 ]
 
 [project.scripts]
-oa-check = "registry.check:main"
-oa-registry = "registry.ingest.cli:main"
-oa-index = "registry.generate.cli:main"
-oa-state = "ops.launch.cli:main"
-oa-contracts = "registry.contracts.cli:main"
 oa-env = "registry.env.cli:main"
 oa-serve = "backend.config.serve:main"
 # The PG-CAM-001 capture. A console script rather than a one-off, because that gate goes

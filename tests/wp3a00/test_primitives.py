@@ -3,7 +3,7 @@
 Covers the acceptance items WP-3A-00 can prove at the primitive level (`02b`
 §5.2): ① each primitive has one definition point, ④ the camera identifier joins
 across CAM/CAP/WS/REC with one grammar, and the row-4/row-6 re-export identity
-(the action shape is CTR-ACT@v1's, the error envelope wraps CTR-ERR@v1) so no
+(the action shape is CTR-ACT@v1's, the error envelope wraps CTR-ERR@v2) so no
 consumer restates them. The JSON mirror is checked against the Python surface so
 "single definition point" holds across the two frozen bodies, not just within one.
 """
@@ -47,7 +47,7 @@ def test_action_shape_is_ctr_act_not_restated() -> None:
 
 
 def test_error_envelope_wraps_ctr_err_not_restated() -> None:
-    """The error envelope primitive re-exports CTR-ERR@v1's severity and code registry."""
+    """The error envelope primitive re-exports CTR-ERR@v2's severity and code registry."""
     assert prim.Severity is ErrSeverity
     assert prim.codes is err_codes
     assert prim.ERROR_CONTRACT_ID == ERR_CONTRACT_ID
@@ -55,7 +55,7 @@ def test_error_envelope_wraps_ctr_err_not_restated() -> None:
 
 def test_consumed_contracts_are_the_frozen_upstreams() -> None:
     """The primitives consume exactly the three 0-A/0-Ops contracts by reference."""
-    assert set(prim.CONSUMED_CONTRACTS) == {"CTR-ACT@v1", "CTR-ERR@v1", "CTR-UNIT@v1"}
+    assert set(prim.CONSUMED_CONTRACTS) == {"CTR-ACT@v1", "CTR-ERR@v2", "CTR-UNIT@v1"}
 
 
 # --- ④ camera identifier round-trip-joins across CAM/CAP/WS/REC --------------

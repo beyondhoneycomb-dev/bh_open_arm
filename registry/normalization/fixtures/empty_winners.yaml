@@ -8,7 +8,7 @@ rows:
       - file: "01"
         section: "4.2"
         quote: "rest 자세 확인 모달"
-    contract: "CTR-CAL@v1"
+    contract: "CTR-CAL@v2"
     rationale: "placeholder"
     enforcement:
       - type: ci_static

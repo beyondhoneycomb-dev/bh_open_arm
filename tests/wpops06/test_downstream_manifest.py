@@ -3,7 +3,7 @@
 Acceptance ⑫. A consumer manifest that names error codes it may emit must name
 only codes the frozen registry defines; an unresolved reference means a consumer
 would emit a code with no recovery procedure. This is the exit-gate property —
-`WP-3A-00` / `WP-G-01` / `WP-G-03` consume CTR-ERR@v1, so a dangling code stops
+`WP-3A-00` / `WP-G-01` / `WP-G-03` consume CTR-ERR@v2, so a dangling code stops
 them starting.
 """
 

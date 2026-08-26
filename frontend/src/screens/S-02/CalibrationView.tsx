@@ -1,4 +1,4 @@
-// Calibration view — RENDER ONLY (WP-G-S02 contract, CTR-CAL@v1). It displays the
+// Calibration view — RENDER ONLY (WP-G-S02 contract, CTR-CAL@v2). It displays the
 // persisted calibration record's fields and nothing more: the zero method, gripper
 // open/close (radians), captured flag, timestamps, and offset/raw counts. It
 // computes no value and edits nothing — the calibration canon is the backend's
@@ -23,7 +23,7 @@ export function CalibrationView({ calibration }: CalibrationViewProps) {
       data-panel="calibration"
     >
       <h2 id="oa-s02-cal-title" className="oa-s02__panel-title">
-        캘리브레이션 (CTR-CAL@v1 · 렌더 전용)
+        캘리브레이션 (CTR-CAL@v2 · 렌더 전용)
       </h2>
 
       {calibration === null ? (

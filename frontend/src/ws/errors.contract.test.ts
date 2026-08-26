@@ -1,4 +1,4 @@
-// The consume-the-frozen-contract proof for CTR-ERR@v1. Reads the frozen
+// The consume-the-frozen-contract proof for CTR-ERR@v2. Reads the frozen
 // `contracts/errors/error_registry.yaml` and asserts the browser mirror in
 // errors.ts agrees on the four severity levels, the closed domain set, and the
 // OA-* code grammar — and that every registered code parses under that grammar.
@@ -47,7 +47,7 @@ function indentedBlock(key: string): string[] {
   return block;
 }
 
-describe("CTR-ERR@v1 mirror equals the frozen registry", () => {
+describe("CTR-ERR@v2 mirror equals the frozen registry", () => {
   it("agrees on the four severity levels", () => {
     const parsed: Record<string, number> = {};
     for (const line of indentedBlock("severity_levels")) {

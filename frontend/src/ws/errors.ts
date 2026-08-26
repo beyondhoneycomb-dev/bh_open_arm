@@ -1,4 +1,4 @@
-// CTR-ERR@v1, mirrored for the browser. The single WebSocket surfaces backend
+// CTR-ERR@v2, mirrored for the browser. The single WebSocket surfaces backend
 // faults as an error envelope wrapping a registered `OA-*` code; this module
 // holds the code grammar and the four severity levels so the browser recognises
 // and never invents a code. `errors.contract.test.ts` reads the frozen
@@ -10,7 +10,7 @@
 export const OA_CODE_PATTERN = /^OA-[A-Z]+-[0-9A-F]{3}$/;
 
 // The four fixed severity levels (diagnostic_msgs semantics). A value outside
-// this set is not a CTR-ERR@v1 severity.
+// this set is not a CTR-ERR@v2 severity.
 export const SEVERITY_LEVELS = {
   OK: 0,
   WARN: 1,
@@ -53,7 +53,7 @@ export function oaDomainOf(code: string): OaDomain | null {
   return (OA_DOMAINS as readonly string[]).includes(domain) ? (domain as OaDomain) : null;
 }
 
-// One CTR-ERR@v1 error, wrapped identically for every surface: a registered code,
+// One CTR-ERR@v2 error, wrapped identically for every surface: a registered code,
 // a human reason, and the code's fixed severity.
 export interface ErrorEnvelope {
   code: string;

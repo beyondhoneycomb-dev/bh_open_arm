@@ -1,7 +1,7 @@
-"""The frozen OpenArm follower calibration schema (CTR-CAL@v1, 02 FR-CON-064, 16 M-1).
+"""The frozen OpenArm follower calibration schema (CTR-CAL@v2, 02 FR-CON-064, 16 M-1).
 
 This is the CONTRACT_FROZEN source of truth for the shape of the on-disk calibration
-JSON. Freezing it (`oa-contracts freeze CTR-CAL@v1`) is the WP-1-02 -> WP-1-03 handover
+JSON. Freezing it (`oa-contracts freeze CTR-CAL@v2`) is the WP-1-02 -> WP-1-03 handover
 condition (01 §6.2): the hold target a scheduler commands cannot be defined until the
 zero contract exists, so the schema is locked before any consumer reads it.
 
@@ -36,7 +36,7 @@ from typing import Any
 
 # The contract id this schema is the frozen body of. Consumers key freeze checks and
 # staleness on this exact string, so it is named once here.
-CONTRACT_ID = "CTR-CAL@v1"
+CONTRACT_ID = "CTR-CAL@v2"
 
 # The frozen schema generation. A shape change is a new generation (`@v2`), never an
 # in-place edit of this literal (06 §4.3).
@@ -83,7 +83,7 @@ class ZeroMethod(StrEnum):
 
 
 class CalibrationError(ValueError):
-    """Raised when a calibration payload violates the frozen CTR-CAL@v1 shape."""
+    """Raised when a calibration payload violates the frozen CTR-CAL@v2 shape."""
 
 
 def _vector8(name: str, values: list[float]) -> list[float]:
@@ -109,7 +109,7 @@ def _vector8(name: str, values: list[float]) -> list[float]:
 
 @dataclass
 class OpenArmCalibration:
-    """The on-disk calibration of one OpenArm follower arm (CTR-CAL@v1).
+    """The on-disk calibration of one OpenArm follower arm (CTR-CAL@v2).
 
     Every per-motor list is indexed by `MOTOR_ORDER`. The joint zero is NOT here — it
     lives in motor NV (16 M-1); `motor_zero_raw` is the readback witness for residual

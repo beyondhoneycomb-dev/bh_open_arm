@@ -29,7 +29,6 @@ OWNER_WP = "WP-3A-03"
 # The frozen glob `WP-3A-06` locks by content hash, and the committed freeze
 # authority CI-09 reads. The mirror path is intentionally absent until the freeze.
 FROZEN_MIRROR_PATH = "contracts/teleop/schema.json"
-AUTHORITY = "registry/contracts/contract_index.json"
 
 STATUS_FROZEN = "FROZEN"
 STATUS_DRAFT = "DRAFT"
@@ -122,72 +121,36 @@ def render_frozen_json() -> str:
 
 @dataclass(frozen=True)
 class ReverifyResult:
-    """The outcome of a CTR-TEL@v1 reverification.
+    """The outcome of a CTR-TEL mirror reverification.
 
     Attributes:
-        registered: Whether the freeze authority carries a CTR-TEL@v1 record.
-        status: The generation status (`DRAFT`/`FROZEN`/...), or empty when absent.
-        owner_wp: The owning work package the authority records, or empty.
-        canonical_hash: The locked content hash for a FROZEN generation, or None.
-        mirror_present: Whether the frozen mirror exists on disk yet.
+        mirror_present: Whether the shipped mirror exists on disk.
         mirror_matches: True/False when the mirror exists and (dis)agrees with the
-            rendered contract; None while no mirror exists (verification-only).
+            rendered contract; None while no mirror exists.
     """
 
-    registered: bool
-    status: str
-    owner_wp: str
-    canonical_hash: str | None
     mirror_present: bool
     mirror_matches: bool | None
 
 
-def _registration(repo_root: Path) -> tuple[bool, str, str, str | None]:
-    """Read CTR-TEL@v1's record from the committed freeze authority.
-
-    Args:
-        repo_root: Repository root the authority lives under.
-
-    Returns:
-        (tuple) present, status, owner_wp, canonical_hash.
-    """
-    path = repo_root / AUTHORITY
-    if not path.is_file():
-        return (False, "", "", None)
-    index = json.loads(path.read_text(encoding="utf-8"))
-    for record in index.get("contracts", []) or []:
-        if record.get("contract_id") == schema.CONTRACT_ID:
-            return (
-                True,
-                str(record.get("status", "")),
-                str(record.get("owner_wp", "")),
-                record.get("canonical_hash"),
-            )
-    return (False, "", "", None)
-
-
 def reverify(repo_root: Path) -> ReverifyResult:
-    """Reverify CTR-TEL@v1 against the authority and, once frozen, the mirror.
+    """Reverify the shipped CTR-TEL mirror against the typed source.
+
+    The one question worth asking: does the JSON on disk still say what `schema.py`
+    says? Two representations of one contract drift silently otherwise — the typed
+    surface moves with a code change and the mirror keeps shipping the old shape.
 
     Args:
         repo_root: Repository root.
 
     Returns:
-        (ReverifyResult) The registration and mirror-drift state. While DRAFT and
-            mirror-less this reports cleanly (`mirror_matches` None) — the hook is
-            verification-only until `WP-3A-06` writes and freezes the mirror.
+        (ReverifyResult) Mirror presence and whether it matches. A missing mirror
+            reports `mirror_matches` None rather than False: nothing has drifted from
+            a file that was never written.
     """
-    registered, status, owner_wp, canonical_hash = _registration(repo_root)
     mirror = repo_root / FROZEN_MIRROR_PATH
     if mirror.is_file():
         matches: bool | None = mirror.read_text(encoding="utf-8") == render_frozen_json()
     else:
         matches = None
-    return ReverifyResult(
-        registered=registered,
-        status=status,
-        owner_wp=owner_wp,
-        canonical_hash=canonical_hash,
-        mirror_present=mirror.is_file(),
-        mirror_matches=matches,
-    )
+    return ReverifyResult(mirror_present=mirror.is_file(), mirror_matches=matches)

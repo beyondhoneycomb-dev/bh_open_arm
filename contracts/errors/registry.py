@@ -70,7 +70,7 @@ class ErrorCode:
 
 
 class Registry:
-    """The loaded CTR-ERR@v1 registry: codes, domains, severities, nibble map.
+    """The loaded CTR-ERR@v2 registry: codes, domains, severities, nibble map.
 
     A `Registry` is immutable after construction. Consumers ask it for a code by
     symbol; asking for an unregistered code raises `UnregisteredCodeError` rather
@@ -202,7 +202,7 @@ def load_registry() -> Registry:
     """Load the frozen registry from its committed path.
 
     Returns:
-        (Registry) The parsed CTR-ERR@v1 registry.
+        (Registry) The parsed CTR-ERR@v2 registry.
     """
     document = yaml.safe_load(REGISTRY_PATH.read_text(encoding="utf-8"))
     return Registry(document if isinstance(document, dict) else {})

@@ -1,4 +1,4 @@
-"""Named literals for the OA-* error-code contract (CTR-ERR@v1).
+"""Named literals for the OA-* error-code contract (CTR-ERR@v2).
 
 Every value here carries meaning in the registry logic — the frozen data path,
 the code grammar, the closed domain set, the field roster — so none of them is
@@ -15,7 +15,7 @@ from pathlib import Path
 REGISTRY_FILENAME = "error_registry.yaml"
 REGISTRY_PATH = Path(__file__).resolve().parent / REGISTRY_FILENAME
 
-CONTRACT_ID = "CTR-ERR@v1"
+CONTRACT_ID = "CTR-ERR@v2"
 
 # OA-<domain>-<3 chars>. The last group is hex because OA-MOT mirrors the Damiao
 # ERR nibble (008..00E), so 00A..00E are valid code numbers, not typos.

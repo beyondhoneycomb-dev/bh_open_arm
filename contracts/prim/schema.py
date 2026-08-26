@@ -31,7 +31,7 @@ The six primitives, and the one rule each carries that a consumer must not bend:
    *classification* (normal vs defect vs counted). Without the classification the
    same dropped frame reads as healthy in one quality report and broken in
    another (`02b` §5.0b row 5).
-6. Error envelope — one wrapper around a `CTR-ERR@v1` code, so an `OA-*` code is
+6. Error envelope — one wrapper around a `CTR-ERR@v2` code, so an `OA-*` code is
    surfaced identically by all five contracts (`02b` §5.0b row 6).
 
 This module is `CONTRACT_FROZEN`: once `CTR-PRIM@v1` is frozen (`WP-3A-00`), a
@@ -520,7 +520,7 @@ QUEUE_PROFILES = {
 
 
 # ---------------------------------------------------------------------------
-# Primitive 6 — error envelope (wrapping CTR-ERR@v1)
+# Primitive 6 — error envelope (wrapping CTR-ERR@v2)
 # ---------------------------------------------------------------------------
 
 # The canonical shape of an `OA-*` code as an error string. Named once so the
@@ -531,17 +531,17 @@ ERROR_CODE_PATTERN = re.compile(r"^OA-[A-Z]+-[0-9A-F]{3}$")
 
 @dataclass(frozen=True)
 class ErrorEnvelope:
-    """One `CTR-ERR@v1` error, wrapped identically for all five contracts.
+    """One `CTR-ERR@v2` error, wrapped identically for all five contracts.
 
     The envelope is the single shape a CAM/CAP/TEL/WS/REC surface reports an error
     in (`02b` §5.0b row 6): a registered `OA-*` code, a human reason, and the
     code's fixed severity. It never invents a code — `code` must match a row in
-    the frozen `CTR-ERR@v1` registry.
+    the frozen `CTR-ERR@v2` registry.
 
     Attributes:
         code: A registered `OA-*` code string.
         reason: The human-readable reason this error was raised.
-        severity: The `CTR-ERR@v1` severity level.
+        severity: The `CTR-ERR@v2` severity level.
     """
 
     code: str
@@ -553,11 +553,11 @@ class ErrorEnvelope:
         if not ERROR_CODE_PATTERN.match(self.code):
             raise PrimitiveRedefinitionError(f"error code {self.code!r} is not an OA-* code")
         if not is_valid_severity(self.severity):
-            raise PrimitiveRedefinitionError(f"severity {self.severity!r} is outside CTR-ERR@v1")
+            raise PrimitiveRedefinitionError(f"severity {self.severity!r} is outside CTR-ERR@v2")
 
 
 def error_envelope(code: ErrorCode, reason: str) -> ErrorEnvelope:
-    """Wrap a registered `CTR-ERR@v1` code in the shared error envelope.
+    """Wrap a registered `CTR-ERR@v2` code in the shared error envelope.
 
     Args:
         code: A code from the frozen registry (`contracts.errors.codes`).

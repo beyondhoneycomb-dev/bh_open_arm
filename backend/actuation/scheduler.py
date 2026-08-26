@@ -9,14 +9,9 @@ decider yields one `Emission`, `tick` turns it into one send, and it asserts the
 count is one, so a tick that emitted zero (a dropped arm) or two (a contested
 command) fails loudly rather than silently (acceptance ①).
 
-Relationship to `ops/cancel` (`WP-BOOT-04`): that package owns the *call contract*
-`latch_to_hold` and builds only a minimal `ActuationScheduler` Protocol to test
-cancellation ordering; it explicitly delegates the *physical executor* to this WP.
-This class is that executor. It implements `latch_to_hold(reason)` with the
-`ops.cancel` `LatchReason`, so a real scheduler satisfies the BOOT-04 Protocol and
-can be handed straight to `ops.cancel.executor.cancel_stage` — the two are unified
-at the interface without either reimplementing the other, and the BOOT-04 tests
-(which use their own Protocol double) are untouched.
+There is one way in: `engage_safety_latch`. There used to be two — a second entry point
+existed so a workflow canceller could reach the same latch under its own name — and a
+latch with two doors is a latch whose callers can be enumerated only by reading both.
 """
 
 from __future__ import annotations
@@ -180,29 +175,10 @@ class ActuationScheduler:
         calls to put the arm into a latched hold. After it, every tick emits
         SAFETY_LATCH_HOLD until `acknowledge_latch`.
 
-        It is deliberately distinct from `latch_to_hold`: that method is the narrow
-        cancellation contract `ops/cancel` owns and is the only latch symbol its
-        locality check polices, whereas this is the general safety-engage the
-        executor exposes to callers inside its own domain.
-
         Args:
             reason: Cause and timestamp of the latch.
         """
         self._latch.engage(reason)
-
-    def latch_to_hold(self, reason: LatchReason) -> None:
-        """Engage the safety latch through the `ops.cancel` cancellation contract.
-
-        This is the method `ops.cancel.executor.cancel_stage` calls on a
-        latch-to-hold stage; `05` §5.2.1 keeps the *call* to it inside `ops/cancel`,
-        which is why the executor's own callers use `engage_safety_latch` instead.
-        It delegates to the same single latch, so a cancellation and a native safety
-        engage cannot diverge.
-
-        Args:
-            reason: Cause and timestamp of the latch.
-        """
-        self.engage_safety_latch(reason)
 
     def acknowledge_latch(self) -> None:
         """Clear the safety latch — the sole legitimate release, an operator ack."""

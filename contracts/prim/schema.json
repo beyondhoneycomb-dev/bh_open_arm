@@ -5,7 +5,7 @@
   "title": "OpenArm shared 3A primitives (CTR-PRIM@v1)",
   "description": "The single definition point of the six primitives the five 3A schemas (CTR-CAM/CAP/TEL/WS/REC) share. Frozen by content hash (WP-3A-00); a byte change is a CI-09 freeze violation. This is the language-agnostic mirror of contracts/prim/schema.py; the two must not diverge (02b §5.0b).",
   "schema_version": 1,
-  "consumed_contracts": ["CTR-ACT@v1", "CTR-ERR@v1", "CTR-UNIT@v1"],
+  "consumed_contracts": ["CTR-ACT@v1", "CTR-ERR@v2", "CTR-UNIT@v1"],
   "primitives": {
     "camera_identifier": {
       "description": "One slot-key grammar shared as the CAM registry key, the CAP sidecar column stem, the WS binary frame tag, and the REC observation.images.<slot> key.",
@@ -85,8 +85,8 @@
       }
     },
     "error_envelope": {
-      "description": "One wrapper around a registered CTR-ERR@v1 code: {code, reason, severity}. Surfaced identically by all five contracts.",
-      "wraps": "CTR-ERR@v1",
+      "description": "One wrapper around a registered CTR-ERR@v2 code: {code, reason, severity}. Surfaced identically by all five contracts.",
+      "wraps": "CTR-ERR@v2",
       "code_pattern": "^OA-[A-Z]+-[0-9A-F]{3}$",
       "fields": ["code", "reason", "severity"],
       "severity_levels": { "OK": 0, "WARN": 1, "ERROR": 2, "STALE": 3 }

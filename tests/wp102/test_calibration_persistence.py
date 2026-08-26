@@ -1,4 +1,4 @@
-"""Acceptance ⑧/⑩ and CTR-CAL@v1 shape: atomic disk SoT, gripper capture, integrity.
+"""Acceptance ⑧/⑩ and CTR-CAL@v2 shape: atomic disk SoT, gripper capture, integrity.
 
 ⑧ is proven two ways: a deterministic crash injection (a write that dies between the
 temp file and the rename leaves the previous file wholly intact), and a SIGKILL stress
