@@ -6,6 +6,13 @@
 
 import { describe, expect, it, vi } from "vitest";
 
+import {
+  WS_CLOSE_COMMAND_UNROUTABLE,
+  WS_CLOSE_FORBIDDEN_ORIGIN,
+  WS_CLOSE_MISSING_SESSION,
+  WS_CLOSE_UNAUTHORIZED_FRAME,
+  WS_CLOSE_UNKNOWN_ROLE,
+} from "./closeCodes";
 import { decodeFrame } from "./decoder";
 import { BUFFERED_AMOUNT_THRESHOLD_BYTES, imageFeatureKey, WsAuthorityError } from "./envelope";
 import {
@@ -273,6 +280,135 @@ describe("a frame that reaches no socket is never silent", () => {
     expect(() => client.send("stop_hold", { type: "stop_hold", session_id: "s" })).not.toThrow();
     expect(factory.latest().sent).toHaveLength(1);
     expect(client.stats().undeliverableCount).toBe(0);
+    client.dispose();
+  });
+});
+
+// The backend's only server-to-client fault channel. `CTR-WS@v2` declares no error frame,
+// so a refusal is a close carrying one of the codes `backend/ws/constants.py` owns, plus
+// the server's reason — delivered after `accept()` precisely so the browser can read it.
+//
+// The split these tests pin: a HANDSHAKE refusal repeats on every socket, because the URL
+// and the Origin are fixed at construction. A per-frame refusal does not, and this socket
+// carries the soft stop, so retrying it is what keeps `FR-GUI-065` true.
+describe("a handshake refusal is not retried and is not silent", () => {
+  it("opens no second socket, however long the retry timer runs", () => {
+    const { client, factory, scheduler } = makeClient({ retryDelayMs: 1000 });
+    client.start();
+    factory.latest().emitClose(WS_CLOSE_MISSING_SESSION, "session_id is required");
+
+    scheduler.advance(10_000);
+    expect(factory.count).toBe(1);
+    expect(client.stats().socketCount).toBe(0);
+    client.dispose();
+  });
+
+  it("hands the code and the server's own words to the caller, once", () => {
+    const onLinkRefused = vi.fn();
+    const { client, factory, scheduler } = makeClient({ retryDelayMs: 1000, onLinkRefused });
+    client.start();
+    factory
+      .latest()
+      .emitClose(WS_CLOSE_FORBIDDEN_ORIGIN, "origin 'http://evil.test' is not on the allowlist");
+
+    expect(onLinkRefused).toHaveBeenCalledTimes(1);
+    expect(onLinkRefused).toHaveBeenCalledWith({
+      code: WS_CLOSE_FORBIDDEN_ORIGIN,
+      reason: "origin 'http://evil.test' is not on the allowlist",
+    });
+    scheduler.advance(10_000);
+    expect(onLinkRefused).toHaveBeenCalledTimes(1);
+    client.dispose();
+  });
+
+  it("quiesces rather than leaving a half-live client running at a null socket", () => {
+    // The renewal loop and the pump are timers. Left running they emit into nothing for
+    // the life of the page — `lease_renew` does not even throw, it is expiry-covered — so
+    // the failure would be counted and invisible, which is the shape being removed here.
+    const { client, factory, scheduler } = makeClient({
+      role: "operator",
+      renewIntervalMs: 250,
+      retryDelayMs: 100_000,
+    });
+    client.start();
+    const socket = factory.latest();
+    socket.receive(
+      textRaw(
+        leaseGrantFrame({
+          sessionId: "s",
+          generation: 1,
+          sequence: 1,
+          expiryMonoServer: 9,
+          issuedMonoClient: 0,
+        }),
+      ),
+    );
+    client.pump();
+    const renewalsSent = client.stats().undeliverableCount;
+    socket.emitClose(WS_CLOSE_UNKNOWN_ROLE, "unknown role 'ghost'");
+
+    scheduler.advance(10_000);
+    expect(client.stats().undeliverableCount).toBe(renewalsSent);
+    client.dispose();
+  });
+
+  it("counts the refusal separately from a browser-side transport error", () => {
+    const { client, factory } = makeClient();
+    client.start();
+    factory.latest().emitClose(WS_CLOSE_MISSING_SESSION, "session_id is required");
+
+    expect(client.stats().refusalCount).toBe(1);
+    expect(client.stats().socketErrorCount).toBe(0);
+    client.dispose();
+  });
+});
+
+// The finding this describe block exists for: the soft stop rides this socket, and
+// `backend/ws/arm_channel.py` guarantees a read-only host still answers `FR-GUI-065`.
+// One refused `command` must not take the stop away until the page is reloaded.
+describe("a per-frame refusal keeps the channel, because the stop rides it", () => {
+  it("reconnects after an unroutable command on a read-only host", () => {
+    const onLinkRefused = vi.fn();
+    const { client, factory, scheduler } = makeClient({ retryDelayMs: 1000, onLinkRefused });
+    client.start();
+    factory
+      .latest()
+      .emitClose(
+        WS_CLOSE_COMMAND_UNROUTABLE,
+        "this process reads the arm and does not command it",
+      );
+
+    scheduler.advance(1000);
+    expect(factory.count).toBe(2);
+    expect(client.stats().socketCount).toBe(1);
+    // Counted, so the loop is measurable — but not reported as a dead channel, because
+    // the next socket is live and can carry a stop.
+    expect(client.stats().refusalCount).toBe(1);
+    expect(onLinkRefused).not.toHaveBeenCalled();
+    client.dispose();
+  });
+
+  it("reconnects after an authority refusal on one frame", () => {
+    const { client, factory, scheduler } = makeClient({ retryDelayMs: 1000 });
+    client.start();
+    factory.latest().emitClose(WS_CLOSE_UNAUTHORIZED_FRAME, "observer may not send command");
+
+    scheduler.advance(1000);
+    expect(factory.count).toBe(2);
+    client.dispose();
+  });
+
+  it("still retries a transport close, which is what the retry was built for", () => {
+    const onLinkRefused = vi.fn();
+    const { client, factory, scheduler } = makeClient({ retryDelayMs: 1000, onLinkRefused });
+    client.start();
+    // 1006: the link dropped with no close frame. Nothing refused anything.
+    factory.latest().emitClose(1006, "");
+
+    scheduler.advance(1000);
+    expect(factory.count).toBe(2);
+    expect(client.stats().refusalCount).toBe(0);
+    expect(onLinkRefused).not.toHaveBeenCalled();
     client.dispose();
   });
 });

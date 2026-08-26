@@ -1,7 +1,7 @@
 // Synthetic 3A fixtures for the WS lane — the TypeScript analog of
 // `contracts/fixtures`. The GUI never sees real hardware (02d §3): it is verified
 // against deterministic frames shaped by the frozen CTR-WS@v2 envelope and the
-// CTR-ERR@v1 codes. This module also holds the injected test doubles (a fake
+// CTR-ERR@v3 codes. This module also holds the injected test doubles (a fake
 // socket, a fake clock, a synchronous decode port, and a fixture server that
 // applies the frozen server-side send authority) so the lane drives WsClient with
 // no real WebSocket, Worker or wall clock.
@@ -219,8 +219,11 @@ export class FakeSocket implements SocketLike {
     this.mHandlers?.onOpen();
   }
 
-  emitClose(): void {
-    this.mHandlers?.onClose();
+  // Defaults to 1006, the code the browser synthesises when a link drops with no close
+  // frame. A test that names no code is testing transport, which is what the retry is for;
+  // a refusal has to be spelled out, because the two take different paths.
+  emitClose(code = ABNORMAL_TRANSPORT_CLOSE, reason = ""): void {
+    this.mHandlers?.onClose(code, reason);
   }
 
   emitError(error: unknown): void {
@@ -235,6 +238,10 @@ export class FakeSocket implements SocketLike {
     }
   }
 }
+
+// RFC 6455's abnormal-closure code. The browser reports it when the link went away
+// without a close frame, so it is what a fixture means by "the socket just dropped".
+const ABNORMAL_TRANSPORT_CLOSE = 1006;
 
 // A factory that counts sockets built, so a test can assert exactly one realtime
 // channel exists (CG-G-01a).

@@ -4,11 +4,12 @@
 // render an absent channel as a quiet one — `client: null` and "connected, no lease yet" produce
 // the same empty lease, and only one of them means the operator could take control by asking.
 
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ControlLeaseHost } from "./ControlLeaseHost";
-import { RealtimeProvider } from "./RealtimeContext";
+import { RealtimeProvider, type RealtimeClientHooks } from "./RealtimeContext";
+import { WS_CLOSE_FORBIDDEN_ORIGIN, type LinkRefusal } from "../ws/closeCodes";
 import type { LeaseSnapshot } from "../ws/leaseRenewer";
 
 const HELD: LeaseSnapshot = {
@@ -63,6 +64,39 @@ describe("ControlLeaseHost", () => {
     renderIn(failing);
 
     expect(screen.getByTestId("realtime-absent")).toBeTruthy();
+    expect(screen.queryByText("s-1")).toBeNull();
+  });
+
+  it("puts a server refusal on the screen, code and reason both", () => {
+    // The whole point of not discarding `onclose(code, reason)`. The backend closes with a code
+    // it owns and a reason it wrote, and a client that showed neither would leave the operator
+    // with a channel that stopped for no stated cause.
+    let refuse: ((refusal: LinkRefusal) => void) | null = null;
+    const client = clientWith(HELD);
+
+    render(
+      <RealtimeProvider
+        createClient={(hooks: RealtimeClientHooks) => {
+          refuse = hooks.onLinkRefused;
+          return client as never;
+        }}
+      >
+        <ControlLeaseHost />
+      </RealtimeProvider>,
+    );
+    expect(screen.getByText("s-1")).toBeTruthy();
+
+    act(() => {
+      refuse?.({
+        code: WS_CLOSE_FORBIDDEN_ORIGIN,
+        reason: "origin 'http://elsewhere.test' is not on the control-channel allowlist",
+      });
+    });
+
+    expect(screen.getByTestId("realtime-absent").textContent).toContain("4407");
+    expect(screen.getByTestId("realtime-absent").textContent).toContain(
+      "is not on the control-channel allowlist",
+    );
     expect(screen.queryByText("s-1")).toBeNull();
   });
 

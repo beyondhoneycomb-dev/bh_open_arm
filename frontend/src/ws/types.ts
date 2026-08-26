@@ -61,7 +61,11 @@ export interface SocketLike {
 export interface SocketHandlers {
   onOpen(): void;
   onMessage(data: string | ArrayBuffer): void;
-  onClose(): void;
+  // The close code and the server's reason, both carried. They are the backend's only
+  // server-to-client fault channel — `CTR-WS@v2` has no error frame — and a handler that
+  // took neither could not tell a refusal that retrying re-runs from a dropped link that
+  // retrying fixes.
+  onClose(code: number, reason: string): void;
   onError(error: unknown): void;
 }
 

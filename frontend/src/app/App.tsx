@@ -11,14 +11,18 @@ import { BrowserRouter } from "react-router-dom";
 import { createDefaultWsClient } from "../ws/defaults";
 import { AppRoutes } from "./AppRoutes";
 import { ConfigProvider } from "./ConfigContext";
-import { RealtimeProvider, type RealtimeLifecycle } from "./RealtimeContext";
+import {
+  RealtimeProvider,
+  type RealtimeClientHooks,
+  type RealtimeLifecycle,
+} from "./RealtimeContext";
 import "./shell.css";
 
 interface AppProps {
   // How the realtime client is built. Injected on the same terms as `ConfigProvider`'s
   // `fetchImpl`: the default reaches a real WebSocket and a real Worker, which no test lane may
   // do, and a host wanting another role or session supplies it at the one place a client is made.
-  createRealtimeClient?: () => RealtimeLifecycle;
+  createRealtimeClient?: (hooks: RealtimeClientHooks) => RealtimeLifecycle;
 }
 
 export function App({ createRealtimeClient = createDefaultWsClient }: AppProps = {}) {

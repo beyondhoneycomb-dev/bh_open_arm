@@ -20,6 +20,7 @@ import {
   type WsFrameType,
   type WsRole,
 } from "./envelope";
+import { isHandshakeRefusal, isServerRefusal, type LinkRefusal } from "./closeCodes";
 import type { ErrorEnvelope } from "./errors";
 import { LeaseRenewer } from "./leaseRenewer";
 import { PriorityDispatcher } from "./boundedQueue";
@@ -81,6 +82,9 @@ export interface WsClientOptions {
   onCamera?: (frame: DecodedCameraFrame) => void;
   onLeaseFrame?: (frame: DecodedTextFrame) => void;
   onError?: (error: ErrorEnvelope) => void;
+  // The socket was closed by a server refusal. Called once per refusal, and the socket is
+  // not retried afterwards — the caller is the only thing that can act on it.
+  onLinkRefused?: (refusal: LinkRefusal) => void;
 }
 
 export interface WsClientStats {
@@ -90,6 +94,10 @@ export interface WsClientStats {
   malformedCount: number;
   errorCount: number;
   socketErrorCount: number;
+  // Closes carrying a server refusal code. Distinct from `socketErrorCount`, which counts
+  // browser-side transport errors: one says the server refused this connection, the other
+  // says the browser's socket faulted, and they call for opposite responses.
+  refusalCount: number;
   // Frames that reached no socket at all. Counted even when `send` also throws, so
   // a tolerated drop is still visible; distinct from `backpressureDrops`, which
   // counts frames shed by the frozen rule while a socket was open.
@@ -135,7 +143,7 @@ export function browserWebSocketFactory(url: string): SocketLike {
     setHandlers: (handlers) => {
       socket.onopen = () => handlers.onOpen();
       socket.onmessage = (event: MessageEvent) => handlers.onMessage(event.data);
-      socket.onclose = () => handlers.onClose();
+      socket.onclose = (event: CloseEvent) => handlers.onClose(event.code, event.reason);
       socket.onerror = (event) => handlers.onError(event);
     },
   };
@@ -153,7 +161,7 @@ export class WsClient {
   private mPumpIntervalMs: number;
   private mCallbacks: Pick<
     WsClientOptions,
-    "onTelemetry" | "onCamera" | "onLeaseFrame" | "onError"
+    "onTelemetry" | "onCamera" | "onLeaseFrame" | "onError" | "onLinkRefused"
   >;
 
   private mSocket: SocketLike | null;
@@ -169,6 +177,7 @@ export class WsClient {
   private mMalformedCount: number;
   private mErrorCount: number;
   private mSocketErrorCount: number;
+  private mRefusalCount: number;
   private mUndeliverableCount: number;
 
   constructor(options: WsClientOptions) {
@@ -186,6 +195,7 @@ export class WsClient {
       onCamera: options.onCamera,
       onLeaseFrame: options.onLeaseFrame,
       onError: options.onError,
+      onLinkRefused: options.onLinkRefused,
     };
 
     this.mSocket = null;
@@ -205,6 +215,7 @@ export class WsClient {
     this.mMalformedCount = 0;
     this.mErrorCount = 0;
     this.mSocketErrorCount = 0;
+    this.mRefusalCount = 0;
     this.mUndeliverableCount = 0;
 
     this.mDecoderPort.onDecoded((frame) => this.onDecoded(frame));
@@ -258,6 +269,7 @@ export class WsClient {
       malformedCount: this.mMalformedCount,
       errorCount: this.mErrorCount,
       socketErrorCount: this.mSocketErrorCount,
+      refusalCount: this.mRefusalCount,
       undeliverableCount: this.mUndeliverableCount,
     };
   }
@@ -312,7 +324,7 @@ export class WsClient {
     socket.setHandlers({
       onOpen: () => {},
       onMessage: (data) => this.onSocketMessage(data),
-      onClose: () => this.onSocketClose(),
+      onClose: (code, reason) => this.onSocketClose(code, reason),
       // A socket transport error is a browser-side event, not a backend OA fault,
       // so it is counted here and never surfaced as a fabricated OA-* envelope.
       onError: () => {
@@ -330,8 +342,29 @@ export class WsClient {
 
   // A closed socket is retried — the socket, and only the socket. The backend
   // Robot is untouched (I-2): there is no re-attach here, by construction.
-  private onSocketClose(): void {
+  //
+  // A HANDSHAKE refusal is the one exception, and only that one. The server settles the
+  // role, the session and the Origin before it reads a frame, and all three are fixed
+  // when this client is constructed — so the next socket earns the identical close and
+  // the retry is a request-per-delay loop that never ends. There the client quiesces and
+  // hands the refusal out; `dispose()` because a half-live client whose pump and renewal
+  // loop keep running against a null socket is the same silence in another shape.
+  //
+  // Every other refusal is a verdict on ONE FRAME (`backend/ws/dispatch.py`,
+  // `arm_channel.py`), and a fresh socket that does not send it is accepted. Those are
+  // counted and retried, because this socket carries the soft stop and `FR-GUI-065` puts
+  // that within reach of every role — killing the channel over one refused `command`
+  // would take the stop away until the operator reloads the page.
+  private onSocketClose(code: number, reason: string): void {
     this.mSocket = null;
+    if (isServerRefusal(code)) {
+      this.mRefusalCount += 1;
+    }
+    if (isHandshakeRefusal(code)) {
+      this.dispose();
+      this.mCallbacks.onLinkRefused?.({ code, reason });
+      return;
+    }
     if (!this.mStarted || this.mRetryTimerId !== null) {
       return;
     }

@@ -11,6 +11,7 @@
 // empty lease, no telemetry, nothing moving. A provider that reported "open" for a client it
 // could not construct would let a screen show an idle rig it is not connected to.
 
+import type { LinkRefusal } from "../ws/closeCodes";
 import type { LeaseSnapshot } from "../ws/leaseRenewer";
 import {
   createContext,
@@ -34,6 +35,13 @@ export interface RealtimeLifecycle {
 
 export type RealtimeStatus = "open" | "unavailable";
 
+// What the provider hands the factory. The one thing the shell needs back from a client it
+// otherwise only starts and disposes: the server refused this connection and will refuse the
+// next one, so nothing below can go on drawing a channel.
+export interface RealtimeClientHooks {
+  onLinkRefused: (refusal: LinkRefusal) => void;
+}
+
 export interface RealtimeContextValue<TClient extends RealtimeLifecycle = RealtimeLifecycle> {
   // The live client, or null when one could not be built. Null is not "not yet" — the provider
   // builds it synchronously on mount — it is "there is no realtime channel on this page".
@@ -49,8 +57,10 @@ interface RealtimeProviderProps<TClient extends RealtimeLifecycle> {
   children: ReactNode;
   // How to build the client. Injected rather than imported so this provider can be rendered in a
   // lane with no Worker global, and so a host that wants a different role or session supplies it
-  // at the one place the client is made.
-  createClient: () => TClient;
+  // at the one place the client is made. The hooks are passed in rather than read back off the
+  // client because a refusal happens once and never changes: a reader would have to be polled
+  // to catch it, and the poll would run for the whole life of a page to observe one event.
+  createClient: (hooks: RealtimeClientHooks) => TClient;
 }
 
 export function RealtimeProvider<TClient extends RealtimeLifecycle>({
@@ -60,9 +70,10 @@ export function RealtimeProvider<TClient extends RealtimeLifecycle>({
   // Built once and kept, never rebuilt on re-render: `useState`'s initialiser runs on mount
   // only, so a parent re-rendering cannot open a second socket. That is the D-2 guarantee, and
   // it is structural here rather than a rule someone has to remember.
+  const [refused, setRefused] = useState<LinkRefusal | null>(null);
   const [built] = useState<{ client: TClient | null; reason: string | null }>(() => {
     try {
-      return { client: createClient(), reason: null };
+      return { client: createClient({ onLinkRefused: setRefused }), reason: null };
     } catch (error) {
       return { client: null, reason: String(error) };
     }
@@ -86,19 +97,29 @@ export function RealtimeProvider<TClient extends RealtimeLifecycle>({
   }, [built]);
 
   const value = useMemo<RealtimeContextValue<TClient>>(() => {
-    const reason = built.reason ?? failed;
+    const reason = built.reason ?? failed ?? refusalReason(refused);
     return {
       client: reason === null ? built.client : null,
       status: reason === null && built.client !== null ? "open" : "unavailable",
       reason,
     };
-  }, [built, failed]);
+  }, [built, failed, refused]);
 
   return (
     <RealtimeContext.Provider value={value as RealtimeContextValue}>
       {children}
     </RealtimeContext.Provider>
   );
+}
+
+// The refusal in the server's own words, prefixed with its close code. Both halves are kept:
+// the reason is what a person can act on, and the code is what they can match against the
+// server log. An empty reason is a server that sent none, not a reason worth inventing.
+function refusalReason(refusal: LinkRefusal | null): string | null {
+  if (refusal === null) {
+    return null;
+  }
+  return refusal.reason === "" ? String(refusal.code) : `${refusal.code}: ${refusal.reason}`;
 }
 
 export function useRealtime(): RealtimeContextValue {

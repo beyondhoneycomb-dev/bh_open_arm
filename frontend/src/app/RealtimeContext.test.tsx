@@ -9,17 +9,19 @@
 // context has to be able to tell "connected and quiet" from "never connected", and a provider
 // that reported one for the other would let a screen render a lease it does not have.
 
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { WS_CLOSE_UNAUTHORIZED_FRAME, type LinkRefusal } from "../ws/closeCodes";
 import { RealtimeProvider, useRealtime } from "./RealtimeContext";
 
 function Probe() {
-  const { status, client } = useRealtime();
+  const { status, client, reason } = useRealtime();
   return (
     <div>
       <span data-testid="status">{status}</span>
       <span data-testid="has-client">{client ? "yes" : "no"}</span>
+      <span data-testid="reason">{reason ?? ""}</span>
     </div>
   );
 }
@@ -99,6 +101,58 @@ describe("RealtimeProvider", () => {
 
     expect(screen.getByTestId("status").textContent).toBe("unavailable");
     expect(screen.getByTestId("has-client").textContent).toBe("no");
+  });
+
+  it("reports a server refusal in the server's own words, with its close code", () => {
+    // The refusal is the backend's only server-to-client fault channel — `CTR-WS@v2` carries no
+    // error frame — and it arrives once, on a socket that will not be retried. A provider that
+    // kept saying "open" would leave every consumer drawing a channel the server has closed.
+    let refuse: ((refusal: LinkRefusal) => void) | null = null;
+    const client = fakeClient();
+
+    render(
+      <RealtimeProvider
+        createClient={(hooks) => {
+          refuse = hooks.onLinkRefused;
+          return client;
+        }}
+      >
+        <Probe />
+      </RealtimeProvider>,
+    );
+    expect(screen.getByTestId("status").textContent).toBe("open");
+
+    act(() => {
+      refuse?.({ code: WS_CLOSE_UNAUTHORIZED_FRAME, reason: "observer may not send command" });
+    });
+
+    expect(screen.getByTestId("status").textContent).toBe("unavailable");
+    expect(screen.getByTestId("has-client").textContent).toBe("no");
+    expect(screen.getByTestId("reason").textContent).toBe(
+      "4404: observer may not send command",
+    );
+  });
+
+  it("shows the bare code when the server sent no reason", () => {
+    // A truncated or absent reason is still a refusal. Inventing words for it would put a
+    // sentence in the operator's hands that matches nothing in the server log.
+    let refuse: ((refusal: LinkRefusal) => void) | null = null;
+
+    render(
+      <RealtimeProvider
+        createClient={(hooks) => {
+          refuse = hooks.onLinkRefused;
+          return fakeClient();
+        }}
+      >
+        <Probe />
+      </RealtimeProvider>,
+    );
+    act(() => {
+      refuse?.({ code: WS_CLOSE_UNAUTHORIZED_FRAME, reason: "" });
+    });
+
+    expect(screen.getByTestId("reason").textContent).toBe("4404");
   });
 
   it("refuses a consumer outside the provider", () => {
