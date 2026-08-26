@@ -1,6 +1,6 @@
 # STATUS — 지금 무엇이 도는가
 
-작성 2026-08-24 · 갱신 2026-08-26(§3.3·§6·§6b·§8) · 기준 커밋 `385c8cd` + 미커밋 작업트리
+작성 2026-08-24 · 갱신 2026-08-26(§3.2·§3.4·§6·§8) · 기준 커밋 `64d5234` + 미커밋 작업트리
 
 ---
 
@@ -72,16 +72,43 @@
 
 | 명령 | 무엇 | 한계 |
 |---|---|---|
-| `oa-serve` | FastAPI + SPA + WebSocket 1개 | `--arm` 이 `none`·`dummy` **뿐**. 실기 백엔드 없음 |
+| `oa-serve` | FastAPI + SPA + WebSocket 1개 | `--arm` 은 `none`·`dummy`·**`real`**. `real` 은 **읽기 전용** — 보드에 실기 값이 오르고, 명령은 여전히 안 나간다(§6) |
 | — REST | `GET /api/tools` · `GET /api/config` · `PUT /api/config/{서브객체}` | 서브객체 4개(`layout`·`presets`·`endEffector`·`control`) |
 | — WS `/ws/realtime` | 리스 갱신·재무장 핸드셰이크·`stop_hold` 수용 · 거절은 닫힘 코드 4400–4408 로 답한다(§8.1) | **서버가 먼저 보내는 프레임 0종.** §6 참조 |
 | — SPA | 13화면 + `/viewport` | 값 전량 픽스처. 실시간 구독 0 |
+| `oa-camcap --bind` | 어느 카메라가 어느 슬롯인가 판정 — 렌즈를 가리면 어두워지는 뷰가 그 슬롯 | **미실행.** `camera_binding.json` 이 아직 없어서 `oa-camcap` 은 거절한다 |
 
 ### 3.3 저장소 도구
 
 `oa-env` · `./scripts/gates.sh` — 검사 **13종**(파이썬 레인 9 + 프런트 `tsc`·`eslint`·`vitest`·`vite build`), 약 100초.
 
 `oa-check`·`oa-registry`·`oa-index`·`oa-contracts`·`oa-state` 는 2026-08-26 에 삭제됐다(§6b). 남은 진입점은 `oa-serve`·`oa-camcap`·`oa-env` 셋이다.
+
+---
+
+### 3.4 `--arm real` — 2026-08-26 신설, 아직 안 켜봤다
+
+`oa-serve --arm real` 이 하는 일, 순서대로 (`backend/config/arm.py`):
+
+1. `~/.config/openarm/can_binding.json` 을 읽고 지금 있는 채널에 맞춘다 (`resolve_arm_channels`).
+   못 맞추면 **거절하고** `canbind_session.sh` 를 지목한다 — 두 팔은 같은 CAN id 로 답하므로
+   "첫 번째 인터페이스" 폴백은 팔이 움직이기 전까지 정답과 구분되지 않는다.
+2. 양쪽 인터페이스 락을 쥔다 (`LockManager.acquire_all`, `01` FR-SYS-005). 남이 쥐고 있으면 거절.
+3. `BiOaOpenArmFollower` 를 채널별 `port` 로 짓고 `connect_readonly(lock_manager)`.
+4. `ArmSession` 에 `RealSideReader` 둘. 각 호출이 `OaOpenArmFollower.read_frame()` — 한 번의
+   `sync_read_all_states` 로 pose·torque·`GuardSample` 이 같이 나온다.
+
+🔴 **뜨는 순간 모터 14개가 통전된다.** `DamiaoMotorsBus.connect()` 의 핸드셰이크가
+`CAN_CMD_ENABLE`(0xFC)를 보내고 응답을 요구한다(`openarm_follower_oa.py:471-475`). kp·kd·tau 가
+0 이라 잡는 힘은 없지만 **한 프레임이면 움직인다.** 브레이크가 없다 — 사람이 받쳐야 한다.
+시동 시 stderr 로 그 문장을 낸다.
+
+**읽기만 한다.** `ArmSession` 에는 송신 경로가 없고 `STOP_HOLD_SENDER` 는 여전히 null 이다
+(§6). 종료 시 `ArmBackend.close()` 가 틱을 세운 **뒤에** 토크를 끄고 버스를 닫고 락을 푼다.
+
+**아직 두 번째 writer 는 없다.** `ArmSessionRunner` 스레드가 버스를 만지는 유일한 쪽이므로
+버스 뮤텍스를 안 지었다(`CLAUDE.md` §4b). **정지 루프가 붙는 회차에 이게 바뀐다** — 그때
+명령은 이 루프를 통해서 가야 한다.
 
 ---
 
@@ -154,7 +181,6 @@
 
 | 무엇 | 막힌 이유 |
 |---|---|
-| **`oa-serve` 실기 백엔드** | `ARM_BACKENDS = ("none", "dummy")`. 실기를 서버 프로세스에 붙이는 작업이 통째로 남았다 |
 | **텔레메트리 흐름** | `ArmStateBoard` 가 100 Hz 로 쓰는데 `board.view()` 프로덕션 소비자 0. `CTR-WS@v2` 의 `telemetry` 프레임은 **필드가 0개**다. 잠금은 사라졌으므로 막는 것은 이제 기계가 아니라 **형상 결정** — 프런트에 이미 갈라진 형상 둘 중 무엇을 정본으로 하느냐다(§6 아래) |
 | **정지 명령 루프** | `STOP_HOLD_SENDER = null` (`frontend/src/app/backendLink.ts`). `ArmSession` 은 읽고 게시할 뿐 **보내지 않는다** — 버스 핸들도 engage 시퀀스도 없다. 채우면 GUI 가 `{sent:true}` 를 받고 팔은 그대로다 (NORM-007) |
 | **`/api/system/report`** | S-13 이 부르는데 백엔드 0건 |
@@ -290,7 +316,7 @@
 | | 무엇 | 크기 | 비고 |
 |---|---|---|---|
 | 1 | ~~**`onError` 배선**~~ | — | **전제가 틀렸다. 2026-08-25 폐기.** error 프레임은 존재하지 않으므로 도착하지도, 버려지지도 않는다 — `CTR-WS@v2` 프레임 열 종에 error 가 없고(`contracts/ws/schema.py:223-338`), 백엔드 송신 경로는 `sink.py:121`·`app.py:198` 둘뿐이다. `onError` 는 생산자 0인 소비자이며 `CG-G-03g` 는 `CTR-WS@v3` 없이는 열리지 않는다. 그 자리에 있던 실제 결함은 §8.1 로 옮겼고 고쳤다 |
-| 2 | **`oa-serve` 실기 백엔드** | 큼 | `--arm real`. 이게 되기 전에는 텔레메트리를 열어도 합성값만 흐른다 |
+| 2 | ~~**`oa-serve` 실기 백엔드**~~ | — | **됐다(2026-08-26). §3.4 참조.** `--arm real` 이 `can_binding.json` 으로 채널을 풀고, 양팔 락을 쥐고, `BiOaOpenArmFollower` 를 열어 보드에 실기 값을 올린다. 첫 실행은 아직 — 뜨는 순간 모터 14개가 통전된다 |
 | 3 | **`telemetry` 프레임에 본문을 준다** | 중간 + 결정 | 2번 뒤. 세대 범프가 아니라 **형상 결정**이다 — 파이썬 표·`envelope.schema.json`·프런트 표 셋이 같은 것을 말하게 하고, 위의 갈라진 형상 둘 중 하나를 고른다 |
 | 4 | 정지 명령 루프 | 중간 | 3번 뒤. 선행은 토크-ON 이고 **사람이 팔 옆에 있어야 한다** |
 | 5 | `/api/system/report` | 중간 | 포트 정본이 `spec/01`:456-462 마크다운 표뿐이라 상수로 박으면 세 번째 정본이 된다 — 읽는 방법 결정 필요 |
