@@ -1,4 +1,4 @@
-// Consume the frozen CTR-ERR@v1 contract as a test target: read the backend
+// Consume the frozen CTR-ERR@v2 contract as a test target: read the backend
 // registry file directly and assert the browser mirror still agrees with it, so
 // a change to the frozen severity levels or domain set breaks this test instead
 // of silently desynchronising the notification center. The YAML is read as text
@@ -11,7 +11,6 @@ import { describe, expect, it } from "vitest";
 import {
   OA_DOMAINS,
   Severity,
-  holdsBadgeUntilAck,
   isValidErrorCode,
 } from "./errorCodes";
 import { repoFile } from "../testSupport/repoRoot";
@@ -38,7 +37,7 @@ function frozenDomains(): string[] {
   return [...block[1].matchAll(/-\s*(OA-[A-Z]+)/g)].map((m) => m[1]);
 }
 
-describe("CTR-ERR@v1 mirror agrees with the frozen registry", () => {
+describe("CTR-ERR@v2 mirror agrees with the frozen registry", () => {
   it("pins the same four severity levels and values", () => {
     expect(frozenSeverityLevels()).toEqual({
       OK: Severity.OK,
@@ -53,14 +52,12 @@ describe("CTR-ERR@v1 mirror agrees with the frozen registry", () => {
   });
 });
 
-describe("severity badge-hold rule (CG-G-03g)", () => {
-  it("holds the badge for ERROR and above, not for OK/WARN", () => {
-    expect(holdsBadgeUntilAck(Severity.OK)).toBe(false);
-    expect(holdsBadgeUntilAck(Severity.WARN)).toBe(false);
-    expect(holdsBadgeUntilAck(Severity.ERROR)).toBe(true);
-    expect(holdsBadgeUntilAck(Severity.STALE)).toBe(true);
-  });
-});
+// The badge-hold rule used to live here as `holdsBadgeUntilAck(severity) => severity >=
+// ERROR`, and that is exactly the shape being removed: the four levels are two axes, not
+// one scale, so a threshold across them decides by accident. What holds the badge now is
+// whether the notification stopped something (`notifications.ts`), and severity is only
+// rendered. The axis fact this file still has to pin is that OK/WARN/ERROR/STALE is the
+// frozen set — asserted above against the registry.
 
 describe("OA-* code validation", () => {
   it("accepts hex numbers in a closed domain and rejects everything else", () => {

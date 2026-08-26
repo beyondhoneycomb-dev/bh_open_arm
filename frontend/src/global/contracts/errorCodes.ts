@@ -1,4 +1,4 @@
-// Browser-side mirror of the frozen CTR-ERR@v1 error-code contract, consumed by
+// Browser-side mirror of the frozen CTR-ERR@v2 error-code contract, consumed by
 // the notification center. The canon is the backend registry
 // (contracts/errors/error_registry.yaml); the browser never authors codes, it
 // only renders codes the backend emits over the WS. This module pins the two
@@ -7,8 +7,10 @@
 // silently mislabelling an alert. The GUI must not duplicate the full code table:
 // that stays backend-owned and arrives at runtime.
 
-// The 4 fixed severity levels (CTR-ERR@v1, 14 §2.10). Values are the contract:
-// OK < WARN < ERROR on the diagnostic axis, STALE the staleness axis above ERROR.
+// The 4 fixed severity levels (CTR-ERR@v2, 14 §2.10). The numbers are the contract's,
+// and they are NOT a single scale: OK < WARN < ERROR is the diagnostic axis, while
+// STALE is the staleness axis ("we could not check") that the contract happens to
+// number above it. Nothing may threshold across the two — see `notifications.ts`.
 // A const object rather than a TS enum keeps the numeric values explicit and
 // isolatedModules-safe.
 export const Severity = {
@@ -23,16 +25,7 @@ export type SeverityValue = (typeof Severity)[SeverityName];
 
 export const SEVERITY_NAMES: readonly SeverityName[] = ["OK", "WARN", "ERROR", "STALE"];
 
-// CG-G-03g / FR-GUI-066: an alert at ERROR or above holds its badge until the
-// operator acknowledges it. STALE (value 3) sits above ERROR on the numeric axis
-// and is a serious condition, so it holds too.
-export const BADGE_HOLD_MIN_SEVERITY: SeverityValue = Severity.ERROR;
-
-export function holdsBadgeUntilAck(severity: SeverityValue): boolean {
-  return severity >= BADGE_HOLD_MIN_SEVERITY;
-}
-
-// The closed set of OA-* domain prefixes (CTR-ERR@v1). A code outside these is
+// The closed set of OA-* domain prefixes (CTR-ERR@v2). A code outside these is
 // not a valid code; a new domain is a contract bump, never an in-place addition.
 export const OA_DOMAINS: readonly string[] = [
   "OA-CAN",
@@ -48,7 +41,7 @@ export const OA_DOMAINS: readonly string[] = [
 ];
 
 // OA-<domain>-<3 hex>. The number group is hex because OA-MOT mirrors the Damiao
-// ERR nibble (008..00E), so 00A..00E are valid, not typos (CTR-ERR@v1).
+// ERR nibble (008..00E), so 00A..00E are valid, not typos (CTR-ERR@v2).
 export const OA_CODE_PATTERN = /^OA-([A-Z]+)-([0-9A-F]{3})$/;
 
 // Report whether a string is a well-formed code in one of the closed domains.

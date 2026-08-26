@@ -26,6 +26,7 @@ function errorAlert(id: string): Notification {
     source: "OA-CAN",
     timestamp: Date.now(),
     detail: "이중 bind 감지",
+    blocking: true,
     acked: false,
   };
 }
@@ -42,9 +43,17 @@ describe("NotificationCenter (CG-G-03g render): badge held until ack", () => {
     expect(cleared).toHaveAttribute("data-alert-held", "false");
   });
 
-  it("does not hold the badge for a WARN alert", () => {
-    const warn: Notification = { ...errorAlert("w1"), severity: Severity.WARN };
-    render(<NotificationBadge notifications={[warn]} />);
+  it("does not hold the badge for an alert that stopped nothing", () => {
+    // Severity is rendered, not consulted: this row is an ERROR and still asks for no
+    // click, because nothing is waiting on the operator to release it.
+    const logged: Notification = { ...errorAlert("l1"), blocking: false };
+    render(<NotificationBadge notifications={[logged]} />);
     expect(screen.getByRole("status")).toHaveAttribute("data-alert-held", "false");
+  });
+
+  it("holds the badge for a WARN that stopped something", () => {
+    const warnLatch: Notification = { ...errorAlert("w1"), severity: Severity.WARN };
+    render(<NotificationBadge notifications={[warnLatch]} />);
+    expect(screen.getByRole("status")).toHaveAttribute("data-alert-held", "true");
   });
 });

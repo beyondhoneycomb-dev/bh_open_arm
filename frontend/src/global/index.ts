@@ -89,7 +89,6 @@ export {
 export {
   Severity,
   SEVERITY_NAMES,
-  holdsBadgeUntilAck,
   isValidErrorCode,
   OA_DOMAINS,
   type SeverityValue,
