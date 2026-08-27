@@ -79,6 +79,24 @@ CONFIG_ROUTE = "/api/config"
 CONFIG_SUBOBJECT_ROUTE = "/api/config/{subobject}"
 TOOLS_ROUTE = "/api/config/tools"
 
+# The camera device panel's surface (S-06, `06` FR-CAM-004). The port travels in the path rather
+# than a query because it is the resource's identity here; it is a `bus_info` string
+# (`usb-0000:00:0d.0-1.1.1`) and carries no slash, so it is one segment.
+CAMERA_DEVICES_ROUTE = "/api/cameras/devices"
+CAMERA_SLOT_ROUTE = "/api/cameras/slots/{slot}"
+CAMERA_PREVIEW_ROUTE = "/api/cameras/devices/{port_path}/preview"
+
+# The device-row wire shape S-06's `DiscoveredCamera` mirrors. Named here so the two copies of
+# the shape have one place to be compared against; `frontend/src/screens/S-06/source.ts` is the
+# other, and a contract test reads both.
+FIELD_PORT_PATH = "portPath"
+FIELD_CARD = "card"
+FIELD_DEVICE_PATH = "devicePath"
+FIELD_ASSIGNED_SLOT = "assignedSlot"
+FIELD_DEVICES = "devices"
+FIELD_SLOTS = "slots"
+FIELD_UNBOUND_PORTS = "unboundPorts"
+
 # The browser<->backend boundary `oa-serve` opens (13 §2.7, FR-GUI-006). One port carries the SPA
 # bundle, the REST surface and the single WebSocket, which is what lets the browser hold exactly
 # one origin and the air-gap CSP stay closed. The spec fixes the default and requires the port be

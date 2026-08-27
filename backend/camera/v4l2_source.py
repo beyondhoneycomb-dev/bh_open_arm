@@ -28,9 +28,10 @@ Every rule below is a measurement on this rig, not an inheritance:
    as "another process holds it", which sends the operator looking for a process that is their own
    previous run.
 
-What this module does not do is decide *which* camera is which. `portpath.node_by_port` already
-resolves a bound port to the node on it, and refuses when nothing is there — that is where the
-identity lives, because the wrist pair shares one serial and the port is all that separates them.
+What this module does not do is decide *which* camera is which. `rig.resolve_slots` turns the
+operator's persisted assignment into the node to open, and refuses when a bound camera is not
+there — that is where the identity lives, because the wrist pair shares one serial and the port
+is all that separates them.
 
 **Every failure here raises, and that is not a contradiction of tolerant connection.** `02b` §6.2
 gives `WP-3B-01` the rule that a dead camera must warn and be skipped rather than fail the arm's
@@ -84,12 +85,6 @@ NS_PER_MS = 1_000_000
 # the first-opened camera starts the run several frames ahead of the last. Deeper than the
 # four-deep buffer those frames sat in.
 PRERUN_DRAIN_FRAMES = 8
-
-# Frames averaged per brightness reading during identification. Enough to ride over one
-# auto-exposure step — which is the failure this averaging exists for, since an exposure
-# adjustment between two readings is a brightness change nobody made — and short enough that the
-# operator is not holding a hand over a lens for a noticeable time.
-PROBE_FRAMES = 5
 
 
 class V4l2OpenError(RuntimeError):
@@ -277,7 +272,7 @@ def _present_controls(
     return present
 
 
-def _default_open(device: str) -> CaptureDevice:
+def open_v4l2_capture(device: str) -> CaptureDevice:
     """Open a device through cv2's V4L2 backend.
 
     The backend is named rather than left to cv2's search order: the search picks whichever
@@ -327,7 +322,7 @@ def open_frame_source(
     """
     import cv2
 
-    opener = open_capture if open_capture is not None else _default_open
+    opener = open_capture if open_capture is not None else open_v4l2_capture
     device = str(node.device)
     label = f"{node.card} on {node.port_path} ({device})"
 
@@ -442,102 +437,16 @@ def _lock_controls(
     return plan.skipped, format_finding
 
 
-class BrightnessProbe:
-    """Opens a node just far enough to answer "how bright is this view right now?".
-
-    Ownership: owns the capture and closes it. Used by the bind flow, never by a run.
-
-    It deliberately does NOT go through `open_frame_source`. That path forces a declared format
-    and verifies declared controls, and both are properties of the SLOT — which is the thing bind
-    is trying to work out. A camera that will not take 1920x1200 must still be identifiable, or
-    the operator is told to fix a binding they cannot record.
-
-    Frames are averaged rather than sampled once: a single frame catches the auto-exposure
-    mid-adjust, and an exposure step reads as a covered lens.
-    """
-
-    def __init__(self, capture: CaptureDevice, frames: int) -> None:
-        """Wrap an open capture.
-
-        Args:
-            capture: The open device.
-            frames: Frames to average per reading.
-        """
-        self._capture = capture
-        self._frames = frames
-
-    def __call__(self) -> float:
-        """Return the mean brightness of the next frames, normalised to 0..1.
-
-        Returns:
-            (float) Mean sample value over the device's full range, or 0.0 when no frame
-                arrived — which the caller reads as a black baseline and refuses on, rather than
-                as a camera that happens to be dark.
-        """
-        import numpy
-
-        means: list[float] = []
-        for _ in range(self._frames):
-            ok, frame = self._capture.read()
-            if not ok or frame is None:
-                continue
-            array = numpy.asarray(frame)
-            # The device's own full scale, not a hardcoded 255: a 10-bit camera surfaced as
-            # uint16 would otherwise read four times too bright and never clear any threshold.
-            full_scale = (
-                float(numpy.iinfo(array.dtype).max)
-                if numpy.issubdtype(array.dtype, numpy.integer)
-                else 1.0
-            )
-            means.append(float(array.mean()) / full_scale)
-        if not means:
-            return 0.0
-        return sum(means) / len(means)
-
-    def close(self) -> None:
-        """Release the device."""
-        self._capture.release()
-
-
-def open_brightness_probe(
-    node: CaptureNode,
-    frames: int = PROBE_FRAMES,
-    open_capture: Callable[[str], CaptureDevice] | None = None,
-) -> BrightnessProbe:
-    """Open a node at whatever format it defaults to, for identification only.
-
-    Args:
-        node: The capture node to open.
-        frames: Frames to average per reading.
-        open_capture: How to open the device, injected so the bind flow is drivable with no
-            camera. None uses cv2's V4L2 backend.
-
-    Returns:
-        (BrightnessProbe) The probe, which owns the device until closed.
-
-    Raises:
-        V4l2OpenError: If the device does not open.
-    """
-    opener = _default_open if open_capture is None else open_capture
-    capture = opener(str(node.device))
-    if not capture.isOpened():
-        capture.release()
-        raise V4l2OpenError(f"{node.card} at {node.port_path} ({node.device}) did not open")
-    return BrightnessProbe(capture, frames)
-
-
 __all__ = [
     "CONTROL_ABSENT",
     "NS_PER_MS",
     "PRERUN_DRAIN_FRAMES",
-    "PROBE_FRAMES",
     "WARMUP_FRAMES",
-    "BrightnessProbe",
     "CaptureDevice",
     "CaptureFormat",
     "V4l2FrameSource",
     "V4l2OpenError",
     "drain_stale_frames",
-    "open_brightness_probe",
+    "open_v4l2_capture",
     "open_frame_source",
 ]

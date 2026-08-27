@@ -36,22 +36,30 @@ import {
   type CameraScreenIntents,
   type CameraScreenSource,
 } from "./source";
+import { useCameraDevices } from "./useCameraDevices";
 
 interface CameraScreenProps {
   source?: CameraScreenSource;
   intents?: CameraScreenIntents;
 }
 
-export default function CameraScreen({
-  source = defaultCameraScreenSource(),
-  intents = noopIntents(),
-}: CameraScreenProps) {
-  const depthOn = depthLayerEnabled(source.gates);
-  const depthReducedNote = depthNote(source.gates);
+export default function CameraScreen({ source, intents }: CameraScreenProps) {
+  // A caller that supplied a source is driving this screen itself — a fixture, a
+  // test, a later integration wave. Only the unsupplied case talks to the backend,
+  // so a fixture render never reaches for a device.
+  const live = useCameraDevices(source === undefined);
+  const rendered = source ?? defaultCameraScreenSource();
+  const acting = intents ?? noopIntents();
+  const depthOn = depthLayerEnabled(rendered.gates);
+  const depthReducedNote = depthNote(rendered.gates);
   // The slots on offer are the registered ones, derived the same way the tiles
   // are (CG-G-S06a). A hardcoded slot list here would let the panel offer a slot
   // the robot does not have, and the assignment would fail at the backend.
-  const slots = deriveTiles(source.observationFeatures).map((tile) => tile.slot);
+  const derivedSlots = deriveTiles(rendered.observationFeatures).map((tile) => tile.slot);
+  // The backend's registered set once it has answered. It is what the assignment is validated
+  // against, so offering anything else would offer a slot the PUT refuses.
+  const slots = live.scan?.slots ?? derivedSlots;
+  const discovered = live.scan?.devices ?? (source === undefined ? [] : rendered.discovered);
 
   return (
     <div className="oa-cam">
@@ -66,32 +74,38 @@ export default function CameraScreen({
         </p>
       )}
 
+      {live.error === null ? null : (
+        <p className="oa-cam__device-error" role="alert" data-device-error="true">
+          {live.error}
+        </p>
+      )}
+
       <DeviceAssignmentPanel
-        discovered={source.discovered}
+        discovered={discovered}
         slots={slots}
-        onRescanDevices={intents.onRescanDevices}
-        onAssignDevice={intents.onAssignDevice}
-        onReleaseDevice={intents.onReleaseDevice}
+        onRescanDevices={source === undefined ? live.rescan : acting.onRescanDevices}
+        onAssignDevice={source === undefined ? live.assign : acting.onAssignDevice}
+        onReleaseDevice={source === undefined ? live.release : acting.onReleaseDevice}
       />
 
       <TilePreviewGrid
-        observationFeatures={source.observationFeatures}
-        cameras={source.cameras}
-        gates={source.gates}
+        observationFeatures={rendered.observationFeatures}
+        cameras={rendered.cameras}
+        gates={rendered.gates}
       />
 
-      <StreamStatsView cameras={source.cameras} />
+      <StreamStatsView cameras={rendered.cameras} />
 
       <PreviewIsolationPanel
-        cameras={source.cameras}
-        masterPreviewEnabled={source.masterPreviewEnabled}
-        onToggleCameraPreview={intents.onToggleCameraPreview}
-        onToggleMasterPreview={intents.onToggleMasterPreview}
+        cameras={rendered.cameras}
+        masterPreviewEnabled={rendered.masterPreviewEnabled}
+        onToggleCameraPreview={acting.onToggleCameraPreview}
+        onToggleMasterPreview={acting.onToggleMasterPreview}
       />
 
       <div className="oa-cam__grid">
-        <HandEyeCompareView results={source.handEye} />
-        <FrustumStatus results={source.handEye} depthLayerEnabled={depthOn} />
+        <HandEyeCompareView results={rendered.handEye} />
+        <FrustumStatus results={rendered.handEye} depthLayerEnabled={depthOn} />
       </div>
     </div>
   );

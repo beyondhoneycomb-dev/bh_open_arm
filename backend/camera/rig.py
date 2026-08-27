@@ -35,7 +35,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from backend.camera.controls import CameraControl
-from backend.camera.portpath import CaptureNode
+from backend.camera.portpath import CaptureNode, assert_ports_distinguish
 from backend.camera.v4l2_source import CaptureFormat
 
 # The file the operator's identification lives in, beside the CAN channel record.
@@ -123,7 +123,13 @@ def check_binding(
 
     Returns:
         (BindingCheck) What resolved, what went missing, and what is present but unclaimed.
+
+    Raises:
+        AmbiguousCameraPortError: If two nodes report one port. A dict keyed on the port would
+            silently keep whichever enumerated last, so the slot would name an enumeration
+            order — the thing `06` FR-CAM-004 refuses, wearing a port path.
     """
+    assert_ports_distinguish(nodes)
     by_port = {node.port_path: node for node in nodes}
     resolved: dict[str, CaptureNode] = {}
     missing: list[str] = []
@@ -166,8 +172,61 @@ def resolve_slots(
         f"no camera is bound and present for {', '.join(check.missing)}. "
         f"Capture nodes present: {present}. "
         f"Ports present that no slot claims: {', '.join(check.unbound_ports) or 'none'}. "
-        "A camera moved ports, or one is not enumerating. Re-run `oa-camcap --bind`; do not "
-        "guess, because the wrist pair reports one serial between the two of them."
+        "A camera moved ports, or one is not enumerating. Re-assign it on the camera screen "
+        "(S-06); do not guess, because the wrist pair reports one serial between the two."
+    )
+
+
+def assign_slot(
+    binding: CameraBinding, slot: str, port_path: str, slots: Sequence[str]
+) -> CameraBinding:
+    """Put the camera on `port_path` into `slot`, answering the new binding.
+
+    A port already filling another slot is moved rather than duplicated. One camera cannot be
+    two slots: the runner opens each slot's node and a device opened twice hands the second
+    caller no frames, which reads as a camera that went dark rather than as a binding mistake.
+
+    Args:
+        binding: The binding to amend. Not modified.
+        slot: The slot to fill.
+        port_path: The camera's port, from a scan.
+        slots: The slot names this rig has.
+
+    Returns:
+        (CameraBinding) The amended binding.
+
+    Raises:
+        CameraBindingError: If the slot is not one this rig has, or the port is empty. An empty
+            port would pin the slot to nothing and read back as bound.
+    """
+    if slot not in slots:
+        raise CameraBindingError(f"{slot!r} is not a slot on this rig; it has {', '.join(slots)}")
+    if not port_path.strip():
+        raise CameraBindingError(f"slot {slot!r} was given an empty port")
+    amended = {
+        existing: port
+        for existing, port in binding.slots.items()
+        if existing != slot and port != port_path
+    }
+    amended[slot] = port_path
+    return CameraBinding(slots=amended)
+
+
+def release_port(binding: CameraBinding, port_path: str) -> CameraBinding:
+    """Take the camera on `port_path` out of whatever slot it filled.
+
+    Silent when it filled none: the operator's intent is "this camera is not assigned", and that
+    is already true.
+
+    Args:
+        binding: The binding to amend. Not modified.
+        port_path: The camera's port.
+
+    Returns:
+        (CameraBinding) The amended binding.
+    """
+    return CameraBinding(
+        slots={slot: port for slot, port in binding.slots.items() if port != port_path}
     )
 
 
@@ -188,8 +247,8 @@ def load_binding(path: Path) -> CameraBinding:
         document = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError as absent:
         raise CameraBindingError(
-            f"no camera binding at {path}. Run `oa-camcap --bind` to record which camera is in "
-            "which slot; the wrist pair reports one serial, so this cannot be derived."
+            f"no camera binding at {path}. Assign the slots on the camera screen (S-06); the "
+            "wrist pair reports one serial, so this cannot be derived from the devices."
         ) from absent
     except (OSError, ValueError) as unreadable:
         raise CameraBindingError(f"camera binding at {path} is unreadable: {unreadable}") from (
@@ -201,7 +260,7 @@ def load_binding(path: Path) -> CameraBinding:
     if version != BINDING_VERSION:
         raise CameraBindingError(
             f"camera binding at {path} is version {version!r}, not {BINDING_VERSION}. "
-            "Re-run `oa-camcap --bind`."
+            "Re-assign the slots on the camera screen (S-06)."
         )
     slots = document.get(FIELD_SLOTS)
     if not isinstance(slots, dict) or not all(
@@ -256,8 +315,10 @@ __all__ = [
     "CameraBindingError",
     "SlotProfile",
     "binding_path",
+    "assign_slot",
     "check_binding",
     "load_binding",
+    "release_port",
     "resolve_slots",
     "save_binding",
 ]

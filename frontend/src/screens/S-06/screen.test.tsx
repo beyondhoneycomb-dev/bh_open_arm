@@ -16,7 +16,10 @@ function withGates(overrides: Partial<CameraScreenSource["gates"]>): CameraScree
 
 describe("S-06 /cameras screen", () => {
   it("renders offline with no backend and shows every panel", () => {
-    const { container } = render(<CameraScreen />);
+    // The fixture is passed rather than defaulted: an unsupplied source is the
+    // signal that this screen is live and should scan the bus, and this test is
+    // about the offline render.
+    const { container } = render(<CameraScreen source={defaultCameraScreenSource()} />);
     expect(container.querySelector(".oa-cam")).not.toBeNull();
     expect(container.querySelector("#oa-cam-tiles-title")).not.toBeNull();
     expect(container.querySelector("#oa-cam-stats-title")).not.toBeNull();
@@ -51,7 +54,7 @@ describe("S-06 /cameras screen", () => {
   });
 
   it("CG-G-S06b: every tile shows BOTH the UI label and the dataset key", () => {
-    const { container } = render(<CameraScreen />);
+    const { container } = render(<CameraScreen source={defaultCameraScreenSource()} />);
     const tiles = container.querySelectorAll("[data-tile-slot]");
     expect(tiles.length).toBeGreaterThan(0);
     for (const tile of tiles) {
@@ -92,7 +95,7 @@ describe("S-06 /cameras screen", () => {
   });
 
   it("CG-G-S06d: a depth camera renders a colormap; an RGB-only camera does not", () => {
-    const { container } = render(<CameraScreen />);
+    const { container } = render(<CameraScreen source={defaultCameraScreenSource()} />);
     const depth = container.querySelector('[data-depth-colormap="right_wrist"]');
     expect(depth).not.toBeNull();
     expect(depth?.querySelectorAll("[data-depth-cell]").length).toBe(48);
@@ -100,7 +103,7 @@ describe("S-06 /cameras screen", () => {
   });
 
   it("CG-G-S06e: the three metrics show and a sub-95% stream reads WARN", () => {
-    const { container } = render(<CameraScreen />);
+    const { container } = render(<CameraScreen source={defaultCameraScreenSource()} />);
     const frontRow = container.querySelector(
       `[data-metric-channel="${imageFeatureKey("front", "rgb")}"]`,
     );
@@ -112,7 +115,7 @@ describe("S-06 /cameras screen", () => {
   });
 
   it("CG-G-S06f: hand-eye shows five methods and no single-method-adopt control", () => {
-    const { container } = render(<CameraScreen />);
+    const { container } = render(<CameraScreen source={defaultCameraScreenSource()} />);
     const cards = container.querySelectorAll("[data-handeye-slot]");
     expect(cards.length).toBeGreaterThan(0);
     for (const card of cards) {
@@ -122,7 +125,7 @@ describe("S-06 /cameras screen", () => {
   });
 
   it("CG-G-S06g: the frustum reads stale exactly when the hand-eye is stale", () => {
-    const { container } = render(<CameraScreen />);
+    const { container } = render(<CameraScreen source={defaultCameraScreenSource()} />);
     expect(
       container
         .querySelector('[data-frustum-slot="front"]')
@@ -136,7 +139,7 @@ describe("S-06 /cameras screen", () => {
   });
 
   it("PG-CAM-001 pending: tiles render with a pending note and none are blocked", () => {
-    const { container } = render(<CameraScreen />);
+    const { container } = render(<CameraScreen source={defaultCameraScreenSource()} />);
     expect(container.querySelectorAll("[data-tile-blocked]")).toHaveLength(0);
     expect(container.querySelector("[data-tile-pending]")).not.toBeNull();
     expect(container.querySelector('[data-tile-disposition="pending"]')).not.toBeNull();

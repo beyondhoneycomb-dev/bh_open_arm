@@ -38,6 +38,8 @@ from fastapi.staticfiles import StaticFiles
 from backend.actuation.clock import Clock, WallClock
 from backend.actuation.session import ArmSession
 from backend.actuation.session_runner import RUNNER_STOP_JOIN_TIMEOUT_SEC, ArmSessionRunner
+from backend.camera.api import mount_camera_routes
+from backend.camera.cli import RIG_SLOTS
 from backend.config.api import create_app
 from backend.config.arm import (
     ARM_BACKEND_NONE,
@@ -325,6 +327,7 @@ def build_server_app(
             line the operator reads.
     """
     app = create_app(store)
+    mount_camera_routes(app, store.directory, tuple(RIG_SLOTS))
     websocket_mounted = mount_websocket_router(
         app, arm, clock if clock is not None else WallClock(), port
     )

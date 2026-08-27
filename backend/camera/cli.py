@@ -35,7 +35,7 @@ import argparse
 import json
 import sys
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -43,24 +43,19 @@ from typing import Any
 from backend.camera.capture_run import run_capture
 from backend.camera.controls import WRIST_CAMERA_CONTROLS
 from backend.camera.droprate import expected_frame_count, skipped_frames_from_timestamps
-from backend.camera.identify import identify_covered_node
 from backend.camera.portpath import CaptureNode, enumerate_capture_nodes
 from backend.camera.rig import (
-    CameraBinding,
     CameraBindingError,
     SlotProfile,
     binding_path,
     load_binding,
     resolve_slots,
-    save_binding,
 )
 from backend.camera.syncslop import build_slop_reports
 from backend.camera.v4l2_source import (
-    BrightnessProbe,
     CaptureFormat,
     V4l2FrameSource,
     drain_stale_frames,
-    open_brightness_probe,
     open_frame_source,
 )
 from backend.config.store import default_config_directory
@@ -330,103 +325,8 @@ def run_acceptance(duration_s: float, out_dir: Path | None) -> CaptureVerdict:
     return verdict
 
 
-def _prompt(message: str) -> None:
-    """Print a message and block until the operator presses Enter."""
-    input(message)
-
-
-class _ProbeReader:
-    """Reads brightness from whichever open probe belongs to the node being asked about."""
-
-    def __init__(self, probes: Mapping[str, BrightnessProbe]) -> None:
-        """Bind the reader to the probes opened for this bind run.
-
-        Args:
-            probes: Port path to the open probe for that node. Borrowed; the caller closes them.
-        """
-        self._probes = probes
-
-    def __call__(self, node: CaptureNode) -> float:
-        """Return this node's mean frame brightness, 0..1."""
-        return self._probes[node.port_path]()
-
-
-class _CoverPrompt:
-    """Asks the operator to cover one named slot's lens.
-
-    A class rather than a closure over the loop variable: a lambda built in the loop would read
-    `slot` at call time, and every round would name whichever slot the loop had reached last.
-    """
-
-    def __init__(self, prompt: Callable[[str], None], slot: str) -> None:
-        """Bind the prompt to one slot.
-
-        Args:
-            prompt: Prints an instruction and blocks until the operator has done it.
-            slot: The slot whose camera the operator should cover.
-        """
-        self._prompt = prompt
-        self._slot = slot
-
-    def __call__(self) -> None:
-        """Ask, and block until the operator answers."""
-        self._prompt(f"  cover the {self._slot} lens completely, then press Enter: ")
-
-
-def bind_rig(prompt: Callable[[str], None] = _prompt) -> int:
-    """Record which camera is in which slot, by asking the operator to cover each in turn.
-
-    One round per slot, over the cameras not yet assigned. Nothing is written until every slot
-    resolved: a half-written map is worse than none, because the slots it does name look decided.
-
-    Args:
-        prompt: Prints an instruction and blocks until the operator has done it. Injected so the
-            flow is drivable with no operator.
-
-    Returns:
-        (int) 0 when every slot was identified and the record was written; 1 on any refusal.
-    """
-    nodes = list(enumerate_capture_nodes())
-    print(f"capture nodes present: {len(nodes)}")
-    for node in nodes:
-        print(f"  {node.card} @ {node.device} ({node.port_path})")
-    if len(nodes) < len(RIG_SLOTS):
-        print(
-            f"\n{len(RIG_SLOTS)} slots need {len(RIG_SLOTS)} cameras and {len(nodes)} are "
-            "enumerating. A camera is unplugged, on a hub that did not come up, or not drawing "
-            "power. Nothing was recorded.",
-            file=sys.stderr,
-        )
-        return 1
-
-    probes = {node.port_path: open_brightness_probe(node) for node in nodes}
-    read_brightness = _ProbeReader(probes)
-    assigned: dict[str, str] = {}
-    try:
-        for slot in RIG_SLOTS:
-            candidates = [node for node in nodes if node.port_path not in assigned.values()]
-            print(f"\n[{slot}]")
-            result = identify_covered_node(candidates, read_brightness, _CoverPrompt(prompt, slot))
-            for reading in result.readings:
-                print(f"    {reading.port_path}  {reading.drop_fraction:5.0%} darker")
-            if not result.resolved:
-                print(f"\nINCONCLUSIVE: {result.reason}. Nothing was recorded.", file=sys.stderr)
-                return 1
-            assert result.port_path is not None
-            assigned[slot] = result.port_path
-            print(f"    -> {slot} is {result.port_path}")
-    finally:
-        for probe in probes.values():
-            probe.close()
-
-    path = binding_path(default_config_directory())
-    save_binding(path, CameraBinding(slots=assigned))
-    print(f"\nwrote {path}")
-    return 0
-
-
 def main(argv: list[str] | None = None) -> int:
-    """Run the acceptance capture and print the verdict, or record the slot binding.
+    """Run the acceptance capture and print the verdict.
 
     Args:
         argv: Command-line arguments, or None to read `sys.argv`.
@@ -435,11 +335,6 @@ def main(argv: list[str] | None = None) -> int:
         (int) 0 when every bar was met; 1 on any breach or refusal.
     """
     parser = argparse.ArgumentParser(prog="oa-camcap", description=__doc__)
-    parser.add_argument(
-        "--bind",
-        action="store_true",
-        help="record which camera is in which slot, then exit; run this after any replug",
-    )
     parser.add_argument(
         "--seconds",
         type=float,
@@ -452,9 +347,6 @@ def main(argv: list[str] | None = None) -> int:
         help="directory to write capture_ts.json, frames.json and verdict.json into",
     )
     args = parser.parse_args(argv)
-
-    if args.bind:
-        return bind_rig()
 
     try:
         verdict = run_acceptance(args.seconds, Path(args.out) if args.out else None)

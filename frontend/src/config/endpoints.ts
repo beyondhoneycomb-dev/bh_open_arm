@@ -36,3 +36,21 @@ export const DEFAULT_BACKEND_PORT = 8000;
 // same-machine. These literals never enter the built bundle.
 export const REST_DEV_PROXY_TARGET = `http://localhost:${DEFAULT_BACKEND_PORT}`;
 export const WS_DEV_PROXY_TARGET = `http://localhost:${DEFAULT_BACKEND_PORT}`;
+
+// The camera device panel's surface (S-06, `06` FR-CAM-004). Which physical camera fills which
+// slot is the operator's answer, given here against a live preview, and the backend persists it.
+//
+// These must equal `CAMERA_*_ROUTE` in backend/config/constants.py — same split-brain as
+// `WS_ENDPOINT_PATH` above, checked by the same kind of contract test.
+export const CAMERA_DEVICES_ENDPOINT = "/api/cameras/devices";
+
+// The slot to assign or clear. `slot` is a registered slot key from the scan.
+export function cameraSlotEndpoint(slot: string): string {
+  return `/api/cameras/slots/${encodeURIComponent(slot)}`;
+}
+
+// One JPEG frame from the camera on a port. A still rather than a stream: the slot's real stream
+// belongs to the capture run, and a second reader on the same node takes frames that run counts.
+export function cameraPreviewEndpoint(portPath: string): string {
+  return `${CAMERA_DEVICES_ENDPOINT}/${encodeURIComponent(portPath)}/preview`;
+}

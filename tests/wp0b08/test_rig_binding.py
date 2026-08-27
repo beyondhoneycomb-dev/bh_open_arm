@@ -137,7 +137,7 @@ def test_a_record_survives_a_write_and_a_read(tmp_path: Path) -> None:
 
 def test_a_missing_record_names_the_command_that_writes_one(tmp_path: Path) -> None:
     """An operator who reads this refusal has to know what to run next."""
-    with pytest.raises(CameraBindingError, match="--bind"):
+    with pytest.raises(CameraBindingError, match="S-06"):
         load_binding(binding_path(tmp_path))
 
 

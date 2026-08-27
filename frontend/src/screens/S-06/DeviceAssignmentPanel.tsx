@@ -10,7 +10,8 @@
 // Rows are derived from `discovered`, never from a constant: a camera is here
 // because it answered the last scan, and gone when it is unplugged.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { cameraPreviewEndpoint } from "../../config/endpoints";
 import {
   deviceForSlot,
   isAssignable,
@@ -19,6 +20,11 @@ import {
   shareCardName,
 } from "./assign";
 import type { DiscoveredCamera } from "./source";
+
+// How often each preview re-fetches. Fast enough that waving a hand in front of a
+// lens is visible as motion — which is how an operator confirms WHICH camera they
+// are looking at — and slow enough that N cameras do not queue up device opens.
+const PREVIEW_INTERVAL_MS = 500;
 
 interface DeviceAssignmentPanelProps {
   discovered: readonly DiscoveredCamera[];
@@ -33,10 +39,39 @@ interface DeviceAssignmentPanelProps {
 // The live preview for one candidate device, keyed on its port. Rendered for
 // every discovered device including the unassigned ones — an unassigned camera is
 // exactly the one the operator needs to look at before deciding.
+//
+// Polled stills rather than a stream. The slot's real stream belongs to the
+// capture run; a second reader on the same node takes frames that run is
+// counting, and the run cannot tell that from a camera that started dropping.
+//
+// The cache-buster is not decoration: without it the browser serves the first
+// frame forever and the panel shows a still picture that looks like a working
+// preview of a camera pointed somewhere it no longer is.
 function DevicePreview({ portPath }: { portPath: string }) {
+  const [tick, setTick] = useState(0);
+  const [failed, setFailed] = useState<boolean>(false);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setTick((previous) => previous + 1), PREVIEW_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [portPath]);
+
   return (
     <div className="oa-cam-assign__preview" data-preview-port={portPath}>
-      <canvas className="oa-cam-assign__canvas" data-testid={`preview-${portPath}`} />
+      {failed ? (
+        <p className="oa-cam-assign__preview-off" data-testid={`preview-off-${portPath}`}>
+          프리뷰 없음 — 캡처가 이 카메라를 쥐고 있거나 열리지 않는다
+        </p>
+      ) : (
+        <img
+          className="oa-cam-assign__frame"
+          data-testid={`preview-${portPath}`}
+          src={`${cameraPreviewEndpoint(portPath)}?t=${tick}`}
+          alt={`${portPath} 프리뷰`}
+          onError={() => setFailed(true)}
+          onLoad={() => setFailed(false)}
+        />
+      )}
     </div>
   );
 }
