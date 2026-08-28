@@ -108,11 +108,28 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-# `backend*` joined the list when `oa-serve` did. A console script gets the interpreter's bin
-# directory on `sys.path`, never the working directory, so an entry point naming a tree that is not
-# installed raises ModuleNotFoundError from every directory including the repository root — the six
-# scripts above all resolve into `registry`/`ops` and never exposed this.
-include = ["registry*", "ops*", "backend*"]
+# A console script gets the interpreter's bin directory on `sys.path`, never the working
+# directory, so a tree an entry point reaches and this list omits raises ModuleNotFoundError from
+# every directory INCLUDING the repository root. Running from the checkout does not paper over it,
+# which is why nothing caught the omission of `contracts` until `oa-serve` was started for real.
+#
+# The list is therefore the whole import closure of the entry points, not the trees they are
+# spelled with: `backend` reaches `contracts` (shared types), `packages` (the LeRobot plugin),
+# `deps` and `sim`. Naming only the obvious three is what broke it.
+#
+# `contracts`, `packages` and `sim` carry no top-level `__init__.py`. `packages.find` discovers
+# namespace packages by default, so they are found — but a `find` that ever gets `namespaces =
+# false` drops all three silently, and the failure lands at import time in the served process.
+include = [
+    "registry*",
+    "ops*",
+    "backend*",
+    "contracts*",
+    "packages*",
+    "sim*",
+    "deps*",
+    "targets*",
+]
 
 [tool.ruff]
 line-length = 100
