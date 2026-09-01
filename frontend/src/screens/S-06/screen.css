@@ -479,3 +479,12 @@
   gap: 0.5rem;
   align-items: center;
 }
+
+/* The hidden retry image behind a failed preview. It has to be in the layout to
+   fire onLoad/onError at all, so it is zero-sized rather than display:none. */
+.oa-cam-assign__retry {
+  width: 0;
+  height: 0;
+  opacity: 0;
+  position: absolute;
+}

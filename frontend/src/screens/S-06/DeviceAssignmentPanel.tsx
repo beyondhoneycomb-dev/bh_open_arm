@@ -10,7 +10,7 @@
 // Rows are derived from `discovered`, never from a constant: a camera is here
 // because it answered the last scan, and gone when it is unplugged.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cameraPreviewEndpoint } from "../../config/endpoints";
 import {
   deviceForSlot,
@@ -21,10 +21,18 @@ import {
 } from "./assign";
 import type { DiscoveredCamera } from "./source";
 
-// How often each preview re-fetches. Fast enough that waving a hand in front of a
-// lens is visible as motion — which is how an operator confirms WHICH camera they
-// are looking at — and slow enough that N cameras do not queue up device opens.
-const PREVIEW_INTERVAL_MS = 500;
+// The pause between one preview frame arriving and the next being asked for. NOT a
+// polling period: the next request is scheduled when the previous one settles, so
+// the rate is whatever the devices can actually sustain.
+//
+// A fixed period was the first shape and it was wrong. One frame off an Arducam
+// measures 0.48 s here — open, warm up, grab, encode, release — and a timer firing
+// every 0.5 s starts the next open before the previous release lands, which the
+// driver answers with EBUSY. That surfaced as a preview that worked for a minute
+// and then went permanently 503 on the two wrist cameras while the ZED, being
+// faster, kept going. Pacing off completion cannot produce that overlap at all,
+// where a longer period would only have made it rarer.
+const PREVIEW_GAP_MS = 150;
 
 interface DeviceAssignmentPanelProps {
   discovered: readonly DiscoveredCamera[];
@@ -51,16 +59,45 @@ function DevicePreview({ portPath }: { portPath: string }) {
   const [tick, setTick] = useState(0);
   const [failed, setFailed] = useState<boolean>(false);
 
+  // Armed by whichever of onLoad/onError fires, and cancelled on unmount so a
+  // navigation away does not leave a device being opened for a panel nobody is
+  // looking at.
+  const pending = useRef<number | null>(null);
+
   useEffect(() => {
-    const timer = window.setInterval(() => setTick((previous) => previous + 1), PREVIEW_INTERVAL_MS);
-    return () => window.clearInterval(timer);
-  }, [portPath]);
+    return () => {
+      if (pending.current !== null) {
+        window.clearTimeout(pending.current);
+      }
+    };
+  }, []);
+
+  const scheduleNext = () => {
+    if (pending.current !== null) {
+      window.clearTimeout(pending.current);
+    }
+    pending.current = window.setTimeout(() => {
+      pending.current = null;
+      setTick((previous) => previous + 1);
+    }, PREVIEW_GAP_MS);
+  };
 
   return (
     <div className="oa-cam-assign__preview" data-preview-port={portPath}>
       {failed ? (
         <p className="oa-cam-assign__preview-off" data-testid={`preview-off-${portPath}`}>
           프리뷰 없음 — 캡처가 이 카메라를 쥐고 있거나 열리지 않는다
+          <img
+            className="oa-cam-assign__retry"
+            src={`${cameraPreviewEndpoint(portPath)}?t=${tick}`}
+            alt=""
+            aria-hidden="true"
+            onError={scheduleNext}
+            onLoad={() => {
+              setFailed(false);
+              scheduleNext();
+            }}
+          />
         </p>
       ) : (
         <img
@@ -68,8 +105,18 @@ function DevicePreview({ portPath }: { portPath: string }) {
           data-testid={`preview-${portPath}`}
           src={`${cameraPreviewEndpoint(portPath)}?t=${tick}`}
           alt={`${portPath} 프리뷰`}
-          onError={() => setFailed(true)}
-          onLoad={() => setFailed(false)}
+          onError={() => {
+            // Kept as a frame that failed rather than a dead preview: a camera a
+            // capture run is holding answers 503 for the length of that run and
+            // then starts answering again, and an operator who navigated here
+            // mid-run should see it come back without reloading.
+            setFailed(true);
+            scheduleNext();
+          }}
+          onLoad={() => {
+            setFailed(false);
+            scheduleNext();
+          }}
         />
       )}
     </div>
