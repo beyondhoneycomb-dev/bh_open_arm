@@ -87,6 +87,17 @@ robot = [
     # server underneath it. Here rather than in core `dependencies` for exactly the reason FastAPI
     # is: `registry.check` validates a plan and must not drag a web server in to do it.
     "uvicorn>=0.30",
+    # The WebSocket protocol implementation uvicorn upgrades with. Bare `uvicorn` ships none, and
+    # without one the upgrade is REFUSED IN A WAY THAT LOOKS LIKE SUCCESS: the handshake answers
+    # `200 OK` instead of `101 Switching Protocols`, so the browser's client sees a closed socket
+    # and reconnects every second forever. `CTR-WS@v2`'s single realtime channel carries the soft
+    # stop (`FR-GUI-065`), so a server that cannot upgrade is a server with no stop path — and
+    # nothing in the startup report says so, because the route mounted fine.
+    #
+    # Named directly rather than taken as `uvicorn[standard]`: that extra also drags in
+    # `httptools`, `uvloop`, `watchfiles` and `python-dotenv`, none of which this process wants,
+    # and a rig has to be able to see why every dependency is here.
+    "websockets>=12",
     # Named for one import that has no FastAPI equivalent: `starlette.routing.WebSocketRoute`,
     # the base class `CG-G-01a` counts to prove the app carries exactly one realtime endpoint.
     # FastAPI exposes only its own `APIWebSocketRoute` subclass, and counting that would stop
