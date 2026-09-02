@@ -17,6 +17,7 @@
 // transport one.
 
 import { useRealtime } from "../../app/RealtimeContext";
+import { useLiveViewportSource } from "../../app/liveViewportSource";
 import ManualScreen from "./ManualScreen";
 import { defaultManualSource, jointReadoutsFrom, type ManualSource } from "./manualSource";
 
@@ -37,6 +38,10 @@ const NO_FRAME_MONO_MS = Number.NEGATIVE_INFINITY;
 
 export default function ManualRoute() {
   const { telemetry, telemetryAtMs } = useRealtime();
+  // The embedded viewport reads the same channel as the standalone route, through the same
+  // builder. Two builders over one frame is how the embed and the route drift into two
+  // viewports, which is the thing WP-G-02's public surface exists to prevent.
+  const viewport = useLiveViewportSource();
   const offline = defaultManualSource();
   const source: ManualSource = {
     ...offline,
@@ -44,6 +49,7 @@ export default function ManualRoute() {
     ee: { ...offline.ee, ...POSE_UNREPORTED },
     lastFrameMonoMs: telemetryAtMs ?? NO_FRAME_MONO_MS,
     nowMonoMs: performance.now(),
+    viewport,
   };
   return <ManualScreen source={source} />;
 }

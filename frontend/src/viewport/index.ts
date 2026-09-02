@@ -8,7 +8,13 @@ export { ViewportCanvas } from "./ViewportCanvas";
 
 export { evaluateAsset, type AssetProvenance, type AssetDecision } from "./loader/provenance";
 export { validateUrdfSource, type UrdfSourceResult } from "./loader/urdfSource";
-export { acceptSnapshot, type JointFrame, type SnapshotResult } from "./state/jointSnapshot";
+export {
+  acceptSnapshot,
+  jointFrameFor,
+  type JointFrame,
+  type JointPositionSource,
+  type SnapshotResult,
+} from "./state/jointSnapshot";
 export { evaluateStreamAge, controlInputAllowed, type StreamAgeState } from "./state/streamAge";
 export { resolvePublishRate, type PublishRateResult } from "./state/publishRate";
 export { reconcileEndEffector, type EePose } from "./state/fkReconcile";

@@ -64,3 +64,37 @@ export function acceptSnapshot(
     frameMonoMs: frame.frameMonoMs,
   };
 }
+
+// One joint of a telemetry frame, as much of it as this module needs. Structural rather than
+// the transport's own type: the viewport renders whatever supplies joints in radians, and
+// importing the WebSocket reader here would tie the 3D subtree to one carrier.
+export interface JointPositionSource {
+  readonly name: string;
+  readonly positionRad: number;
+}
+
+// Build a frame for the loaded model from whatever the backend reported.
+//
+// The rig reports every joint on the bus — both grippers included — and the model declares the
+// joints it has. Taking only the declared ones is not a relaxation of the gate above: what that
+// gate is for is a joint the model HAS and the frame does not carry, which still arrives here as
+// a missing key and is still refused. What it does mean is that `unexpected-joint` becomes
+// unreachable from this path by construction, rather than firing on a gripper the URDF omits.
+//
+// The unit is not touched. The backend converted through the one CTR-UNIT crossing and these
+// are those numbers.
+export function jointFrameFor(
+  joints: readonly JointPositionSource[],
+  expectedJointNames: readonly string[],
+  frameMonoMs: number,
+): JointFrame {
+  const reported = new Map(joints.map((joint) => [joint.name, joint.positionRad]));
+  const positionsRad: Record<string, number> = {};
+  for (const name of expectedJointNames) {
+    const value = reported.get(name);
+    if (value !== undefined) {
+      positionsRad[name] = value;
+    }
+  }
+  return { positionsRad, frameMonoMs };
+}
