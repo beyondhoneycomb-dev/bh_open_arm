@@ -8,7 +8,7 @@
 import { render, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import ManualScreen from "./screen";
+import ManualScreen from "./ManualScreen";
 import { HomePanel } from "./HomePanel";
 import { defaultManualSource } from "./manualSource";
 

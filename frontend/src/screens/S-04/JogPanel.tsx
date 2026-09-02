@@ -49,6 +49,14 @@ function stopCommand(side: ManualSource["side"]): ManualCommand {
   return { op: "stop_hold", side };
 }
 
+// A reader with no thermometer reports nothing rather than a plausible temperature; the cell
+// says so. `0` here would read as a motor at freezing, which is not what was measured.
+const TEMPERATURE_UNOBSERVED = "\u2014";
+
+function temperature(celsius: number | null): string {
+  return celsius === null ? TEMPERATURE_UNOBSERVED : celsius.toFixed(0);
+}
+
 function directionBlocked(joint: JointReadout, direction: JogDirection): boolean {
   return joint.blockedDirection === direction;
 }
@@ -177,7 +185,7 @@ export function JogPanel(props: JogPanelProps) {
               <td data-unit="rad/s">{joint.velocityRadPerSec.toFixed(3)}</td>
               <td data-unit="Nm">{joint.torqueNm.toFixed(2)}</td>
               <td data-unit="degC">
-                {joint.tempMosC.toFixed(0)}/{joint.tempRotorC.toFixed(0)}
+                {temperature(joint.tempMosC)}/{temperature(joint.tempRotorC)}
               </td>
               <td data-unit="rad">
                 [{joint.limitLoRad.toFixed(4)}, {joint.limitHiRad.toFixed(4)}]

@@ -54,6 +54,18 @@ const ROTATION_AXES: readonly AxisSpec[] = [
   { axis: "yaw", label: "Y", unit: "deg" },
 ];
 
+// What an unreported pose component reads as. A dash rather than a zero: zero is a
+// place the tool can actually be, and the operator cannot tell the two apart.
+const POSE_UNOBSERVED = "\u2014";
+
+function poseComponent(value: number | null): string {
+  return value === null ? POSE_UNOBSERVED : value.toFixed(1);
+}
+
+function axisTriple(first: number | null, second: number | null, third: number | null): string {
+  return [first, second, third].map(poseComponent).join(" / ");
+}
+
 export function CartesianPanel(props: CartesianPanelProps) {
   const { source, mode, activeFrame, canMove, onCommand } = props;
 
@@ -216,15 +228,13 @@ export function CartesianPanel(props: CartesianPanelProps) {
         <div>
           <dt>X/Y/Z</dt>
           <dd data-unit="mm">
-            {source.ee.xMm.toFixed(1)} / {source.ee.yMm.toFixed(1)} / {source.ee.zMm.toFixed(1)} mm
-            (world)
+            {axisTriple(source.ee.xMm, source.ee.yMm, source.ee.zMm)} mm (world)
           </dd>
         </div>
         <div>
           <dt>R/P/Y</dt>
           <dd data-unit="deg">
-            {source.ee.rollDeg.toFixed(1)} / {source.ee.pitchDeg.toFixed(1)} /{" "}
-            {source.ee.yawDeg.toFixed(1)} deg (world)
+            {axisTriple(source.ee.rollDeg, source.ee.pitchDeg, source.ee.yawDeg)} deg (world)
           </dd>
         </div>
       </dl>

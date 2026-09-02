@@ -16,6 +16,10 @@ measurement, and this frame is the last place that distinction can still be made
 
 from __future__ import annotations
 
+import math
+
+import pytest
+
 from backend.actuation.board import ArmState, ArmStateBoard, ArmStateView
 from backend.actuation.clock import ManualClock
 from backend.actuation.guard import GuardSample
@@ -24,6 +28,14 @@ from backend.ws.telemetry import (
     ARM_BUS_READ_OK,
     ARM_READ_AGE,
     ARM_STALE,
+    JOINT_ROW_BLOCKED_DIRECTION,
+    JOINT_ROW_LIMIT_LOWER_DEG,
+    JOINT_ROW_LIMIT_UPPER_DEG,
+    JOINT_ROW_MOTOR,
+    JOINT_ROW_NAME,
+    JOINT_ROW_NEAR_LIMIT,
+    JOINT_ROW_POSITION_DEG,
+    JOINT_ROW_POSITION_RAD,
     MOTOR_ROW_JOINT_NAME,
     MOTOR_ROW_TEMP_MOS,
     OBSERVATION_STATE_KEY,
@@ -34,10 +46,12 @@ from contracts.plugin.robot_abc import raw_observation_channels
 from contracts.units import Celsius, Deg, DegPerSec, Nm
 from contracts.ws import (
     TELEMETRY_ARMS_FIELD,
+    TELEMETRY_JOINTS_FIELD,
     TELEMETRY_MOTOR_STATES_FIELD,
     TELEMETRY_OBSERVATION_FIELD,
 )
 from contracts.ws.schema import FRAME_TABLE, WsFrameType
+from sim.ik.limits import soft_limits
 
 # The frozen layout's width. Eight slots per side, seven joints and the gripper.
 SLOTS_PER_SIDE = 8
@@ -262,3 +276,73 @@ def test_a_stale_reading_still_carries_its_age() -> None:
     body = telemetry_body(_views(_boards(age_s=1.5)), STALE_AFTER_SEC)
 
     assert body[TELEMETRY_ARMS_FIELD]["left"][ARM_READ_AGE] == 1.5
+
+
+def test_every_joint_of_every_published_side_gets_a_row() -> None:
+    """Sixteen rows: eight slots a side, seven joints and the gripper."""
+    rows = telemetry_body(_views(_boards()), STALE_AFTER_SEC)[TELEMETRY_JOINTS_FIELD]
+
+    assert len(rows) == 2 * SLOTS_PER_SIDE
+
+
+def test_a_row_carries_both_namespaces_so_the_browser_joins_nothing() -> None:
+    """The URDF name the model is written against, and the LeRobot name `motor_states` uses.
+
+    The crossing between them is this process's fact. A screen deriving one from the other would
+    be doing string surgery on a naming convention nobody promised to keep.
+    """
+    rows = telemetry_body(_views(_boards()), STALE_AFTER_SEC)[TELEMETRY_JOINTS_FIELD]
+
+    assert rows[0][JOINT_ROW_NAME] == "openarm_left_joint1"
+    assert rows[0][JOINT_ROW_MOTOR] == "left_joint_1"
+
+
+def test_the_row_order_matches_the_frozen_channel_order() -> None:
+    """`motor_states` and the observation vector are in that order, so this must be too."""
+    rows = telemetry_body(_views(_boards()), STALE_AFTER_SEC)[TELEMETRY_JOINTS_FIELD]
+    motors = [row[JOINT_ROW_MOTOR] for row in rows]
+
+    assert motors[:2] == ["left_joint_1", "left_joint_2"]
+    assert motors[SLOTS_PER_SIDE] == "right_joint_1"
+
+
+def test_the_position_is_the_reading_and_the_radians_are_the_same_angle() -> None:
+    """The browser is forbidden from converting, so the frame carries the crossing's result."""
+    rows = telemetry_body(_views(_boards()), STALE_AFTER_SEC)[TELEMETRY_JOINTS_FIELD]
+
+    assert rows[0][JOINT_ROW_POSITION_DEG] == LEFT_POSE[0].value
+    assert rows[0][JOINT_ROW_POSITION_RAD] == pytest.approx(
+        math.radians(LEFT_POSE[0].value), abs=1e-12
+    )
+
+
+def test_the_bounds_travel_with_the_verdict_they_produced() -> None:
+    """A separately fetched limit could describe a different configuration than the verdict."""
+    rows = telemetry_body(_views(_boards()), STALE_AFTER_SEC)[TELEMETRY_JOINTS_FIELD]
+    expected = soft_limits("left")[0]
+
+    assert rows[0][JOINT_ROW_LIMIT_LOWER_DEG] == expected.lower_deg.value
+    assert rows[0][JOINT_ROW_LIMIT_UPPER_DEG] == expected.upper_deg.value
+
+
+def test_a_joint_on_its_bound_reports_the_refusal_the_screen_renders() -> None:
+    """`04` FR-MAN-013's second half, on the wire. The screen must not decide this itself."""
+    upper = soft_limits("left")[0].upper_deg
+    at_bound = tuple([upper] + list(LEFT_POSE[1:]))
+    clock = ManualClock()
+    board = ArmStateBoard(clock=clock)
+    board.publish(_state(at_bound, LEFT_VELOCITY, LEFT_TORQUE, thermometer=True))
+
+    rows = telemetry_body({"left": board.view()}, STALE_AFTER_SEC)[TELEMETRY_JOINTS_FIELD]
+
+    assert rows[0][JOINT_ROW_BLOCKED_DIRECTION] == "positive"
+    assert rows[0][JOINT_ROW_NEAR_LIMIT] is True
+    # The joints beside it are untouched: the verdict is per joint, not per arm.
+    assert rows[1][JOINT_ROW_BLOCKED_DIRECTION] == "none"
+
+
+def test_a_board_that_published_nothing_contributes_no_joint_rows() -> None:
+    """A joint at 0.0 deg with bounds either side of it renders exactly like a measurement."""
+    body = telemetry_body(_views(_boards(publish=False)), STALE_AFTER_SEC)
+
+    assert body[TELEMETRY_JOINTS_FIELD] == []

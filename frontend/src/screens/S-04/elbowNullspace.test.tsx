@@ -7,7 +7,7 @@
 import { fireEvent, render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import ManualScreen from "./screen";
+import ManualScreen from "./ManualScreen";
 import { ElbowSlider } from "./ElbowSlider";
 import type { ManualCommand } from "./commands";
 import { RecordingSink } from "./harness";

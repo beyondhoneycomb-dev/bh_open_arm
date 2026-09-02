@@ -148,10 +148,10 @@ export const FRAME_TABLE: Record<WsFrameType, FrameSpec> = {
     payload: "text",
     queue: "telemetry",
     isControlFrame: false,
-    // Mirrors `contracts/ws/schema.py`'s TELEMETRY row. Two consumers read this
-    // frame and want different halves — `S-06`'s sibling `S-03` reads
-    // `motor_states`, the policy path reads `observation` — so both travel.
-    fields: ["sequence", "observation", "motor_states", "arms"],
+    // Mirrors `contracts/ws/schema.py`'s TELEMETRY row. Consumers read different
+    // halves — `S-03` reads `motor_states`, `S-04` and the viewport read `joints`,
+    // the policy path reads `observation` — so all of them travel.
+    fields: ["sequence", "observation", "motor_states", "arms", "joints"],
   },
   command: {
     frameType: "command",

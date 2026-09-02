@@ -6,7 +6,7 @@
 import { render, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import ManualScreen from "./screen";
+import ManualScreen from "./ManualScreen";
 import { LeaseHeartbeatBar } from "./LeaseHeartbeatBar";
 import { defaultManualSource } from "./manualSource";
 import { sourceWith } from "./harness";

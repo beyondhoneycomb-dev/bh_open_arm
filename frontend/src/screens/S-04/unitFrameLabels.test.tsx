@@ -5,7 +5,7 @@
 import { render, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import ManualScreen from "./screen";
+import ManualScreen from "./ManualScreen";
 
 describe("CG-G-S04e unit and reference-frame labels are present", () => {
   it("labels joint readouts with rad, deg, velocity, torque and temperature units", () => {

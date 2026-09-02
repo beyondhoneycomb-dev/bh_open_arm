@@ -21,3 +21,10 @@ STEP_SIZES_DEG: tuple[float, ...] = (0.1, 0.5, 1.0, 5.0)
 # interpolated waypoints a single step becomes.
 DEFAULT_INTERPOLATION_HZ: float = 50.0
 DEFAULT_STEP_DURATION_SEC: float = 2.0
+
+# Remaining travel below which a joint is reported near its limit (`04` FR-MAN-013,
+# stated default). The warning is what buys the operator the distance to stop before
+# the clamp takes over: LeRobot's own `joint_limits` clip leaves only a
+# `logger.debug` behind, so a jog that runs into a bound looks from the outside like
+# a jog that simply stopped moving.
+NEAR_LIMIT_MARGIN_DEG: float = 5.0

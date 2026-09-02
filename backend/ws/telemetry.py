@@ -21,13 +21,18 @@ from collections.abc import Mapping
 from typing import Any
 
 from backend.actuation.board import ArmStateView
+from backend.jog.config import NEAR_LIMIT_MARGIN_DEG
+from backend.jog.proximity import evaluate_proximity
 from contracts.plugin.robot_abc import raw_observation_channels
+from contracts.units import deg_per_sec_to_rad_per_sec, deg_to_rad
 from contracts.ws import (
     TELEMETRY_ARMS_FIELD,
+    TELEMETRY_JOINTS_FIELD,
     TELEMETRY_MOTOR_STATES_FIELD,
     TELEMETRY_OBSERVATION_FIELD,
     TELEMETRY_SEQUENCE_FIELD,
 )
+from sim.ik.limits import soft_limits
 
 # The key the 48-channel vector travels under, matching what LeRobot names it. An object rather
 # than a bare list so a later observation key is an added key, not a reshaped frame.
@@ -62,6 +67,26 @@ ARM_BUS_READ_OK = "bus_read_ok"
 ARM_LOCK_ACQUIRED = "lock_acquired"
 ARM_RESIDUAL_EXCEEDED = "residual_exceeded"
 ARM_TICK_INDEX = "tick_index"
+
+# Joint row keys, read by `S-04`'s joint table and by the viewport's snapshot gate. Two names
+# per row on purpose: `JOINT_ROW_NAME` is the URDF/MJCF joint the model and the limits are
+# written against, `JOINT_ROW_MOTOR` is the LeRobot channel prefix the motor rows and the
+# observation vector use. The crossing between those namespaces is a fact this process holds and
+# neither consumer can derive, so it travels rather than being reconstructed by string surgery
+# in a browser.
+JOINT_ROW_NAME = "name"
+JOINT_ROW_MOTOR = "motor"
+JOINT_ROW_POSITION_DEG = "position_deg"
+JOINT_ROW_POSITION_RAD = "position_rad"
+JOINT_ROW_VELOCITY_DEG_S = "velocity_deg_s"
+JOINT_ROW_VELOCITY_RAD_S = "velocity_rad_s"
+JOINT_ROW_TORQUE_NM = "torque_nm"
+JOINT_ROW_LIMIT_LOWER_DEG = "limit_lower_deg"
+JOINT_ROW_LIMIT_UPPER_DEG = "limit_upper_deg"
+JOINT_ROW_LIMIT_LOWER_RAD = "limit_lower_rad"
+JOINT_ROW_LIMIT_UPPER_RAD = "limit_upper_rad"
+JOINT_ROW_NEAR_LIMIT = "near_limit"
+JOINT_ROW_BLOCKED_DIRECTION = "blocked_direction"
 
 
 def _motor_names(side: str) -> list[str]:
@@ -171,6 +196,65 @@ def arm_rows(views: Mapping[str, ArmStateView], stale_after_s: float) -> dict[st
     return rows
 
 
+def joint_rows(views: Mapping[str, ArmStateView]) -> list[dict[str, Any]]:
+    """Per-joint readout: the reading, the bounds, and the two verdicts the screen may not make.
+
+    The bounds ride along with the values rather than being fetched once and cached, which for
+    numbers that never change looks like waste. It is not: the verdict below is computed FROM
+    those bounds, and a client holding a separately fetched copy could render a near-limit
+    warning against a bound from a different configuration. One frame, one set of numbers, no
+    join across time.
+
+    Radians come from `deg_to_rad`, the single CTR-UNIT crossing, because the browser is
+    forbidden from converting — `frontend/src/viewport/state/jointSnapshot.ts` says so, and the
+    reason is that a second conversion is a second rounding that disagrees with this one exactly
+    where the value sits on a bound.
+
+    A side that has published nothing contributes no rows, on the same rule as everything else
+    here: a joint at 0.0° with limits either side of it is indistinguishable from a measurement.
+
+    Args:
+        views: One view per arm side, all taken at the same moment.
+
+    Returns:
+        (list[dict]) One row per joint of every side that has published, sides in name order and
+        joints in the frozen channel declaration's order.
+    """
+    rows: list[dict[str, Any]] = []
+    for side in sorted(views):
+        state = views[side].state
+        if state is None:
+            continue
+        limits = soft_limits(side)
+        motors = _motor_names(side)
+        for index, motor in enumerate(motors):
+            if index >= len(limits) or index >= len(state.joint_deg):
+                break
+            limit = limits[index]
+            position = state.joint_deg[index]
+            proximity = evaluate_proximity(position, limit, NEAR_LIMIT_MARGIN_DEG)
+            rows.append(
+                {
+                    JOINT_ROW_NAME: limit.mjcf_joint,
+                    JOINT_ROW_MOTOR: motor,
+                    JOINT_ROW_POSITION_DEG: position.value,
+                    JOINT_ROW_POSITION_RAD: deg_to_rad(position).value,
+                    JOINT_ROW_VELOCITY_DEG_S: state.velocity_deg_s[index].value,
+                    JOINT_ROW_VELOCITY_RAD_S: deg_per_sec_to_rad_per_sec(
+                        state.velocity_deg_s[index]
+                    ).value,
+                    JOINT_ROW_TORQUE_NM: state.torque_nm[index].value,
+                    JOINT_ROW_LIMIT_LOWER_DEG: limit.lower_deg.value,
+                    JOINT_ROW_LIMIT_UPPER_DEG: limit.upper_deg.value,
+                    JOINT_ROW_LIMIT_LOWER_RAD: limit.lower_rad.value,
+                    JOINT_ROW_LIMIT_UPPER_RAD: limit.upper_rad.value,
+                    JOINT_ROW_NEAR_LIMIT: proximity.near_limit,
+                    JOINT_ROW_BLOCKED_DIRECTION: proximity.blocked_direction.value,
+                }
+            )
+    return rows
+
+
 def telemetry_body(views: Mapping[str, ArmStateView], stale_after_s: float) -> dict[str, Any]:
     """Build the whole `telemetry` body from one read of every board.
 
@@ -193,6 +277,7 @@ def telemetry_body(views: Mapping[str, ArmStateView], stale_after_s: float) -> d
         TELEMETRY_OBSERVATION_FIELD: {OBSERVATION_STATE_KEY: observation_vector(views)},
         TELEMETRY_MOTOR_STATES_FIELD: motor_rows(views),
         TELEMETRY_ARMS_FIELD: arm_rows(views, stale_after_s),
+        TELEMETRY_JOINTS_FIELD: joint_rows(views),
     }
 
 
@@ -203,12 +288,26 @@ __all__ = [
     "ARM_READ_AGE",
     "ARM_RESIDUAL_EXCEEDED",
     "ARM_STALE",
+    "JOINT_ROW_BLOCKED_DIRECTION",
+    "JOINT_ROW_LIMIT_LOWER_DEG",
+    "JOINT_ROW_LIMIT_LOWER_RAD",
+    "JOINT_ROW_LIMIT_UPPER_DEG",
+    "JOINT_ROW_LIMIT_UPPER_RAD",
+    "JOINT_ROW_MOTOR",
+    "JOINT_ROW_NAME",
+    "JOINT_ROW_NEAR_LIMIT",
+    "JOINT_ROW_POSITION_DEG",
+    "JOINT_ROW_POSITION_RAD",
+    "JOINT_ROW_TORQUE_NM",
+    "JOINT_ROW_VELOCITY_DEG_S",
+    "JOINT_ROW_VELOCITY_RAD_S",
     "ARM_TICK_INDEX",
     "MOTOR_ROW_JOINT_NAME",
     "MOTOR_ROW_TEMP_MOS",
     "MOTOR_ROW_TEMP_ROTOR",
     "OBSERVATION_STATE_KEY",
     "arm_rows",
+    "joint_rows",
     "motor_rows",
     "observation_vector",
     "telemetry_body",

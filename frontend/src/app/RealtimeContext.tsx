@@ -57,6 +57,10 @@ export interface RealtimeContextValue<TClient extends RealtimeLifecycle = Realti
   // The last telemetry frame read, or null when none has arrived. Null is "the server has
   // sent nothing", which is what a process holding no arm does — not "the arm reads zero".
   telemetry: TelemetryView | null;
+  // When that frame landed, on this browser's monotonic clock. Recorded here rather than by
+  // each consumer because only this callback knows the arrival — a screen comparing `now`
+  // against a render timestamp would measure its own re-render, not the stream.
+  telemetryAtMs: number | null;
 }
 
 const RealtimeContext = createContext<RealtimeContextValue | null>(null);
@@ -89,7 +93,7 @@ export function RealtimeProvider<TClient extends RealtimeLifecycle>({
           onTelemetry: (frame) => {
             const view = readTelemetry(frame);
             if (view !== null) {
-              setTelemetry(view);
+              setTelemetry({ view, atMs: performance.now() });
             }
           },
         }),
@@ -100,7 +104,9 @@ export function RealtimeProvider<TClient extends RealtimeLifecycle>({
     }
   });
   const [failed, setFailed] = useState<string | null>(null);
-  const [telemetry, setTelemetry] = useState<TelemetryView | null>(null);
+  const [telemetry, setTelemetry] = useState<{ view: TelemetryView; atMs: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     const client = built.client;
@@ -126,7 +132,8 @@ export function RealtimeProvider<TClient extends RealtimeLifecycle>({
       reason,
       // Cleared with the channel: a frame kept after the link went away is a reading the
       // screen would go on showing while nothing is arriving to replace it.
-      telemetry: reason === null ? telemetry : null,
+      telemetry: reason === null && telemetry !== null ? telemetry.view : null,
+      telemetryAtMs: reason === null && telemetry !== null ? telemetry.atMs : null,
     };
   }, [built, failed, refused, telemetry]);
 

@@ -34,7 +34,8 @@
         "sequence",
         "observation",
         "motor_states",
-        "arms"
+        "arms",
+        "joints"
       ]
     },
     "command": {

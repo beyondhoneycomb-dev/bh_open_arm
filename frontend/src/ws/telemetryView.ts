@@ -17,6 +17,7 @@ export const TELEMETRY_SEQUENCE_KEY = "sequence";
 export const TELEMETRY_OBSERVATION_KEY = "observation";
 export const TELEMETRY_MOTOR_STATES_KEY = "motor_states";
 export const TELEMETRY_ARMS_KEY = "arms";
+export const TELEMETRY_JOINTS_KEY = "joints";
 
 // The vector key inside `observation`, as LeRobot names it.
 export const OBSERVATION_STATE_KEY = "observation.state";
@@ -29,6 +30,52 @@ export const ARM_OBSERVATION_PRESENT_KEY = "observation_present";
 export const ARM_BUS_READ_OK_KEY = "bus_read_ok";
 export const ARM_LOCK_ACQUIRED_KEY = "lock_acquired";
 export const ARM_RESIDUAL_EXCEEDED_KEY = "residual_exceeded";
+
+// Joint row keys, matching `backend/ws/telemetry.py`.
+export const JOINT_NAME_KEY = "name";
+export const JOINT_MOTOR_KEY = "motor";
+export const JOINT_POSITION_DEG_KEY = "position_deg";
+export const JOINT_POSITION_RAD_KEY = "position_rad";
+export const JOINT_VELOCITY_DEG_S_KEY = "velocity_deg_s";
+export const JOINT_VELOCITY_RAD_S_KEY = "velocity_rad_s";
+export const JOINT_TORQUE_NM_KEY = "torque_nm";
+export const JOINT_LIMIT_LOWER_DEG_KEY = "limit_lower_deg";
+export const JOINT_LIMIT_UPPER_DEG_KEY = "limit_upper_deg";
+export const JOINT_LIMIT_LOWER_RAD_KEY = "limit_lower_rad";
+export const JOINT_LIMIT_UPPER_RAD_KEY = "limit_upper_rad";
+export const JOINT_NEAR_LIMIT_KEY = "near_limit";
+export const JOINT_BLOCKED_DIRECTION_KEY = "blocked_direction";
+
+// The three values the backend's `BlockedDirection` can take. Listed so a fourth one — or a
+// typo — is read as an unparsable row rather than silently becoming a direction nothing blocks.
+const BLOCKED_DIRECTIONS = ["none", "positive", "negative"] as const;
+
+export type BlockedDirection = (typeof BLOCKED_DIRECTIONS)[number];
+
+export interface JointReading {
+  // The URDF/MJCF joint this row is about — the name the model and the limits are written
+  // against, and what the viewport keys its snapshot by.
+  readonly name: string;
+  // The LeRobot channel prefix for the same joint, which is how `motor_states` names it. Both
+  // travel because the crossing between the two namespaces is the backend's fact, not a string
+  // transform a screen should be doing.
+  readonly motor: string;
+  readonly positionDeg: number;
+  // Converted by the backend through the single CTR-UNIT crossing. The browser must not convert
+  // — a second rounding disagrees with the first exactly where a value sits on a bound.
+  readonly positionRad: number;
+  readonly velocityDegPerSec: number;
+  readonly velocityRadPerSec: number;
+  readonly torqueNm: number;
+  readonly limitLowerDeg: number;
+  readonly limitUpperDeg: number;
+  readonly limitLowerRad: number;
+  readonly limitUpperRad: number;
+  // Backend verdicts (`04` FR-MAN-013). Rendered, never recomputed: a browser that decided "at
+  // limit" from the position would be a second clamp disagreeing with the gateway's.
+  readonly nearLimit: boolean;
+  readonly blockedDirection: BlockedDirection;
+}
 
 export interface ArmLiveness {
   readonly side: string;
@@ -59,6 +106,9 @@ export interface TelemetryView {
   // Only the sides that have published. A side missing here has taken no reading
   // yet, which is a different fact from a reading that went stale.
   readonly arms: readonly ArmLiveness[];
+  // One row per joint of every side that has published, in the backend's order. Empty
+  // when the frame carried none, which is not the same as a rig with no joints.
+  readonly joints: readonly JointReading[];
 }
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -123,6 +173,80 @@ function parseArms(body: Record<string, unknown>): ArmLiveness[] {
   return parsed;
 }
 
+function stringAt(source: Record<string, unknown>, key: string): string | null {
+  const value = source[key];
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function parseJoints(body: Record<string, unknown>): JointReading[] {
+  const rows = body[TELEMETRY_JOINTS_KEY];
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+  const parsed: JointReading[] = [];
+  for (const row of rows) {
+    const entry = record(row);
+    if (entry === null) {
+      continue;
+    }
+    const name = stringAt(entry, JOINT_NAME_KEY);
+    const motor = stringAt(entry, JOINT_MOTOR_KEY);
+    const blocked = stringAt(entry, JOINT_BLOCKED_DIRECTION_KEY);
+    const nearLimit = boolAt(entry, JOINT_NEAR_LIMIT_KEY);
+    const numbers = [
+      JOINT_POSITION_DEG_KEY,
+      JOINT_POSITION_RAD_KEY,
+      JOINT_VELOCITY_DEG_S_KEY,
+      JOINT_VELOCITY_RAD_S_KEY,
+      JOINT_TORQUE_NM_KEY,
+      JOINT_LIMIT_LOWER_DEG_KEY,
+      JOINT_LIMIT_UPPER_DEG_KEY,
+      JOINT_LIMIT_LOWER_RAD_KEY,
+      JOINT_LIMIT_UPPER_RAD_KEY,
+    ].map((key) => numberAt(entry, key));
+    // All or nothing, for the reason the arm rows are: a half-read joint would show a
+    // position against a bound that came from nowhere, and the near-limit warning is
+    // exactly a claim about the two together.
+    if (
+      name === null ||
+      motor === null ||
+      nearLimit === null ||
+      blocked === null ||
+      !BLOCKED_DIRECTIONS.includes(blocked as BlockedDirection) ||
+      numbers.some((value) => value === null)
+    ) {
+      continue;
+    }
+    const [
+      positionDeg,
+      positionRad,
+      velocityDegPerSec,
+      velocityRadPerSec,
+      torqueNm,
+      limitLowerDeg,
+      limitUpperDeg,
+      limitLowerRad,
+      limitUpperRad,
+    ] = numbers as number[];
+    parsed.push({
+      name,
+      motor,
+      positionDeg,
+      positionRad,
+      velocityDegPerSec,
+      velocityRadPerSec,
+      torqueNm,
+      limitLowerDeg,
+      limitUpperDeg,
+      limitLowerRad,
+      limitUpperRad,
+      nearLimit,
+      blockedDirection: blocked as BlockedDirection,
+    });
+  }
+  return parsed;
+}
+
 function parseObservation(body: Record<string, unknown>): number[] {
   const observation = record(body[TELEMETRY_OBSERVATION_KEY]);
   const vector = observation === null ? null : observation[OBSERVATION_STATE_KEY];
@@ -147,5 +271,6 @@ export function readTelemetry(frame: DecodedTextFrame): TelemetryView | null {
     observationState: parseObservation(frame.body),
     body: frame.body,
     arms: parseArms(frame.body),
+    joints: parseJoints(frame.body),
   };
 }

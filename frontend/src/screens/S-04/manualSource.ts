@@ -13,6 +13,7 @@
 
 import type { ControlLease, LeaseClock } from "../../mode";
 import { defaultViewportSource, type ViewportSource } from "../../viewport";
+import { TELEMETRY_MOTOR_STATES_KEY, type TelemetryView } from "../../ws/telemetryView";
 
 export type ArmSide = "left" | "right";
 
@@ -35,8 +36,10 @@ export interface JointReadout {
   positionDeg: number;
   velocityRadPerSec: number;
   torqueNm: number;
-  tempMosC: number;
-  tempRotorC: number;
+  // Null when the reader has no thermometer. A CAN-free double has no MOSFET, and
+  // `0 °C` renders exactly like a measurement of a very cold motor.
+  tempMosC: number | null;
+  tempRotorC: number | null;
   limitLoRad: number;
   limitHiRad: number;
   nearLimit: boolean;
@@ -58,12 +61,15 @@ export interface CartesianFrameInfo {
 
 export interface EeReadout {
   side: ArmSide;
-  xMm: number;
-  yMm: number;
-  zMm: number;
-  rollDeg: number;
-  pitchDeg: number;
-  yawDeg: number;
+  // Null when nothing has reported a pose. The six numbers are the only fields on this
+  // screen that a reader would take for a measurement, and the backend has no channel
+  // carrying them yet — a plausible pose here is a claim about where the tool is.
+  xMm: number | null;
+  yMm: number | null;
+  zMm: number | null;
+  rollDeg: number | null;
+  pitchDeg: number | null;
+  yawDeg: number | null;
   controlPointLabel: string;
   // The default control point is the wrist, not the grasp point (FR-MAN-023).
   tcpIsGraspPoint: boolean;
@@ -351,4 +357,60 @@ export function defaultManualSource(): ManualSource {
     jogStepSizesDeg: [0.1, 0.5, 1, 5],
     viewport: defaultViewportSource(),
   };
+}
+
+
+// The motor rows of one telemetry frame, keyed by the motor name the joint rows also carry.
+// Both namespaces travel on every joint row precisely so this join is a lookup rather than a
+// string transform over a naming convention nobody promised to keep.
+function temperaturesByMotor(
+  telemetry: TelemetryView,
+): Map<string, { mos: number; rotor: number }> {
+  const rows = telemetry.body[TELEMETRY_MOTOR_STATES_KEY];
+  const byMotor = new Map<string, { mos: number; rotor: number }>();
+  if (!Array.isArray(rows)) {
+    return byMotor;
+  }
+  for (const row of rows) {
+    if (typeof row !== "object" || row === null) {
+      continue;
+    }
+    const entry = row as Record<string, unknown>;
+    const name = entry["joint_name"];
+    const mos = entry["temp_mos_c"];
+    const rotor = entry["temp_rotor_c"];
+    if (typeof name === "string" && typeof mos === "number" && typeof rotor === "number") {
+      byMotor.set(name, { mos, rotor });
+    }
+  }
+  return byMotor;
+}
+
+// Live joint readouts for one arm, from one telemetry frame. Rows for the other side are
+// dropped rather than renumbered: the screen shows one arm at a time, and an index counting
+// both would put the left arm's gripper where the right arm's J8 belongs.
+//
+// Every number here is the backend's own — including the radians, which it converted through
+// the one CTR-UNIT crossing. Nothing on this path multiplies by pi/180.
+export function jointReadoutsFrom(telemetry: TelemetryView, side: ArmSide): JointReadout[] {
+  const temperatures = temperaturesByMotor(telemetry);
+  return telemetry.joints
+    .filter((reading) => reading.motor.startsWith(`${side}_`))
+    .map((reading, index) => {
+      const temps = temperatures.get(reading.motor);
+      return {
+        index: index + 1,
+        name: reading.name,
+        positionRad: reading.positionRad,
+        positionDeg: reading.positionDeg,
+        velocityRadPerSec: reading.velocityRadPerSec,
+        torqueNm: reading.torqueNm,
+        tempMosC: temps ? temps.mos : null,
+        tempRotorC: temps ? temps.rotor : null,
+        limitLoRad: reading.limitLowerRad,
+        limitHiRad: reading.limitUpperRad,
+        nearLimit: reading.nearLimit,
+        blockedDirection: reading.blockedDirection,
+      };
+    });
 }

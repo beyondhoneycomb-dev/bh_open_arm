@@ -170,6 +170,13 @@ TELEMETRY_MOTOR_STATES_FIELD = "motor_states"
 # client cannot tell a board that stopped advancing from an arm that is holding still, because
 # every value in the two cases is identical.
 TELEMETRY_ARMS_FIELD = "arms"
+# Per-joint operator readout: the reading in both units, the soft limits it is judged against,
+# and the two verdicts `04` FR-MAN-013 forbids the screen from computing — near-limit and the
+# refused jog direction. Separate from `observation` because the two answer to different owners:
+# that vector is the frozen LeRobot channel list a policy eats, in its names and its unit, and
+# this is the operator's view in the URDF namespace with the bounds beside the values. Both come
+# off one board read, so they cannot describe different instants.
+TELEMETRY_JOINTS_FIELD = "joints"
 
 
 class LeaseRejectReason(StrEnum):
@@ -255,6 +262,7 @@ FRAME_TABLE: dict[WsFrameType, FrameSpec] = {
             TELEMETRY_OBSERVATION_FIELD,
             TELEMETRY_MOTOR_STATES_FIELD,
             TELEMETRY_ARMS_FIELD,
+            TELEMETRY_JOINTS_FIELD,
         ),
     ),
     WsFrameType.COMMAND: FrameSpec(

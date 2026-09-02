@@ -35,6 +35,19 @@ MIRRORED = (
     backend_telemetry.ARM_BUS_READ_OK,
     backend_telemetry.ARM_LOCK_ACQUIRED,
     backend_telemetry.ARM_RESIDUAL_EXCEEDED,
+    backend_telemetry.JOINT_ROW_NAME,
+    backend_telemetry.JOINT_ROW_MOTOR,
+    backend_telemetry.JOINT_ROW_POSITION_DEG,
+    backend_telemetry.JOINT_ROW_POSITION_RAD,
+    backend_telemetry.JOINT_ROW_VELOCITY_DEG_S,
+    backend_telemetry.JOINT_ROW_VELOCITY_RAD_S,
+    backend_telemetry.JOINT_ROW_TORQUE_NM,
+    backend_telemetry.JOINT_ROW_LIMIT_LOWER_DEG,
+    backend_telemetry.JOINT_ROW_LIMIT_UPPER_DEG,
+    backend_telemetry.JOINT_ROW_LIMIT_LOWER_RAD,
+    backend_telemetry.JOINT_ROW_LIMIT_UPPER_RAD,
+    backend_telemetry.JOINT_ROW_NEAR_LIMIT,
+    backend_telemetry.JOINT_ROW_BLOCKED_DIRECTION,
 )
 
 
