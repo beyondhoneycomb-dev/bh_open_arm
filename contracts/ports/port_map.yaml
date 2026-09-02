@@ -1,0 +1,41 @@
+# The port canon S-13's compare view reads, as `13` §2.7 requires: one declaration the
+# backend serves, so the browser holds no third copy of it.
+#
+# Canon: the union of `01` §2.17 and `14` §2.1. Those two markdown tables are where the
+# numbers were decided and they stay the source; this file is the machine-readable form
+# of the same set, and `tests/wpg00_backend/test_port_canon_mirror.py` compares the two.
+# The tables name the same components differently — "웹 백엔드 (SPA 정적 + REST +
+# WebSocket)" in one and "브라우저 SPA ↔ GUI 백엔드" in the other — so the mirror
+# compares the ports, which is the fact both tables agree on and the one a compare view
+# is actually about.
+#
+# A null port is a component with no network boundary. It is declared rather than
+# omitted so the compare view can show "no port expected" instead of a spurious
+# mismatch against a binding that was never supposed to exist.
+components:
+  # The row this process fills. S-13 lines actual bindings up against the canon BY
+  # COMPONENT NAME, so the server has to know which row it is; deriving that from a
+  # port would break the moment `--port` moves, which is the case the compare view
+  # exists to show.
+  - component: "웹 백엔드 (SPA 정적 + REST + WebSocket)"
+    protocol: "HTTP / WS"
+    port: 8000
+    served_by_this_process: true
+  - component: "GUI 백엔드 ↔ 하드웨어"
+    protocol: "in-process"
+    port: null
+  - component: "VR (Quest APK)"
+    protocol: "UDP"
+    port: 5006
+  - component: "VR (WebXR 대안)"
+    protocol: "HTTPS"
+    port: 8443
+  - component: "LeRobot async PolicyServer"
+    protocol: "gRPC"
+    port: 8080
+  - component: "GR00T 추론 서버"
+    protocol: "ZMQ"
+    port: 5555
+  - component: "openpi 정책 서버"
+    protocol: "WebSocket"
+    port: 8000

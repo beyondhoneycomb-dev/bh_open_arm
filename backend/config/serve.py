@@ -60,6 +60,7 @@ from backend.config.constants import (
 from backend.config.store import RuntimeConfigStore, default_store
 from backend.security.constants import PLAINTEXT_HTTP_SCHEME
 from backend.security.loopback import LOOPBACK_HOSTS, LoopbackBindError, assert_loopback_bind
+from backend.system.api import mount_system_routes
 from backend.ws.app import mount_realtime_channel
 from backend.ws.arm_channel import refuse_command
 from backend.ws.constants import TELEMETRY_STALE_TICK_MULTIPLE
@@ -340,6 +341,7 @@ def build_server_app(
     """
     app = create_app(store)
     mount_camera_routes(app, store.directory, tuple(RIG_SLOTS))
+    mount_system_routes(app)
     websocket_mounted = mount_websocket_router(
         app,
         arm,

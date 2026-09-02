@@ -13,6 +13,10 @@ interface RtCheckViewProps {
   registry: ErrorRegistry;
 }
 
+// What an unread host field reads as. A dash rather than a zero: `VmLck: 0` is a real
+// measurement — the pages were not locked — and a file that could not be read is not.
+const UNREAD = "\u2014";
+
 export function RtCheckView({ rt, registry }: RtCheckViewProps) {
   const preemptAbsent = preemptRtAbsent(rt.env);
   return (
@@ -61,9 +65,9 @@ export function RtCheckView({ rt, registry }: RtCheckViewProps) {
                 <td>{proc.schedPolicy}</td>
                 <td>{proc.schedPriority}</td>
                 <td>{proc.cpuAffinity.join(",")}</td>
-                <td data-testid={`rt-vmlck-${proc.pid}`}>{proc.vmlckKb}</td>
+                <td data-testid={`rt-vmlck-${proc.pid}`}>{proc.vmlckKb ?? UNREAD}</td>
                 <td data-testid={`rt-mlockall-${proc.pid}`}>
-                  {locked ? "잠김" : "미잠김"}
+                  {proc.mlockallReturnedOk === null ? UNREAD : locked ? "잠김" : "미잠김"}
                   {silent && (
                     <span className="oa-sys-alert" role="alert" data-testid={`rt-silent-${proc.pid}`}>
                       {" "}

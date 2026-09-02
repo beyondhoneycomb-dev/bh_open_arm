@@ -43,8 +43,13 @@ export interface ProcessRtStatus {
   schedPolicy: string;
   schedPriority: number;
   cpuAffinity: number[];
-  vmlckKb: number;
-  mlockallReturnedOk: boolean;
+  // Null when `/proc/<pid>/status` could not be read. Distinct from 0, which is a real
+  // reading and means mlockall locked nothing.
+  vmlckKb: number | null;
+  // Null when the process never called mlockall. `false` would say the syscall failed,
+  // which is a different fact — and this field is kept beside `vmlckKb` precisely so a
+  // success that locked nothing can be seen.
+  mlockallReturnedOk: boolean | null;
 }
 
 // A backend-declared RT deficiency carrying the OA-* code that names it. S-13 does

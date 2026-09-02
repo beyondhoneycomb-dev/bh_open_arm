@@ -8,15 +8,19 @@
 
 import type { ProcessRtStatus, RtEnvironment } from "./types";
 
-// mlockall took effect iff the kernel actually locked pages, which VmLck reports.
+// mlockall took effect iff the kernel actually locked pages, which VmLck reports. An
+// unread VmLck is not evidence of locking, so it reads the same as nothing locked.
 export function mlockallLocked(status: ProcessRtStatus): boolean {
-  return status.vmlckKb > 0;
+  return status.vmlckKb !== null && status.vmlckKb > 0;
 }
 
 // The exact failure the gate targets: the syscall claimed success while VmLck
 // shows nothing locked. Surfacing this keeps a false "RT ready" off the screen.
 export function mlockallSilentFailure(status: ProcessRtStatus): boolean {
-  return status.mlockallReturnedOk && status.vmlckKb <= 0;
+  // Only a syscall that actually reported success can fail silently. A process that never
+  // called mlockall has nothing to disagree with, and flagging it would put a red line
+  // beside every process on a rig nobody has promoted yet.
+  return status.mlockallReturnedOk === true && (status.vmlckKb ?? 0) <= 0;
 }
 
 // PREEMPT_RT absence is a reported environment fact (14 FR-OPS-023); its remedy is
