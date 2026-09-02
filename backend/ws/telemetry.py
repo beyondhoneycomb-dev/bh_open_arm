@@ -52,8 +52,11 @@ MOTOR_ROW_TEMP_MOS = "temp_mos_c"
 MOTOR_ROW_TEMP_ROTOR = "temp_rotor_c"
 
 # Per-side liveness keys. The age is what separates a board that stopped advancing from an arm
-# that is holding still — every reading in those two cases is identical.
+# that is holding still — every reading in those two cases is identical. `stale` is that age
+# already judged, because the deadline is derived from the control tick rate and this process is
+# the only one that knows it: a browser given the age alone would have to invent the rate.
 ARM_READ_AGE = "read_age_s"
+ARM_STALE = "stale"
 ARM_OBSERVATION_PRESENT = "observation_present"
 ARM_BUS_READ_OK = "bus_read_ok"
 ARM_LOCK_ACQUIRED = "lock_acquired"
@@ -130,15 +133,23 @@ def motor_rows(views: Mapping[str, ArmStateView]) -> list[dict[str, Any]]:
     return rows
 
 
-def arm_rows(views: Mapping[str, ArmStateView]) -> dict[str, dict[str, Any]]:
-    """Per-side liveness: what the guard saw, and how old the reading is.
+def arm_rows(views: Mapping[str, ArmStateView], stale_after_s: float) -> dict[str, dict[str, Any]]:
+    """Per-side liveness: what the guard saw, how old the reading is, and whether that is too old.
 
     A side that has published nothing is omitted rather than reported with an infinite age. The
     two are different facts — "no reading yet" and "a reading that went stale" — and a client
     that showed them the same way would report a server still starting up as a dead arm.
 
+    `stale` is decided on age alone, which is NOT the rule `ArmStateView.is_driving_blind` uses.
+    That one needs a command outliving its reading, because an arm nobody reads and nobody drives
+    is idle rather than stale. Here there is no idle case to protect: the board is filled by a
+    runner that ticks unconditionally while it lives, so a reading that stopped advancing means
+    the runner stopped — and `ArmSessionRunner` keeps that exception to itself until the process
+    exits, so this field is the only thing that says so while the server is up.
+
     Args:
         views: One view per arm side.
+        stale_after_s: How old a reading may be before the side is reported stale.
 
     Returns:
         (dict) Side name to its liveness, for every side that has published.
@@ -150,6 +161,7 @@ def arm_rows(views: Mapping[str, ArmStateView]) -> dict[str, dict[str, Any]]:
             continue
         rows[side] = {
             ARM_READ_AGE: view.age_s,
+            ARM_STALE: view.age_s > stale_after_s,
             ARM_TICK_INDEX: view.state.tick_index,
             ARM_OBSERVATION_PRESENT: view.state.guard.observation_present,
             ARM_BUS_READ_OK: view.state.guard.bus_read_ok,
@@ -159,7 +171,7 @@ def arm_rows(views: Mapping[str, ArmStateView]) -> dict[str, dict[str, Any]]:
     return rows
 
 
-def telemetry_body(views: Mapping[str, ArmStateView]) -> dict[str, Any]:
+def telemetry_body(views: Mapping[str, ArmStateView], stale_after_s: float) -> dict[str, Any]:
     """Build the whole `telemetry` body from one read of every board.
 
     The views are taken by the caller and passed in together, so every part of one frame
@@ -168,6 +180,7 @@ def telemetry_body(views: Mapping[str, ArmStateView]) -> dict[str, Any]:
 
     Args:
         views: One view per arm side, all taken at the same moment.
+        stale_after_s: How old a reading may be before its side is reported stale.
 
     Returns:
         (dict) The body, carrying exactly the fields `CTR-WS@v2` declares for this frame.
@@ -179,7 +192,7 @@ def telemetry_body(views: Mapping[str, ArmStateView]) -> dict[str, Any]:
         ),
         TELEMETRY_OBSERVATION_FIELD: {OBSERVATION_STATE_KEY: observation_vector(views)},
         TELEMETRY_MOTOR_STATES_FIELD: motor_rows(views),
-        TELEMETRY_ARMS_FIELD: arm_rows(views),
+        TELEMETRY_ARMS_FIELD: arm_rows(views, stale_after_s),
     }
 
 
@@ -189,6 +202,7 @@ __all__ = [
     "ARM_OBSERVATION_PRESENT",
     "ARM_READ_AGE",
     "ARM_RESIDUAL_EXCEEDED",
+    "ARM_STALE",
     "ARM_TICK_INDEX",
     "MOTOR_ROW_JOINT_NAME",
     "MOTOR_ROW_TEMP_MOS",

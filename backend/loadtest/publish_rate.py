@@ -2,8 +2,8 @@
 
 `NFR-GUI-003` fixes the joint-state WS publish rate at 30 Hz default, 60 Hz cap, and
 forbids pushing the control-loop full rate straight onto the WS. This module is the
-Python mirror of the frontend `resolvePublishRate` governor (the frontend owns the
-runtime one), plus the leak check the load test needs: the cap sits strictly below the
+Python mirror of the frontend `resolvePublishRate` governor, plus the leak check the
+load test needs: the cap sits strictly below the
 fast control loop (100 Hz), so the fast loop's full rate can never resolve as a publish
 rate, and a request AT that rate is rejected rather than clamped.
 
@@ -17,11 +17,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from backend.loadtest.constants import (
-    CONTROL_LOOP_POLL_RATES_HZ,
-    WS_PUBLISH_RATE_DEFAULT_HZ,
-    WS_PUBLISH_RATE_MAX_HZ,
-)
+from backend.loadtest.constants import CONTROL_LOOP_POLL_RATES_HZ
+from backend.ws.constants import WS_PUBLISH_RATE_DEFAULT_HZ, WS_PUBLISH_RATE_MAX_HZ
 
 
 @dataclass(frozen=True)

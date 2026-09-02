@@ -23,6 +23,7 @@ export const OBSERVATION_STATE_KEY = "observation.state";
 
 // Per-side liveness keys, matching `backend/ws/telemetry.py`.
 export const ARM_READ_AGE_KEY = "read_age_s";
+export const ARM_STALE_KEY = "stale";
 export const ARM_TICK_INDEX_KEY = "tick_index";
 export const ARM_OBSERVATION_PRESENT_KEY = "observation_present";
 export const ARM_BUS_READ_OK_KEY = "bus_read_ok";
@@ -34,6 +35,10 @@ export interface ArmLiveness {
   // Seconds since the reading was taken, on the server's clock. This is what
   // separates a board that stopped advancing from an arm that is holding still.
   readonly readAgeS: number;
+  // That age already judged, by the only process that knows the rate the board is
+  // filled at. True means the reading stopped advancing — the values below are the
+  // last ones taken, however long ago that was, and none of them will change again.
+  readonly stale: boolean;
   readonly tickIndex: number;
   readonly observationPresent: boolean;
   readonly busReadOk: boolean;
@@ -84,6 +89,7 @@ function parseArms(body: Record<string, unknown>): ArmLiveness[] {
       continue;
     }
     const readAgeS = numberAt(entry, ARM_READ_AGE_KEY);
+    const stale = boolAt(entry, ARM_STALE_KEY);
     const tickIndex = numberAt(entry, ARM_TICK_INDEX_KEY);
     const observationPresent = boolAt(entry, ARM_OBSERVATION_PRESENT_KEY);
     const busReadOk = boolAt(entry, ARM_BUS_READ_OK_KEY);
@@ -94,6 +100,7 @@ function parseArms(body: Record<string, unknown>): ArmLiveness[] {
     // the four — the row would say "lock lost" about a lock nobody asked about.
     if (
       readAgeS === null ||
+      stale === null ||
       tickIndex === null ||
       observationPresent === null ||
       busReadOk === null ||
@@ -105,6 +112,7 @@ function parseArms(body: Record<string, unknown>): ArmLiveness[] {
     parsed.push({
       side,
       readAgeS,
+      stale,
       tickIndex,
       observationPresent,
       busReadOk,

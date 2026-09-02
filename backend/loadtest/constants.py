@@ -8,27 +8,19 @@ below are either load-generation knobs (how much synthetic traffic to make),
 spec-given rates that are already confirmed elsewhere and reused here, or report
 labels.
 
-Two rates are mirrored, not owned:
+One rate is mirrored, not owned:
 
-  * `WS_PUBLISH_RATE_DEFAULT_HZ` / `WS_PUBLISH_RATE_MAX_HZ` are `NFR-GUI-003`'s
-    confirmed 30 Hz default / 60 Hz cap. The frontend owns the runtime governor
-    (`frontend/src/viewport/constants.ts` PUBLISH_RATE_DEFAULT_HZ / MAX_HZ and
-    `viewport/state/publishRate.ts`). This harness runs in Python and cannot import
-    a TypeScript module, so the two numbers are mirrored here for the phase-1
-    governor. That mirror is a value-copy of a confirmed spec constant, not a second
-    truth over a contested one, and it creates no import-graph edge (`06` §5.6).
   * `CONTROL_LOOP_POLL_RATES_HZ` are `13` §2.4's control-loop poll rates the WS must
     NOT forward at full rate. They are the reference the leak check reads.
+
+`NFR-GUI-003`'s 30 Hz default / 60 Hz cap used to be written out here as well. It now
+lives in `backend.ws.constants`, next to the loop that publishes at it — a rate the load
+test judges and the server does not read is a rate the server can quietly disagree with,
+and it did. The browser-side copy is still `frontend/src/viewport/constants.ts`, compared
+against the Python one by `tests/wp5_05/test_reuse_no_fork.py`.
 """
 
 from __future__ import annotations
-
-# `NFR-GUI-003` (`13` §2.4, confirmed): the joint-state WS publish rate is 30 Hz by
-# default and 60 Hz at the cap. A request over the cap is REJECTED, not clamped —
-# silently clamping would hide that the operator asked for a rate the link will not
-# sustain (mirrors the frontend `resolvePublishRate` contract).
-WS_PUBLISH_RATE_DEFAULT_HZ = 30.0
-WS_PUBLISH_RATE_MAX_HZ = 60.0
 
 # `13` §2.4: the control loop polls at 50 Hz or 100 Hz, and the view is decimated
 # from it. "Full-rate leak" is the anti-pattern of pushing every control-loop tick

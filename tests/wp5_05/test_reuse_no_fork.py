@@ -16,11 +16,8 @@ from backend.camera.bandwidth import descriptor_bandwidth_mbps
 from backend.camera.constants import BITS_PER_BYTE, MEGABIT_DIVISOR
 from backend.camera.fixtures import d415_quad_full_res
 from backend.loadtest import LoadProfile, verify_backpressure_policy
-from backend.loadtest.constants import (
-    JPEG_PREVIEW_COMPRESSION_RATIO,
-    WS_PUBLISH_RATE_DEFAULT_HZ,
-    WS_PUBLISH_RATE_MAX_HZ,
-)
+from backend.loadtest.constants import JPEG_PREVIEW_COMPRESSION_RATIO
+from backend.ws.constants import WS_PUBLISH_RATE_DEFAULT_HZ, WS_PUBLISH_RATE_MAX_HZ
 from contracts.ws.schema import BUFFERED_AMOUNT_THRESHOLD_BYTES
 
 _FRONTEND_CONSTANTS = Path("frontend/src/viewport/constants.ts")

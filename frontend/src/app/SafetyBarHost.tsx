@@ -48,15 +48,24 @@ const NO_SESSION_ROBOT: RobotBadgeState = {
 // channel for them — the mode is the session's, the profile is the config's, and the holder is
 // the lease's. Filling any of them from what IS here would be a label with nothing behind it.
 //
-// Staleness is not judged. A reading's age is on the wire (`readAgeS`) and no threshold has been
-// decided for it, so this reports what arrived rather than a verdict nobody chose. What it does
-// catch is a link that stopped: the provider drops its view with the channel, and the bar falls
-// back to the constant above.
+// Connected means a reading is still advancing, which is not the same as frames still arriving.
+// The two come apart when the loop that fills the board dies while the socket stays up: the
+// server keeps publishing the last reading at the full rate, so a badge that counted frames
+// reports a healthy arm for as long as the operator leaves the page open. The server judges the
+// age against the tick rate it set and puts the verdict in the frame; this reads it.
 function robotBadgeFrom(telemetry: TelemetryView | null): RobotBadgeState {
-  if (telemetry === null || telemetry.arms.length === 0) {
+  if (telemetry === null || telemetry.arms.every((arm) => arm.stale)) {
     return NO_SESSION_ROBOT;
   }
   return { ...NO_SESSION_ROBOT, connected: true };
+}
+
+// Whether frames are arriving from arms whose readings have all stopped advancing. Distinct from
+// the disconnected badge on purpose: the badge cannot separate "no arm" from "an arm that froze",
+// and those want opposite things from the operator — one is a session not started, the other is a
+// rig that needs looking at.
+function readingStopped(telemetry: TelemetryView | null): boolean {
+  return telemetry !== null && telemetry.arms.length > 0 && telemetry.arms.every((arm) => arm.stale);
 }
 
 // Empty because no interface has been observed, not because none exists. The badge bar
@@ -73,6 +82,10 @@ const NO_SESSION_NOTIFICATIONS: readonly Notification[] = [];
 // node — and claiming it would name a backend that is not running. The absence of any
 // backend is carried by the disconnected badge and the missing-link notice below.
 const DUMMY_MODE = false;
+
+const READING_STOPPED_HEADLINE = "팔 상태 읽기가 멈췄습니다";
+const READING_STOPPED_WHY =
+  "화면의 값은 마지막으로 읽힌 것이고 더 갱신되지 않습니다. 서버가 팔을 계속 읽고 있는지 stderr 로그를 확인하십시오.";
 
 const STOP_LINK_ABSENT_NOTICE =
   "이 소프트 스톱은 아직 전달 경로가 없습니다 — 누르더라도 로봇에 도달하지 않습니다. 즉시 정지가 필요하면 전원라인 물리 E-Stop을 사용하십시오.";
@@ -110,6 +123,13 @@ export function SafetyBarHost() {
         onSoftStop={handleSoftStop}
         onToggleVelocityTorque={handleToggleVelocityTorque}
       />
+
+      {readingStopped(telemetry) && (
+        <p className="oa-link-failure" role="alert" data-arm-reading="stopped">
+          <strong className="oa-link-failure__head">{READING_STOPPED_HEADLINE}</strong>
+          <span className="oa-link-failure__why">{READING_STOPPED_WHY}</span>
+        </p>
+      )}
 
       {STOP_HOLD_SENDER === null && (
         <p className="oa-link-notice" role="status" data-stop-link="absent">

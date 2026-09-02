@@ -147,6 +147,29 @@ def test_a_tick_that_raises_stops_the_loop_and_is_kept(
     assert runner.ticks == 0
 
 
+def test_the_death_is_reported_when_it_happens_not_at_shutdown(
+    session: ArmSession, arm: CountingArm, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Keeping the exception in an attribute is not reporting it.
+
+    The only reader of `failure` runs after the server's own loop has returned, so a reader lost
+    to a vanished CAN adapter stayed invisible for as long as the operator left the window open —
+    measured once at forty-five minutes, with the browser reporting a connected arm throughout.
+    The process has to say so while it is still up.
+    """
+    arm.failure = RuntimeError("the bus answered no state")
+    runner = ArmSessionRunner(session, TEST_TICK_HZ)
+    runner.start()
+    runner.join(timeout=TICK_WAIT_TIMEOUT_SEC)
+
+    reported = capsys.readouterr().err
+
+    assert "the bus answered no state" in reported
+    # Names the consequence, not only the exception: an operator reading this needs to know the
+    # boards are frozen from here on, which the exception text alone does not say.
+    assert "will not advance" in reported
+
+
 def test_stopping_a_runner_that_never_started_is_not_an_error(session: ArmSession) -> None:
     """Shutdown runs on paths where startup did not finish, and must not raise there."""
     assert ArmSessionRunner(session, TEST_TICK_HZ).stop() is True

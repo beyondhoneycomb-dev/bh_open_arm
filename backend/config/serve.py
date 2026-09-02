@@ -62,6 +62,7 @@ from backend.security.constants import PLAINTEXT_HTTP_SCHEME
 from backend.security.loopback import LOOPBACK_HOSTS, LoopbackBindError, assert_loopback_bind
 from backend.ws.app import mount_realtime_channel
 from backend.ws.arm_channel import refuse_command
+from backend.ws.constants import TELEMETRY_STALE_TICK_MULTIPLE
 from backend.ws.deployment import LoopbackDeployment
 
 EXIT_OK = 0
@@ -238,7 +239,9 @@ def _as_url_host(host: str) -> str:
     return f"[{host}]" if ":" in host else host
 
 
-def mount_websocket_router(app: FastAPI, arm: ArmSession | None, clock: Clock, port: int) -> bool:
+def mount_websocket_router(
+    app: FastAPI, arm: ArmSession | None, clock: Clock, port: int, control_tick_hz: float
+) -> bool:
     """Mount the realtime channel over this process's arm session, if it has one.
 
     The order is the safety property, not a preference. The channel carries the soft stop, and a
@@ -258,6 +261,10 @@ def mount_websocket_router(app: FastAPI, arm: ArmSession | None, clock: Clock, p
         clock: The server monotonic clock latch timestamps are stamped from — the same one the
             session's boards and lease read.
         port: The served port, used to build the Origin allowlist.
+        control_tick_hz: The rate the session is ticked at, which is what makes a board age
+            readable: the deadline the frame calls a side stale by is that period times
+            `TELEMETRY_STALE_TICK_MULTIPLE`. Passed rather than defaulted because an operator
+            who lowered the tick rate would otherwise get stale reported on a healthy arm.
 
     Returns:
         (bool) Whether a WebSocket route is now on the app.
@@ -277,6 +284,7 @@ def mount_websocket_router(app: FastAPI, arm: ArmSession | None, clock: Clock, p
         # here and nowhere else: a channel mounted without them sends nothing unprompted, which
         # is the shape every refusal test reads against.
         boards={side: arm.board(side) for side in arm.sides},
+        stale_after_s=TELEMETRY_STALE_TICK_MULTIPLE / control_tick_hz,
     )
     return True
 
@@ -333,7 +341,11 @@ def build_server_app(
     app = create_app(store)
     mount_camera_routes(app, store.directory, tuple(RIG_SLOTS))
     websocket_mounted = mount_websocket_router(
-        app, arm, clock if clock is not None else WallClock(), port
+        app,
+        arm,
+        clock if clock is not None else WallClock(),
+        port,
+        store.load().document.control.control_tick_hz,
     )
     spa_mounted = mount_spa_bundle(app, root)
     return app, websocket_mounted, spa_mounted

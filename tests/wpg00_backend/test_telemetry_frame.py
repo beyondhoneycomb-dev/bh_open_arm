@@ -23,6 +23,7 @@ from backend.ws.dispatch import server_envelope
 from backend.ws.telemetry import (
     ARM_BUS_READ_OK,
     ARM_READ_AGE,
+    ARM_STALE,
     MOTOR_ROW_JOINT_NAME,
     MOTOR_ROW_TEMP_MOS,
     OBSERVATION_STATE_KEY,
@@ -76,8 +77,22 @@ def _state(
     )
 
 
-def _boards(*, thermometer: bool = True, publish: bool = True) -> dict[str, ArmStateBoard]:
-    """Two published boards over one clock, as a session's would be."""
+# The deadline the frame judges an age against. Five control periods at the 100 Hz default, which
+# is what `mount_websocket_router` computes from the rate the session is actually ticked at.
+STALE_AFTER_SEC = 0.05
+
+
+def _boards(
+    *, thermometer: bool = True, publish: bool = True, age_s: float = 0.0
+) -> dict[str, ArmStateBoard]:
+    """Two published boards over one clock, as a session's would be.
+
+    Args:
+        thermometer: Whether the reader reports temperatures.
+        publish: Whether either board has published at all.
+        age_s: How far the clock is moved after publishing, which is how old every reading is
+            when a view is taken — the whole difference between a live board and a dead loop.
+    """
     clock = ManualClock()
     boards = {"left": ArmStateBoard(clock=clock), "right": ArmStateBoard(clock=clock)}
     if publish:
@@ -87,6 +102,7 @@ def _boards(*, thermometer: bool = True, publish: bool = True) -> dict[str, ArmS
         boards["right"].publish(
             _state(RIGHT_POSE, RIGHT_VELOCITY, RIGHT_TORQUE, thermometer=thermometer)
         )
+    clock.advance(age_s)
     return boards
 
 
@@ -97,7 +113,7 @@ def _views(boards: dict[str, ArmStateBoard]) -> dict[str, ArmStateView]:
 
 def test_the_body_carries_exactly_the_fields_the_contract_declares() -> None:
     """The envelope builder refuses anything else, so a drift here is a send that raises."""
-    body = telemetry_body(_views(_boards()))
+    body = telemetry_body(_views(_boards()), STALE_AFTER_SEC)
 
     assert set(body) == set(FRAME_TABLE[WsFrameType.TELEMETRY].fields)
 
@@ -109,7 +125,9 @@ def test_the_envelope_accepts_the_body() -> None:
     builder produced and the contract does not admit fails at send time — on the live socket,
     with an arm energised, which is the worst place to find it.
     """
-    envelope = server_envelope(WsFrameType.TELEMETRY, telemetry_body(_views(_boards())))
+    envelope = server_envelope(
+        WsFrameType.TELEMETRY, telemetry_body(_views(_boards()), STALE_AFTER_SEC)
+    )
 
     assert envelope["type"] == WsFrameType.TELEMETRY.value
 
@@ -154,7 +172,7 @@ def test_the_two_arms_do_not_bleed_into_each_other() -> None:
 
 def test_a_thermometer_produces_one_row_per_motor() -> None:
     """The diagnostics half — what the observation vector has no channel for."""
-    body = telemetry_body(_views(_boards(thermometer=True)))
+    body = telemetry_body(_views(_boards(thermometer=True)), STALE_AFTER_SEC)
     rows = body[TELEMETRY_MOTOR_STATES_FIELD]
 
     assert len(rows) == 2 * SLOTS_PER_SIDE
@@ -168,7 +186,7 @@ def test_a_reader_with_no_thermometer_reports_no_rows_rather_than_zeros() -> Non
     This is the whole reason the board's temperature is optional rather than a zeroed tuple:
     the absence has to survive as far as the wire, because the screen cannot recover it.
     """
-    body = telemetry_body(_views(_boards(thermometer=False)))
+    body = telemetry_body(_views(_boards(thermometer=False)), STALE_AFTER_SEC)
 
     assert body[TELEMETRY_MOTOR_STATES_FIELD] == []
 
@@ -186,7 +204,7 @@ def test_a_board_that_published_nothing_contributes_no_arm_entry() -> None:
     Reported as an omission rather than an infinite age, so a client cannot render a server
     still starting up as an arm that died.
     """
-    body = telemetry_body(_views(_boards(publish=False)))
+    body = telemetry_body(_views(_boards(publish=False)), STALE_AFTER_SEC)
 
     assert body[TELEMETRY_ARMS_FIELD] == {}
     assert body[TELEMETRY_OBSERVATION_FIELD][OBSERVATION_STATE_KEY] == [
@@ -196,7 +214,51 @@ def test_a_board_that_published_nothing_contributes_no_arm_entry() -> None:
 
 def test_the_guard_reaches_the_wire() -> None:
     """The badge bar's only possible source. Without it a stalled board reads as a still arm."""
-    body = telemetry_body(_views(_boards()))
+    body = telemetry_body(_views(_boards()), STALE_AFTER_SEC)
 
     assert body[TELEMETRY_ARMS_FIELD]["left"][ARM_BUS_READ_OK] is True
     assert body[TELEMETRY_ARMS_FIELD]["left"][ARM_READ_AGE] == 0.0
+
+
+def test_a_fresh_reading_is_not_stale() -> None:
+    """The healthy case, which the two below are only meaningful against."""
+    body = telemetry_body(_views(_boards()), STALE_AFTER_SEC)
+
+    assert body[TELEMETRY_ARMS_FIELD]["left"][ARM_STALE] is False
+
+
+def test_a_reading_past_the_deadline_is_reported_stale() -> None:
+    """The failure this field exists for, and the one that already happened.
+
+    A CAN adapter left the bus, the tick that fills these boards raised and returned, and the
+    push loop kept sending this exact body at the full rate for forty-five minutes. Every value
+    in it was a real measurement — of a moment three quarters of an hour earlier. The badge read
+    `arms` non-empty and reported a connected arm the entire time.
+    """
+    body = telemetry_body(_views(_boards(age_s=STALE_AFTER_SEC * 2.0)), STALE_AFTER_SEC)
+
+    assert body[TELEMETRY_ARMS_FIELD]["left"][ARM_STALE] is True
+    assert body[TELEMETRY_ARMS_FIELD]["right"][ARM_STALE] is True
+
+
+def test_the_stale_verdict_moves_with_the_deadline_it_was_given() -> None:
+    """The deadline is the caller's, derived from the tick rate the session was built at.
+
+    An operator who lowered `control_tick_hz` widened the interval a healthy board publishes at,
+    and a verdict pinned to a figure chosen here would call that arm dead.
+    """
+    aged = _views(_boards(age_s=0.2))
+
+    assert telemetry_body(aged, 0.05)[TELEMETRY_ARMS_FIELD]["left"][ARM_STALE] is True
+    assert telemetry_body(aged, 0.5)[TELEMETRY_ARMS_FIELD]["left"][ARM_STALE] is False
+
+
+def test_a_stale_reading_still_carries_its_age() -> None:
+    """The verdict does not replace the number it was made from.
+
+    An operator needs to know whether the reading stopped a second ago or an hour ago, and the
+    boolean cannot say. Both travel.
+    """
+    body = telemetry_body(_views(_boards(age_s=1.5)), STALE_AFTER_SEC)
+
+    assert body[TELEMETRY_ARMS_FIELD]["left"][ARM_READ_AGE] == 1.5

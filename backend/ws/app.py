@@ -27,16 +27,19 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from backend.actuation.board import ArmStateBoard
 from backend.actuation.clock import Clock
+from backend.config.constants import CONTROL_TICK_HZ_DEFAULT
 from backend.deadman import DeadmanController, LatchTarget
 from backend.ws.constants import (
     ORIGIN_HEADER,
     REALTIME_ROUTE,
     ROLE_QUERY_PARAM,
     SESSION_QUERY_PARAM,
+    TELEMETRY_STALE_TICK_MULTIPLE,
     WS_CLOSE_FORBIDDEN_ORIGIN,
     WS_CLOSE_MISSING_SESSION,
     WS_CLOSE_REASON_MAX_BYTES,
     WS_CLOSE_UNKNOWN_ROLE,
+    WS_PUBLISH_RATE_DEFAULT_HZ,
 )
 from backend.ws.deployment import ControlChannelDeployment, admitted_origins
 from backend.ws.dispatch import CommandSink, FrameDispatcher, WsClosure, server_envelope
@@ -115,16 +118,21 @@ def handshake_session(
     return WsSession(role=WsRole(role_value), session_id=session_id, preview_sink=preview_sink)
 
 
-# How often a connected client is sent the board's state. `13` FR-GUI-004 wants the GUI to show
-# what the arm is doing, not every tick of it: the control loop runs at 100 Hz and a socket
-# carrying that would spend the link on frames no screen repaints for. Twenty is above the rate a
-# person reads a changing number at and an order below the loop, so a stalled board is visible
-# within a frame or two without the channel becoming the reason the loop is late.
-DEFAULT_TELEMETRY_HZ = 20.0
+# How often a connected client is sent the board's state, and how old a reading may be before
+# the frame says so. `13` FR-GUI-004 wants the GUI to show what the arm is doing, not every tick
+# of it: the control loop runs at 100 Hz and a socket carrying that would spend the link on
+# frames no screen repaints for. The rate is `NFR-GUI-003`'s confirmed default rather than a
+# figure chosen here — a publisher that picks its own number is a third answer to a question the
+# spec and the frontend had already settled.
+DEFAULT_TELEMETRY_HZ = WS_PUBLISH_RATE_DEFAULT_HZ
+DEFAULT_STALE_AFTER_SEC = TELEMETRY_STALE_TICK_MULTIPLE / CONTROL_TICK_HZ_DEFAULT
 
 
 async def _push_telemetry(
-    websocket: WebSocket, boards: Mapping[str, ArmStateBoard], telemetry_hz: float
+    websocket: WebSocket,
+    boards: Mapping[str, ArmStateBoard],
+    telemetry_hz: float,
+    stale_after_s: float,
 ) -> None:
     """Send the board's state to one client until the connection goes away.
 
@@ -136,6 +144,11 @@ async def _push_telemetry(
     describes one instant. Reading them again per section would let the observation vector and
     the arm ages come from different ticks.
 
+    This loop keeps running when the loop that FILLS the boards has stopped, and it must: a
+    client that stops receiving cannot tell a dead reader from a dead link, and the two want
+    opposite responses. What it sends instead is the board's age against `stale_after_s`, so a
+    frozen board arrives labelled as one rather than as a robot holding perfectly still.
+
     A send that raises ends the loop rather than retrying. The socket is gone, and a task that
     kept trying would hold the connection's objects alive behind a client that left.
     """
@@ -143,7 +156,7 @@ async def _push_telemetry(
     try:
         while True:
             views = {side: board.view() for side, board in boards.items()}
-            body = telemetry_body(views)
+            body = telemetry_body(views, stale_after_s)
             await websocket.send_json(server_envelope(WsFrameType.TELEMETRY, body))
             await asyncio.sleep(period)
     except (WebSocketDisconnect, RuntimeError):
@@ -159,6 +172,7 @@ def mount_realtime_channel(
     security: ControlChannelDeployment,
     boards: Mapping[str, ArmStateBoard] | None = None,
     telemetry_hz: float = DEFAULT_TELEMETRY_HZ,
+    stale_after_s: float = DEFAULT_STALE_AFTER_SEC,
 ) -> FastAPI:
     """Mount the single realtime websocket route on an existing application.
 
@@ -237,7 +251,9 @@ def mount_realtime_channel(
         pushing = (
             None
             if boards is None
-            else asyncio.create_task(_push_telemetry(websocket, boards, telemetry_hz))
+            else asyncio.create_task(
+                _push_telemetry(websocket, boards, telemetry_hz, stale_after_s)
+            )
         )
         try:
             while True:

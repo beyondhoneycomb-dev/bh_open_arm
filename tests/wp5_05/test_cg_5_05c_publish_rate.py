@@ -11,12 +11,9 @@ from __future__ import annotations
 import math
 
 from backend.loadtest import resolve_publish_rate, verify_publish_rate_policy
-from backend.loadtest.constants import (
-    CONTROL_LOOP_POLL_RATES_HZ,
-    WS_PUBLISH_RATE_DEFAULT_HZ,
-    WS_PUBLISH_RATE_MAX_HZ,
-)
+from backend.loadtest.constants import CONTROL_LOOP_POLL_RATES_HZ
 from backend.loadtest.publish_rate import full_rate_leaks
+from backend.ws.constants import WS_PUBLISH_RATE_DEFAULT_HZ, WS_PUBLISH_RATE_MAX_HZ
 
 
 def test_unset_resolves_to_default() -> None:

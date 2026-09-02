@@ -30,8 +30,8 @@ from backend.camera.descriptor import CameraDescriptor
 from backend.loadtest.constants import (
     CLIENT_LOCALITY_LAN,
     JPEG_PREVIEW_COMPRESSION_RATIO,
-    WS_PUBLISH_RATE_DEFAULT_HZ,
 )
+from backend.ws.constants import WS_PUBLISH_RATE_DEFAULT_HZ
 from contracts.ws.schema import (
     FRAME_TABLE,
     WsFrameType,

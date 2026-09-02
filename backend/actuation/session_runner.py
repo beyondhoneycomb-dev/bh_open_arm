@@ -19,10 +19,18 @@ A tick that raises stops the loop and the exception is kept. `HoldMaintainer` ma
 choice for the same reason: a maintenance loop that died quietly is worse than one that stopped
 loudly, because the board it fed keeps answering with its last frame and only a reader checking
 the age would ever notice.
+
+Loudly means at the moment of death, not at shutdown. Keeping the exception in an attribute is
+not reporting it: the one reader of `failure` runs after the server's own loop has returned, so a
+reader lost to a vanished CAN adapter stayed invisible for as long as the operator left the
+window open — measured once at 45 minutes, with the browser's badge reporting a connected arm the
+whole time. The write to stderr here is what makes the process say so while it is still up; the
+telemetry frame's `stale` field is what makes the browser say so.
 """
 
 from __future__ import annotations
 
+import sys
 import threading
 
 from backend.actuation.pacer import PacerError, TickPacer
@@ -79,6 +87,12 @@ class ArmSessionRunner(threading.Thread):
                     self._session.tick()
                 except BaseException as failure:  # noqa: BLE001 — a dead loop is the finding
                     self.failure = failure
+                    print(
+                        f"the arm session tick died after {self.ticks} ticks: {failure!r}; "
+                        "the boards will not advance again until this process restarts.",
+                        file=sys.stderr,
+                        flush=True,
+                    )
                     return
                 self.ticks += 1
                 pacer.wait()

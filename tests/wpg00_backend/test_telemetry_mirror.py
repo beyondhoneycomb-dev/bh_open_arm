@@ -29,6 +29,7 @@ VIEW_TS = _REPO_ROOT / "frontend" / "src" / "ws" / "telemetryView.ts"
 MIRRORED = (
     backend_telemetry.OBSERVATION_STATE_KEY,
     backend_telemetry.ARM_READ_AGE,
+    backend_telemetry.ARM_STALE,
     backend_telemetry.ARM_TICK_INDEX,
     backend_telemetry.ARM_OBSERVATION_PRESENT,
     backend_telemetry.ARM_BUS_READ_OK,

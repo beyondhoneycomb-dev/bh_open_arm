@@ -16,6 +16,12 @@ Two things this module *does* own, because no contract fixes them:
   frozen contract. The refusal is therefore a WebSocket close, which is part of RFC 6455
   rather than part of the contract — visible to the client as `onclose(code, reason)`,
   and distinct per refusal so a client can tell them apart.
+
+The publish rate below is neither of those: it is `NFR-GUI-003`'s confirmed figure, and it
+lives here because this package holds the only loop that actually publishes. It was written
+down in `backend/loadtest/constants.py` first, when the load test was the only Python reader
+of it; a second copy next to the real publisher would be the fork that mirror is there to
+prevent.
 """
 
 from __future__ import annotations
@@ -74,6 +80,21 @@ GUI_STOP_GATE_PREFIX = "GUI_SOFT_STOP"
 GUI_STOP_PREVIOUS_STATE = "LIVE"
 GUI_STOP_NEW_STATE = "LATCHED"
 
+# `NFR-GUI-003` / `FR-GUI-022` (`13` §2.4, both confirmed): joint state goes onto the
+# socket at 30 Hz by default, 60 Hz at the cap, and the control loop's full rate never
+# goes out raw. The cap sits strictly below the fast loop (100 Hz), so decimation is not
+# an option the deployment can switch off. `frontend/src/viewport/constants.ts` carries
+# the browser-side copy and `tests/wp5_05/test_reuse_no_fork.py` reads both.
+WS_PUBLISH_RATE_DEFAULT_HZ = 30.0
+WS_PUBLISH_RATE_MAX_HZ = 60.0
+
+# How many control periods a board reading may lag by before the frame reports that side
+# as stale. The board's age is the only thing that separates an arm holding still from a
+# reader that died: both publish identical numbers forever, and `ArmSessionRunner` keeps a
+# dead loop's exception to itself until the process exits. Five periods rather than one
+# because the publisher is slower than the tick and a late tick is not a dead one.
+TELEMETRY_STALE_TICK_MULTIPLE = 5
+
 __all__ = [
     "ENVELOPE_TYPE_FIELD",
     "GUI_STOP_GATE_PREFIX",
@@ -83,6 +104,7 @@ __all__ = [
     "REALTIME_ROUTE",
     "ROLE_QUERY_PARAM",
     "SESSION_QUERY_PARAM",
+    "TELEMETRY_STALE_TICK_MULTIPLE",
     "WS_CLOSE_COMMAND_UNROUTABLE",
     "WS_CLOSE_FORBIDDEN_ORIGIN",
     "WS_CLOSE_MALFORMED_FRAME",
@@ -93,4 +115,6 @@ __all__ = [
     "WS_CLOSE_UNKNOWN_FRAME_TYPE",
     "WS_CLOSE_UNKNOWN_ROLE",
     "WS_CLOSE_WRONG_DIRECTION",
+    "WS_PUBLISH_RATE_DEFAULT_HZ",
+    "WS_PUBLISH_RATE_MAX_HZ",
 ]
