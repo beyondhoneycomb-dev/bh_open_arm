@@ -1,6 +1,6 @@
 # STATUS — 지금 무엇이 도는가
 
-작성 2026-08-24 · 갱신 2026-08-27(§3.2·§3.5) · 기준 커밋 `31c59f8` + 미커밋 작업트리
+작성 2026-08-24 · 갱신 2026-09-02(§3.2·§3.6·§6·§8) · 기준 커밋 `a2cbf18`
 
 ---
 
@@ -74,9 +74,10 @@
 |---|---|---|
 | `oa-serve` | FastAPI + SPA + WebSocket 1개 | `--arm` 은 `none`·`dummy`·**`real`**. `real` 은 **읽기 전용** — 보드에 실기 값이 오르고, 명령은 여전히 안 나간다(§6) |
 | — REST | `GET /api/tools` · `GET /api/config` · `PUT /api/config/{서브객체}` | 서브객체 4개(`layout`·`presets`·`endEffector`·`control`) |
-| — WS `/ws/realtime` | 리스 갱신·재무장 핸드셰이크·`stop_hold` 수용 · 거절은 닫힘 코드 4400–4408 로 답한다(§8.1) | **서버가 먼저 보내는 프레임 0종.** §6 참조 |
-| — SPA | 13화면 + `/viewport` | **S-06 장치 지정 패널만 실기에 붙었다**(프리뷰·지정·저장). 나머지 12화면은 값 전량 픽스처, 실시간 구독 0 |
+| — WS `/ws/realtime` | 리스 갱신·재무장 핸드셰이크·`stop_hold` 수용 · 거절은 닫힘 코드 4400–4408 로 답한다(§8.1) · **`telemetry` 프레임을 30 Hz 로 민다**(§3.6) | 서버가 먼저 보내는 프레임 **1종** |
+| — SPA | 13화면 + `/viewport` | **실기에 붙은 것 4 + 뷰포트**: `S-06`(카메라 지정) · `S-03`(모터 진단) · `S-04`(관절 표) · `S-13`(시스템) · `/viewport`(관절 프레임·stream-age). 나머지 9화면은 값 전량 픽스처 |
 | — REST 카메라 | `GET /api/cameras/devices` · `PUT`·`DELETE /api/cameras/slots/{슬롯}` · `GET .../{포트}/preview` | **S-06 이 실제로 부른다.** 프런트에서 백엔드로 가는 첫 `fetch` |
+| — REST 시스템 | `GET /api/system/report` | **S-13 이 부른다.** 포트 정본 + 실제 바인딩 + RT 자세 + 번들 매니페스트 + `OA-*` 55종 |
 
 ### 3.3 저장소 도구
 
@@ -135,6 +136,33 @@
 **갈릴 수 있는 두 슬롯 목록.** 패널이 offer 하는 슬롯은 백엔드가 답한 `RIG_SLOTS` 이고, 타일은
 `observationFeatures` 에서 파생된다(`CG-G-S06a`). 둘이 어긋나면 패널이 제안한 슬롯을 `PUT` 이
 404 로 거절한다 — 조용히 맞추지 않는다.
+
+---
+
+### 3.6 텔레메트리가 흐른다 — 2026-09-02
+
+서버가 먼저 보내는 프레임이 생겼다. `telemetry` 한 종, **30 Hz**(`NFR-GUI-003` 확정 기본값).
+본문 다섯 절, 전부 보드 한 번 읽기에서 나온다 — 한 프레임은 한 순간을 말한다.
+
+| 절 | 무엇 | 읽는 쪽 |
+|---|---|---|
+| `sequence` | 세션 tick. 안 움직이면 루프가 멈춘 것 | — |
+| `observation` | 동결 48채널 벡터, LeRobot 이름·단위 | 정책 경로(아직 소비자 0) |
+| `motor_states` | 모터별 MOS·로터 온도 | `S-03` |
+| `arms` | 팔별 guard 4종 + `read_age_s` + `tick_index` + **`stale`** | 배지 바 |
+| `joints` | 관절 16행: URDF 이름·LeRobot 이름·deg·rad·속도·토크·소프트리밋·`near_limit`·`blocked_direction` | `S-04` · `/viewport` |
+
+**`stale` 이 있는 이유.** 어댑터가 USB 로 빠져도 `_push_telemetry` 는 계속 돈다 — 보드가
+마지막 값을 영원히 돌려주므로 45분 전 측정값이 초당 30번 나갔고 배지는 그동안 "연결됨"
+이었다. 마감은 `mount_websocket_router` 가 실제 `control_tick_hz` × 5 로 계산한다. 이제
+읽기 루프가 죽으면 `ArmSessionRunner` 가 그 자리에서 stderr 로 말하고, 프레임이 stale 을
+싣고, 배지가 끊김으로 가고, 별도 알림 줄이 "세션 없음"과 "얼었음"을 갈라 준다.
+
+**단위 crossing 은 백엔드에 하나뿐이다.** 브라우저는 deg→rad 를 안 한다. 두 번째 변환은
+두 번째 반올림이고 값이 경계 위에 앉은 바로 그 지점에서 첫 번째와 어긋난다.
+
+**아직 안 보이는 것:** 두 팔이 다 wire 에 있는데 `S-04` 는 `ManualSource.side` 하나만
+그린다(선택기 없음). 뷰포트는 관절을 받지만 **모델이 없다** — §6 참조.
 
 ---
 
@@ -207,9 +235,10 @@
 
 | 무엇 | 막힌 이유 |
 |---|---|
-| **텔레메트리 흐름** | `ArmStateBoard` 가 100 Hz 로 쓰는데 `board.view()` 프로덕션 소비자 0. `CTR-WS@v2` 의 `telemetry` 프레임은 **필드가 0개**다. 잠금은 사라졌으므로 막는 것은 이제 기계가 아니라 **형상 결정** — 프런트에 이미 갈라진 형상 둘 중 무엇을 정본으로 하느냐다(§6 아래) |
 | **정지 명령 루프** | `STOP_HOLD_SENDER = null` (`frontend/src/app/backendLink.ts`). `ArmSession` 은 읽고 게시할 뿐 **보내지 않는다** — 버스 핸들도 engage 시퀀스도 없다. 채우면 GUI 가 `{sent:true}` 를 받고 팔은 그대로다 (NORM-007) |
-| **`/api/system/report`** | S-13 이 부르는데 백엔드 0건 |
+| **뷰포트의 모델** | `openarm_description` 이 **이 저장소에도 이 기계에도 없다**. URDF·provenance·링크 집합을 서빙하는 것이 0이라 `robotHandle` 은 null 이고 캔버스는 씬만 그린다. 관절 프레임은 도착한다(§3.6) — 없는 것은 지오메트리다. 외부 저장소를 벤더링할지가 선행 결정 |
+| **EE 포즈** | 어느 프레임에도 채널이 없다. `S-04` 는 여섯 성분을 null 로 받고 대시를 그린다 — 픽스처 값을 실기 관절값 옆에 두면 측정된 툴 포인트로 읽힌다 |
+| **진단 번들 생성기** | `FR-OPS-023` 원클릭 생성이 없다. `/api/system/report` 의 매니페스트는 그 리포트가 **실제로 실은** 두 항목만 주장하고 나머지 여덟은 빠짐으로 뜬다 |
 | **`PG-*` 게이트 판정 봉인** | 봉인할 기계가 없다. `registry/state/store/state.json` 은 **존재한 적이 없고**, 그것을 쓰던 `oa-state` 는 2026-08-26 에 삭제됐다(§6b). 게이트 통과 여부는 실기 캡처와 작업로그가 들고 있다 |
 | **Isaac Tier-2** | `WP-5-09`~`14`. 코드 0줄. `Isaac` 문자열은 `ops/versionpin` 승급 차단기에만 있다 |
 | **전원상실 복구 상태머신** | 사용자 확정 — 안 짓는다 (§7) |
@@ -245,14 +274,17 @@
 라벨은 편집 한 줄로 맞췄고 미러 27파일이 따라왔다. 경위는
 `work_log/2026-08-25_거절은-…md` §7 이 들고 있다.
 
-### `telemetry` 본문 형상이 프런트에 둘이다 — 🔴 아직 유효하다
+### ~~`telemetry` 본문 형상이 프런트에 둘이다~~ — 닫혔다(2026-09-02)
 
-- `screens/S-03/motorDomain.ts:269-289` — `body["motor_states"]` = `{joint_name, temp_mos_c, temp_rotor_c, err_nibble}[]`
-- `ws/synthetic.ts:52` — `{sequence, observation:{"observation.state":[]}}`
+형상 하나로 정했다. `contracts/ws/schema.py` 의 TELEMETRY 행이 다섯 필드를 선언하고,
+`backend/ws/telemetry.py` 가 그것만 만들고(`server_envelope` 이 다른 것을 거절한다),
+`frontend/src/ws/telemetryView.ts` 가 그것을 읽는다. 갈라졌던 둘은 이렇게 흡수됐다 —
+`motor_states` 는 `S-03` 이 계속 자기 파서로 읽고(행 타입과 `err_nibble` 기본값이 그 화면
+것이므로), 나머지는 공유 리더가 읽는다.
 
-둘 다 `CTR-WS@v2` 의 `telemetry` 프레임에 없다 — 그 프레임은 **필드가 0개**다. 잠금을 지운 것이
-이 문제를 고치지는 않는다. 형상이 둘이면 소비자가 둘로 갈리고, 그건 잠금이 있든 없든 결함이다.
-텔레메트리를 실제로 흘릴 때 **하나로 정해야 한다**.
+언어 경계는 미러 테스트 둘이 지킨다: `tests/wpg00_backend/test_telemetry_mirror.py` 가 백엔드
+상수값이 TS 소스에 문자열로 있는지 보고, `frontend/src/ws/envelope.contract.test.ts` 가 동결
+envelope 의 필드 목록과 프런트 `FRAME_TABLE` 을 맞춘다. 둘 다 변이로 red 확인했다.
 
 ---
 
@@ -343,9 +375,12 @@
 |---|---|---|---|
 | 1 | ~~**`onError` 배선**~~ | — | **전제가 틀렸다. 2026-08-25 폐기.** error 프레임은 존재하지 않으므로 도착하지도, 버려지지도 않는다 — `CTR-WS@v2` 프레임 열 종에 error 가 없고(`contracts/ws/schema.py:223-338`), 백엔드 송신 경로는 `sink.py:121`·`app.py:198` 둘뿐이다. `onError` 는 생산자 0인 소비자이며 `CG-G-03g` 는 `CTR-WS@v3` 없이는 열리지 않는다. 그 자리에 있던 실제 결함은 §8.1 로 옮겼고 고쳤다 |
 | 2 | ~~**`oa-serve` 실기 백엔드**~~ | — | **됐다(2026-08-26). §3.4 참조.** `--arm real` 이 `can_binding.json` 으로 채널을 풀고, 양팔 락을 쥐고, `BiOaOpenArmFollower` 를 열어 보드에 실기 값을 올린다. 첫 실행은 아직 — 뜨는 순간 모터 14개가 통전된다 |
-| 3 | **`telemetry` 프레임에 본문을 준다** | 중간 + 결정 | 2번 뒤. 세대 범프가 아니라 **형상 결정**이다 — 파이썬 표·`envelope.schema.json`·프런트 표 셋이 같은 것을 말하게 하고, 위의 갈라진 형상 둘 중 하나를 고른다 |
-| 4 | 정지 명령 루프 | 중간 | 3번 뒤. 선행은 토크-ON 이고 **사람이 팔 옆에 있어야 한다** |
-| 5 | `/api/system/report` | 중간 | 포트 정본이 `spec/01`:456-462 마크다운 표뿐이라 상수로 박으면 세 번째 정본이 된다 — 읽는 방법 결정 필요 |
+| 3 | ~~**`telemetry` 프레임에 본문을 준다**~~ | — | **됐다(2026-09-02). §3.6 참조.** 다섯 절, 30 Hz. 소비자 넷이 붙었다 |
+| 4 | ~~`/api/system/report`~~ | — | **됐다(2026-09-02).** 포트 정본은 `contracts/ports/port_map.yaml` 이고 미러 테스트가 `01` §2.17 · `14` §2.1 두 표에서 포트를 긁어 대조한다 — 상수로 박지 않았으므로 세 번째 정본이 아니다 |
+| 5 | **정지 명령 루프** | 중간 | 선행은 토크-ON 이고 **사람이 팔 옆에 있어야 한다.** 어댑터가 돌아와야 한다 |
+| 6 | 뷰포트 모델 자산 | 중간 + 결정 | `openarm_description` 을 벤더링할 것인가. 관절 프레임은 이미 도착한다 — 없는 것은 지오메트리뿐(§6) |
+| 7 | `S-04` 팔 선택기 | 작음 | 두 팔이 wire 에 다 있는데 화면이 하나만 그린다. 전송 변경이 아니라 화면 변경 |
+| 8 | EE 포즈 채널 | 중간 | FK 를 어디서 돌릴 것인가 — 지금은 여섯 성분이 null 이고 대시로 그려진다 |
 
 ### 8.1 이미 이었다 — 서버 거절은 닫힘 코드로 온다 (2026-08-25)
 
@@ -372,7 +407,7 @@
 
 ### 착수 전 알아야 할 함정
 
-1. `tests/wp3b15/conftest.py:236-273` `expect_close()` 는 서버 메시지를 **정확히 하나** 읽고 프레임이면 실패시킨다. 요청 없이 telemetry 를 밀면 거절·리스 테스트가 전부 깨진다 — 결함이 아니라 순서 문제다
+1. ~~`tests/wp3b15/conftest.py:236-273` `expect_close()` 는 서버 메시지를 **정확히 하나** 읽고 프레임이면 실패시킨다~~ — **부딪히지 않았다(2026-09-02).** 밀기 태스크는 `boards` 가 주어질 때만 뜨고, 그건 이 프로세스가 팔 세션을 쥘 때뿐이다. 거절·리스 테스트에는 팔이 없으므로 서버가 먼저 보내는 것도 없다. 팔이 있는 테스트를 새로 쓸 때는 이 문장이 다시 유효해진다
 2. `tests/wp3b15/test_single_channel.py:76-88` 이 `backend/ws/` 의 모든 `.py` 를 소문자로 읽어 `webrtc`·`foxglove`·`rosbridge`·`grpc-web` 이 있으면 실패시킨다 — **주석에 써도 걸린다**
 3. 스레드 경계는 건널 것이 없다. 보드는 락 없는 속성 읽기(`board.py:155-162`)라 루프가 당겨오면 되고, `app.py:192` 의 `asyncio.create_task(sink.drain_forever())` 가 이미 동시 송신 태스크의 선례다
 4. `uv sync` 는 `pyzed` 를 지운다(락에 없는 벤더 휠). 복구: `.venv/bin/python /usr/local/zed/get_python_api.py` 로 휠만 받고 → `uv pip install <휠>`. 사본 `~/.local/share/openarm/`
