@@ -11,7 +11,9 @@
 // verified behaviour of the facade is proven against the 3A-style fixtures in the
 // colocated tests; this wiring is the single seam where live frames enter.
 
+import { useRealtime } from "../../app/RealtimeContext";
 import { MotorSetupScreen } from "./MotorSetupScreen";
+import { parseMotorStatesFromFrame } from "./motorDomain";
 import type { MotorSetupSink, MotorSetupSource } from "./motorDomain";
 
 const AWAITING_SOURCE: MotorSetupSource = {
@@ -35,5 +37,13 @@ const INERT_SINK: MotorSetupSink = {
 };
 
 export default function MotorSetupRoute() {
-  return <MotorSetupScreen source={AWAITING_SOURCE} sink={INERT_SINK} />;
+  const { telemetry } = useRealtime();
+  // Only `motorStates` is live. The rest of the source — descriptors, profiles, gripper
+  // endpoints, the error registry — has no channel on the telemetry frame, so it stays the
+  // awaiting shape rather than being filled from something that is not it.
+  const source: MotorSetupSource =
+    telemetry === null
+      ? AWAITING_SOURCE
+      : { ...AWAITING_SOURCE, motorStates: parseMotorStatesFromFrame(telemetry.body) };
+  return <MotorSetupScreen source={source} sink={INERT_SINK} />;
 }

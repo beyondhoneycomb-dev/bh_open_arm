@@ -28,16 +28,36 @@ import {
   deliver,
   type CommandOutcome,
 } from "./backendLink";
+import { useRealtime } from "./RealtimeContext";
 import { screenIdForPath } from "./currentScreen";
+import type { TelemetryView } from "../ws/telemetryView";
 
-// No session has reported any of this. `connected: false` is not a pessimistic guess —
-// no socket exists in this build, so disconnected is a fact.
+// What the badge bar shows before any telemetry has arrived, and after the link goes away.
+// `connected: false` is a fact rather than a pessimistic guess: the provider clears its last
+// frame when the channel closes, so a null view means nothing is arriving right now.
 const NO_SESSION_ROBOT: RobotBadgeState = {
   connected: false,
   mode: null,
   profileName: null,
   controlHolder: null,
 };
+
+// Derive the badge state from what the frame actually carries, which is one field of the four.
+//
+// `mode`, `profileName` and `controlHolder` stay unobserved because the telemetry frame has no
+// channel for them — the mode is the session's, the profile is the config's, and the holder is
+// the lease's. Filling any of them from what IS here would be a label with nothing behind it.
+//
+// Staleness is not judged. A reading's age is on the wire (`readAgeS`) and no threshold has been
+// decided for it, so this reports what arrived rather than a verdict nobody chose. What it does
+// catch is a link that stopped: the provider drops its view with the channel, and the bar falls
+// back to the constant above.
+function robotBadgeFrom(telemetry: TelemetryView | null): RobotBadgeState {
+  if (telemetry === null || telemetry.arms.length === 0) {
+    return NO_SESSION_ROBOT;
+  }
+  return { ...NO_SESSION_ROBOT, connected: true };
+}
 
 // Empty because no interface has been observed, not because none exists. The badge bar
 // renders this absence explicitly rather than showing zero CAN badges.
@@ -61,6 +81,7 @@ const FLAG_FAILED_HEADLINE = "설정이 적용되지 않았습니다";
 
 export function SafetyBarHost() {
   const { pathname } = useLocation();
+  const { telemetry } = useRealtime();
   const [stopOutcome, setStopOutcome] = useState<CommandOutcome | null>(null);
   const [flagOutcome, setFlagOutcome] = useState<CommandOutcome | null>(null);
 
@@ -80,7 +101,7 @@ export function SafetyBarHost() {
     <div className="oa-safety-host">
       <GlobalSafetyBar
         context={{ screen: screenIdForPath(pathname), mode: null, role: null }}
-        robot={NO_SESSION_ROBOT}
+        robot={robotBadgeFrom(telemetry)}
         canInterfaces={NO_SESSION_CAN}
         velocityTorque={NO_SESSION_VELOCITY_TORQUE}
         pushToHub={NO_SESSION_PUSH_TO_HUB}

@@ -12,6 +12,8 @@
 // could not construct would let a screen show an idle rig it is not connected to.
 
 import type { LinkRefusal } from "../ws/closeCodes";
+import { readTelemetry, type TelemetryView } from "../ws/telemetryView";
+import type { DecodedTextFrame } from "../ws/types";
 import type { LeaseSnapshot } from "../ws/leaseRenewer";
 import {
   createContext,
@@ -40,6 +42,9 @@ export type RealtimeStatus = "open" | "unavailable";
 // next one, so nothing below can go on drawing a channel.
 export interface RealtimeClientHooks {
   onLinkRefused: (refusal: LinkRefusal) => void;
+  // Every telemetry frame, as it arrives. The provider keeps the last one so a screen
+  // mounted mid-stream renders the current state rather than waiting for the next frame.
+  onTelemetry: (frame: DecodedTextFrame) => void;
 }
 
 export interface RealtimeContextValue<TClient extends RealtimeLifecycle = RealtimeLifecycle> {
@@ -49,6 +54,9 @@ export interface RealtimeContextValue<TClient extends RealtimeLifecycle = Realti
   status: RealtimeStatus;
   // Why there is no client, for the surface that tells the operator. Null while one exists.
   reason: string | null;
+  // The last telemetry frame read, or null when none has arrived. Null is "the server has
+  // sent nothing", which is what a process holding no arm does — not "the arm reads zero".
+  telemetry: TelemetryView | null;
 }
 
 const RealtimeContext = createContext<RealtimeContextValue | null>(null);
@@ -73,12 +81,26 @@ export function RealtimeProvider<TClient extends RealtimeLifecycle>({
   const [refused, setRefused] = useState<LinkRefusal | null>(null);
   const [built] = useState<{ client: TClient | null; reason: string | null }>(() => {
     try {
-      return { client: createClient({ onLinkRefused: setRefused }), reason: null };
+      return {
+        client: createClient({
+          onLinkRefused: setRefused,
+          // A frame that does not parse leaves the last one standing: replacing a good
+          // reading with a blank is how a screen reports a healthy arm as absent.
+          onTelemetry: (frame) => {
+            const view = readTelemetry(frame);
+            if (view !== null) {
+              setTelemetry(view);
+            }
+          },
+        }),
+        reason: null,
+      };
     } catch (error) {
       return { client: null, reason: String(error) };
     }
   });
   const [failed, setFailed] = useState<string | null>(null);
+  const [telemetry, setTelemetry] = useState<TelemetryView | null>(null);
 
   useEffect(() => {
     const client = built.client;
@@ -102,8 +124,11 @@ export function RealtimeProvider<TClient extends RealtimeLifecycle>({
       client: reason === null ? built.client : null,
       status: reason === null && built.client !== null ? "open" : "unavailable",
       reason,
+      // Cleared with the channel: a frame kept after the link went away is a reading the
+      // screen would go on showing while nothing is arriving to replace it.
+      telemetry: reason === null ? telemetry : null,
     };
-  }, [built, failed, refused]);
+  }, [built, failed, refused, telemetry]);
 
   return (
     <RealtimeContext.Provider value={value as RealtimeContextValue}>
