@@ -16,10 +16,10 @@ import pytest
 
 from backend.actuation.clock import ManualClock
 from backend.actuation.guard import GuardSample
-from backend.actuation.session import ArmSession
+from backend.actuation.session import ArmFrame, ArmSession
 from backend.deadman import DEADMAN_LEASE_DURATION_SEC, LeaseRenewal
 from contracts.prim.schema import ARM_SIDES
-from contracts.units import Deg, Nm
+from contracts.units import Celsius, Deg, DegPerSec, Nm
 from ops.cancel.scheduler import LatchReason
 
 LEFT, RIGHT = ARM_SIDES
@@ -27,6 +27,11 @@ LEFT, RIGHT = ARM_SIDES
 # One frame's worth of arm, distinct per joint so a vector assembled in the wrong order fails.
 POSE_DEG = (1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 0.0)
 TORQUE_NM = (0.5, -1.5, 2.5, -3.5, 4.5, -5.5, 6.5, 0.0)
+# Distinct per joint and distinct from the pose and the torque: a channel assembled from the
+# wrong source passes against a constant vector and fails against these.
+VELOCITY_DEG_S = (0.1, -0.2, 0.3, -0.4, 0.5, -0.6, 0.7, 0.0)
+TEMP_MOS_C = (40.0, 41.0, 42.0, 43.0, 44.0, 45.0, 46.0, 0.0)
+TEMP_ROTOR_C = (30.0, 31.0, 32.0, 33.0, 34.0, 35.0, 36.0, 0.0)
 
 # What one read costs on the clock. Non-zero so `read_at` cannot be confused with the instant
 # the tick started, which is what a board age is measured against.
@@ -47,16 +52,19 @@ class RecordingArm:
         self.reads = 0
         self.failure: Exception | None = None
 
-    def read(self) -> tuple[tuple[Deg, ...], tuple[Nm, ...], GuardSample]:
+    def read(self) -> ArmFrame:
         """Answer one frame, or raise what the test armed."""
         self.reads += 1
         self._clock.advance(READ_DURATION_SEC)
         if self.failure is not None:
             raise self.failure
-        return (
-            tuple(Deg(value) for value in POSE_DEG),
-            tuple(Nm(value) for value in TORQUE_NM),
-            GuardSample.healthy(),
+        return ArmFrame(
+            joint_deg=tuple(Deg(value) for value in POSE_DEG),
+            torque_nm=tuple(Nm(value) for value in TORQUE_NM),
+            velocity_deg_s=tuple(DegPerSec(value) for value in VELOCITY_DEG_S),
+            temp_mos_c=tuple(Celsius(value) for value in TEMP_MOS_C),
+            temp_rotor_c=tuple(Celsius(value) for value in TEMP_ROTOR_C),
+            guard=GuardSample.healthy(),
         )
 
 

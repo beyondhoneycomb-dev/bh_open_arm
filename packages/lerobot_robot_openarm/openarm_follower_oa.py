@@ -30,6 +30,7 @@ from __future__ import annotations
 import math
 import time
 from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -79,7 +80,7 @@ from backend.threshold.constants import JOINT_EFFORT_LIMITS_NM
 from contracts.action import DROP_COUNTER_META
 from contracts.plugin.config import Side
 from contracts.plugin.robot_abc import OpenArmRobot
-from contracts.units import Deg, Nm
+from contracts.units import Celsius, Deg, DegPerSec, Nm
 from ops.cancel.scheduler import LatchReason
 from packages.lerobot_robot_openarm.config_oa import (
     BI_OA_FOLLOWER_TYPE,
@@ -280,6 +281,44 @@ class BusReadRefusedError(RuntimeError):
     is no honest hold to fall back to at this level; the tick's own stale-source hold is the one
     that knows where the arm was last legitimately commanded.
     """
+
+
+@dataclass(frozen=True)
+class PolledStates:
+    """What one `sync_read_all_states` answered, widened to the frozen layout.
+
+    Every list is `MOTOR_ORDER` long whatever the fitted set is, so a slot with no motor
+    behind it reads as the zero it always did rather than shifting every later index.
+
+    The five channels arrive together. `sync_read_all_states` fills its cache from one refresh
+    (`damiao.py:576-581`), so carrying velocity and the two temperatures costs no frame that
+    the pose did not already cost — they were being read and discarded.
+
+    Attributes:
+        position: Per-joint angle, degrees.
+        torque: Per-joint reported torque, newton-metres.
+        velocity: Per-joint reported velocity, degrees per second.
+        temp_mos: Per-joint MOSFET temperature, degrees Celsius.
+        temp_rotor: Per-joint rotor temperature, degrees Celsius.
+        guard: What this read told the collision guard.
+    """
+
+    position: list[float]
+    torque: list[float]
+    velocity: list[float]
+    temp_mos: list[float]
+    temp_rotor: list[float]
+    guard: GuardSample
+
+
+def _widen(states: dict[str, dict[str, float]], channel: str) -> list[float]:
+    """Pull one channel out of a read, in the frozen layout's order.
+
+    The default is 0.0 for a slot the fitted set does not carry, which is a fact about that
+    slot. A fitted motor that answered nothing never reaches here — `_poll_states` refuses
+    that read before this runs, because for `position` the same default is the horizontal.
+    """
+    return [float(states.get(motor, {}).get(channel, 0.0)) for motor in MOTOR_ORDER]
 
 
 class OaOpenArmFollower(OpenArmFollower):
@@ -716,7 +755,8 @@ class OaOpenArmFollower(OpenArmFollower):
                 tool has no motor 0x08.
         """
         _refuse_unknown_position_keys(action)
-        angles, _reported_torque, guard_sample = self._poll_states()
+        polled = self._poll_states()
+        angles, guard_sample = polled.position, polled.guard
         present = tuple(Deg(angle) for angle in angles)
         request = tuple(
             Deg(float(action.get(f"{motor}.pos", present[index].value)))
@@ -893,11 +933,14 @@ class OaOpenArmFollower(OpenArmFollower):
             BusReadRefusedError: If a fitted motor answered nothing. Propagated rather than
                 widened to zero — `_poll_states` explains why that zero is a move command.
         """
-        joint_deg, torque_nm, sample = self._poll_states()
-        return (
-            tuple(Deg(value) for value in joint_deg),
-            tuple(Nm(value) for value in torque_nm),
-            sample,
+        reading = self._poll_states()
+        return ArmFrame(
+            joint_deg=tuple(Deg(value) for value in reading.position),
+            torque_nm=tuple(Nm(value) for value in reading.torque),
+            velocity_deg_s=tuple(DegPerSec(value) for value in reading.velocity),
+            temp_mos_c=tuple(Celsius(value) for value in reading.temp_mos),
+            temp_rotor_c=tuple(Celsius(value) for value in reading.temp_rotor),
+            guard=reading.guard,
         )
 
     def enable_drop_counting(self) -> None:
@@ -1036,9 +1079,9 @@ class OaOpenArmFollower(OpenArmFollower):
 
     def _read_joint_deg(self) -> list[float]:
         """Read the current raw joint angles (degrees) in MOTOR_ORDER."""
-        return self._poll_states()[0]
+        return self._poll_states().position
 
-    def _poll_states(self) -> tuple[list[float], list[float], GuardSample]:
+    def _poll_states(self) -> PolledStates:
         """Read the joint angles and torques once, and report what that read saw to the guard.
 
         The poll names the fitted motors and the answer is widened back to the frozen layout, so
@@ -1098,9 +1141,14 @@ class OaOpenArmFollower(OpenArmFollower):
             or self._lock_manager.is_held(self.config.port),
             residual_exceeded=NO_RESIDUAL_DETECTION,
         )
-        widened = [float(states.get(motor, {}).get("position", 0.0)) for motor in MOTOR_ORDER]
-        widened_torque = [float(states.get(motor, {}).get("torque", 0.0)) for motor in MOTOR_ORDER]
-        return widened, widened_torque, sample
+        return PolledStates(
+            position=_widen(states, "position"),
+            torque=_widen(states, "torque"),
+            velocity=_widen(states, "velocity"),
+            temp_mos=_widen(states, "temp_mos"),
+            temp_rotor=_widen(states, "temp_rotor"),
+            guard=sample,
+        )
 
 
 def _refuse_unknown_position_keys(action: RobotAction) -> None:

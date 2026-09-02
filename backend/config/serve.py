@@ -273,6 +273,10 @@ def mount_websocket_router(app: FastAPI, arm: ArmSession | None, clock: Clock, p
         security=LoopbackDeployment(
             host=DEFAULT_HTTP_HOST, origin_allowlist=loopback_origins(port)
         ),
+        # The boards this process writes, so a connected client is sent what they hold. Passed
+        # here and nowhere else: a channel mounted without them sends nothing unprompted, which
+        # is the shape every refusal test reads against.
+        boards={side: arm.board(side) for side in arm.sides},
     )
     return True
 

@@ -41,6 +41,7 @@ loop that commands does not live here yet.
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 
 from backend.actuation.board import ArmState, ArmStateBoard
 from backend.actuation.clock import Clock
@@ -48,14 +49,45 @@ from backend.actuation.guard import GuardSample
 from backend.actuation.latch import SafetyLatch
 from backend.actuation.lease import LeaseManager
 from backend.deadman import DEADMAN_LEASE_DURATION_SEC, DeadmanController
-from contracts.units import Deg, Nm
+from contracts.units import Celsius, Deg, DegPerSec, Nm
 from ops.cancel.scheduler import LatchReason
 
-# One read of the arm: the pose, the torque reported in the same frame, and what that read told
-# the collision guard. A tuple rather than a type of its own because it is what
-# `OaOpenArmFollower._poll_states` already returns and what `ArmState` already carries — a third
-# name between them would be a shape to keep in step with two others.
-ArmFrame = tuple[tuple[Deg, ...], tuple[Nm, ...], GuardSample]
+
+@dataclass(frozen=True)
+class ArmFrame:
+    """One read of the arm — every channel the motor answered with, in one object.
+
+    A record rather than a tuple, and the reason is the channel count. The bus answers five
+    per motor (`position`, `velocity`, `torque`, `temp_mos`, `temp_rotor`) and four of them
+    arrive here as same-shaped float tuples; a positional unpack that transposed velocity and
+    torque would type-check, run, and produce a residual computed against the wrong quantity.
+    Naming the fields is what makes that unsayable.
+
+    Every field comes out of ONE bus refresh. That is the property the whole record exists to
+    carry: a torque fetched separately from its pose describes a different instant, and a
+    residual taken across that gap is a collision signal nobody can trust.
+
+    Attributes:
+        joint_deg: Per-joint angle, in the frozen command layout's order.
+        torque_nm: Per-joint reported torque, from the same frame.
+        velocity_deg_s: Per-joint reported velocity, from the same frame.
+        temp_mos_c: Per-joint MOSFET temperature, or None when this reader has no
+            thermometer. None rather than zeros: a CAN-free double has no MOSFET, and a tuple
+            of `Celsius(0.0)` is a reading of a freezing motor that nothing downstream can tell
+            from a measurement.
+        temp_rotor_c: Per-joint rotor temperature, on the same terms.
+        guard: What that one read told the collision guard — presence, bus health, lock,
+            residual.
+    """
+
+    joint_deg: tuple[Deg, ...]
+    torque_nm: tuple[Nm, ...]
+    velocity_deg_s: tuple[DegPerSec, ...]
+    temp_mos_c: tuple[Celsius, ...] | None
+    temp_rotor_c: tuple[Celsius, ...] | None
+    guard: GuardSample
+
+
 ArmReader = Callable[[], ArmFrame]
 
 
@@ -184,13 +216,16 @@ class ArmSession:
         self._deadman.poll()
         self._tick_index += 1
         for side, read_arm in self._read_arms.items():
-            joint_deg, torque_nm, guard = read_arm()
+            frame = read_arm()
             self._boards[side].publish(
                 ArmState(
                     read_at=self._clock.now(),
-                    joint_deg=joint_deg,
-                    torque_nm=torque_nm,
-                    guard=guard,
+                    joint_deg=frame.joint_deg,
+                    torque_nm=frame.torque_nm,
+                    velocity_deg_s=frame.velocity_deg_s,
+                    temp_mos_c=frame.temp_mos_c,
+                    temp_rotor_c=frame.temp_rotor_c,
+                    guard=frame.guard,
                     tick_index=self._tick_index,
                 )
             )

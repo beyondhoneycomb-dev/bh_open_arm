@@ -49,7 +49,7 @@ def follower(
 
 def test_poll_reports_the_torque_the_bus_answered_with(follower) -> None:
     """The reply's torque reaches the caller, per joint, in the frozen layout's order."""
-    _, torque, _ = follower._poll_states()
+    torque = follower._poll_states().torque
 
     assert tuple(torque) == EXPECTED_TORQUE_NM
 
@@ -61,7 +61,8 @@ def test_pose_and_torque_come_out_of_the_same_read(follower) -> None:
     call would still produce the right numbers here while breaking the only property the pairing
     exists for.
     """
-    angles, torque, _ = follower._poll_states()
+    polled = follower._poll_states()
+    angles, torque = polled.position, polled.torque
 
     assert len(follower.bus.read_motors) == 1
     assert tuple(angles) == EXPECTED_POSE_DEG

@@ -127,6 +127,32 @@ class Nm:
 
 
 @dataclass(frozen=True, order=True)
+class Celsius:
+    """A temperature in degrees Celsius — what a DAMIAO feedback frame reports.
+
+    The motor answers two of these per frame, MOS and rotor (`03` §2.7 D6/D7), and they
+    are the only channel that says an arm is cooking. A bare float here would be
+    assignable where a torque or an angle is expected, and the value that reaches an
+    operator as "115" would be the one number nobody could tell apart from a limit in
+    another unit.
+    """
+
+    value: float
+
+    def __add__(self, other: Celsius) -> Celsius:
+        """Add another temperature."""
+        return Celsius(self.value + other.value)
+
+    def __sub__(self, other: Celsius) -> Celsius:
+        """Subtract another temperature."""
+        return Celsius(self.value - other.value)
+
+    def scaled(self, factor: float) -> Celsius:
+        """Scale by a dimensionless factor, staying in degrees Celsius."""
+        return Celsius(self.value * factor)
+
+
+@dataclass(frozen=True, order=True)
 class PacketTorque:
     """A torque in raw motor-packet scale (the DM `T_MAX` axis, `03` FR-MOT-037).
 

@@ -225,7 +225,7 @@ class FrameDispatcher:
         So a sink written against an older contract can return a bool, which is truthy, rides out
         as `DispatchOutcome.closure`, and dies on `.code` inside the connection task — after
         `accept()`, delivered to the browser as a drop with no code. Refused here it names the
-        sink's return instead, which is the same thing `_envelope` does for a reply whose fields
+        sink's return instead, the same thing `server_envelope` does for a reply whose fields
         drifted from the contract.
 
         Returns:
@@ -299,7 +299,7 @@ class FrameDispatcher:
                 closure=WsClosure(code=WS_CLOSE_REARM_NOT_ISSUED, reason=str(refused))
             )
         return DispatchOutcome(
-            reply=_envelope(
+            reply=server_envelope(
                 WsFrameType.REARM_ACCEPT,
                 {
                     LEASE_SESSION_FIELD: session.session_id,
@@ -397,7 +397,7 @@ def _lease_reply(
     """
     if result.accepted and result.lease is not None:
         lease = result.lease
-        return _envelope(
+        return server_envelope(
             WsFrameType.LEASE_GRANT,
             {
                 LEASE_SESSION_FIELD: session.session_id,
@@ -407,7 +407,7 @@ def _lease_reply(
                 LEASE_ISSUED_FIELD: lease.issued_mono_client,
             },
         )
-    return _envelope(
+    return server_envelope(
         WsFrameType.LEASE_REJECT,
         {
             LEASE_SESSION_FIELD: session.session_id,
@@ -417,7 +417,7 @@ def _lease_reply(
     )
 
 
-def _envelope(frame_type: WsFrameType, body: dict[str, Any]) -> dict[str, Any]:
+def server_envelope(frame_type: WsFrameType, body: dict[str, Any]) -> dict[str, Any]:
     """Tag a server-authored body with its frame type, checking it against the table.
 
     The field check is against `FRAME_TABLE`, so a reply that grew or lost a field
@@ -445,4 +445,5 @@ __all__ = [
     "DispatchOutcome",
     "FrameDispatcher",
     "WsClosure",
+    "server_envelope",
 ]

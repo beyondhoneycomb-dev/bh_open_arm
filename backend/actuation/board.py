@@ -39,7 +39,7 @@ from dataclasses import dataclass, field
 
 from backend.actuation.clock import Clock
 from backend.actuation.guard import GuardSample
-from contracts.units import Deg, Nm
+from contracts.units import Celsius, Deg, DegPerSec, Nm
 
 # What `mark_commanded` records before any frame has gone out. Negative infinity rather than the
 # clock's zero: a board that has published a reading but never sent must not read as "commanded
@@ -62,6 +62,13 @@ class ArmState:
         torque_nm: Per-joint reported torque, from the SAME frame as `joint_deg`. Pairing them
             here is the point: read separately they describe two different instants, and a
             residual computed across that gap is a collision signal nobody can trust.
+        velocity_deg_s: Per-joint reported velocity, from that same frame.
+        temp_mos_c: Per-joint MOSFET temperature from that same frame, or None when the
+            source has no thermometer. The only channel that says an arm is cooking, and it
+            costs nothing to carry — the motor answers it in the frame the pose came in. None
+            rather than zeros, because a CAN-free double has no MOSFET and `Celsius(0.0)` is a
+            reading nothing downstream can tell from a measurement.
+        temp_rotor_c: Per-joint rotor temperature, on the same terms.
         guard: What that one read told the collision guard — presence, bus health, lock, residual.
         tick_index: The scheduler tick this reading belongs to, so a reader can tell two
             consecutive publications apart even when every value in them is identical.
@@ -70,6 +77,9 @@ class ArmState:
     read_at: float
     joint_deg: tuple[Deg, ...]
     torque_nm: tuple[Nm, ...]
+    velocity_deg_s: tuple[DegPerSec, ...]
+    temp_mos_c: tuple[Celsius, ...] | None
+    temp_rotor_c: tuple[Celsius, ...] | None
     guard: GuardSample
     tick_index: int
 

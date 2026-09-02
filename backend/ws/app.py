@@ -21,9 +21,11 @@ route. A second websocket route on the same app is a contract violation, and
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Mapping
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
+from backend.actuation.board import ArmStateBoard
 from backend.actuation.clock import Clock
 from backend.deadman import DeadmanController, LatchTarget
 from backend.ws.constants import (
@@ -37,10 +39,11 @@ from backend.ws.constants import (
     WS_CLOSE_UNKNOWN_ROLE,
 )
 from backend.ws.deployment import ControlChannelDeployment, admitted_origins
-from backend.ws.dispatch import CommandSink, FrameDispatcher, WsClosure
+from backend.ws.dispatch import CommandSink, FrameDispatcher, WsClosure, server_envelope
 from backend.ws.session import WsSession
 from backend.ws.sink import WebSocketPreviewSink
-from contracts.ws import WsRole
+from backend.ws.telemetry import telemetry_body
+from contracts.ws import WsFrameType, WsRole
 
 
 def truncate_close_reason(reason: str) -> str:
@@ -112,6 +115,41 @@ def handshake_session(
     return WsSession(role=WsRole(role_value), session_id=session_id, preview_sink=preview_sink)
 
 
+# How often a connected client is sent the board's state. `13` FR-GUI-004 wants the GUI to show
+# what the arm is doing, not every tick of it: the control loop runs at 100 Hz and a socket
+# carrying that would spend the link on frames no screen repaints for. Twenty is above the rate a
+# person reads a changing number at and an order below the loop, so a stalled board is visible
+# within a frame or two without the channel becoming the reason the loop is late.
+DEFAULT_TELEMETRY_HZ = 20.0
+
+
+async def _push_telemetry(
+    websocket: WebSocket, boards: Mapping[str, ArmStateBoard], telemetry_hz: float
+) -> None:
+    """Send the board's state to one client until the connection goes away.
+
+    Its own task because the two directions are independent: a client that sends nothing must
+    still receive state, and one flooding the socket must not starve it. Cancelled in the
+    handler's `finally`, so a disconnect never leaves a task writing to a closed socket.
+
+    Every board is read in one pass and the frame is built from that pass, so one frame
+    describes one instant. Reading them again per section would let the observation vector and
+    the arm ages come from different ticks.
+
+    A send that raises ends the loop rather than retrying. The socket is gone, and a task that
+    kept trying would hold the connection's objects alive behind a client that left.
+    """
+    period = 1.0 / telemetry_hz
+    try:
+        while True:
+            views = {side: board.view() for side, board in boards.items()}
+            body = telemetry_body(views)
+            await websocket.send_json(server_envelope(WsFrameType.TELEMETRY, body))
+            await asyncio.sleep(period)
+    except (WebSocketDisconnect, RuntimeError):
+        return
+
+
 def mount_realtime_channel(
     app: FastAPI,
     latch_target: LatchTarget,
@@ -119,6 +157,8 @@ def mount_realtime_channel(
     clock: Clock,
     command_sink: CommandSink,
     security: ControlChannelDeployment,
+    boards: Mapping[str, ArmStateBoard] | None = None,
+    telemetry_hz: float = DEFAULT_TELEMETRY_HZ,
 ) -> FastAPI:
     """Mount the single realtime websocket route on an existing application.
 
@@ -190,6 +230,15 @@ def mount_realtime_channel(
         # flooding the socket must not starve them. Cancelled in `finally`, so a
         # disconnect never leaves a task holding a closed socket.
         drain = asyncio.create_task(sink.drain_forever())
+        # Only when this process holds boards. A connection with none sends nothing unprompted,
+        # which is what lets a refusal test read the close it is owed as the FIRST message on
+        # the socket: a telemetry frame arriving before it would be indistinguishable, to that
+        # reader, from a server that answered instead of closing.
+        pushing = (
+            None
+            if boards is None
+            else asyncio.create_task(_push_telemetry(websocket, boards, telemetry_hz))
+        )
         try:
             while True:
                 raw = await websocket.receive_text()
@@ -206,6 +255,8 @@ def mount_realtime_channel(
             return
         finally:
             drain.cancel()
+            if pushing is not None:
+                pushing.cancel()
 
     return app
 

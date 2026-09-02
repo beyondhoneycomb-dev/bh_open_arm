@@ -11,7 +11,7 @@ That is the failure worth refusing. A refusal raised inside the connection task 
 `app.py` says the post-accept design exists to avoid, because in it a bad wiring, a refused
 frame and a backend that is simply down are the same event.
 
-The module already answers this shape for server-authored frames: `_envelope` checks a reply's
+The module already answers this shape for server-authored frames: `server_envelope` checks a reply's
 fields against `FRAME_TABLE` and raises rather than letting a browser read a missing key as a
 null. These are the same check on the two objects that arrive from outside.
 """

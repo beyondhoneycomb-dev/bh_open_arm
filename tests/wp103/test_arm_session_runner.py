@@ -17,10 +17,10 @@ import pytest
 
 from backend.actuation.clock import WallClock
 from backend.actuation.guard import GuardSample
-from backend.actuation.session import ArmSession
+from backend.actuation.session import ArmFrame, ArmSession
 from backend.actuation.session_runner import ArmSessionRunner
 from contracts.prim.schema import ARM_SIDES
-from contracts.units import Deg, Nm
+from contracts.units import Celsius, Deg, DegPerSec, Nm
 
 LEFT = ARM_SIDES[0]
 JOINT_COUNT = 8
@@ -59,10 +59,13 @@ class CountingArm:
         self.reads += 1
         if self.failure is not None:
             raise self.failure
-        return (
-            tuple(Deg(0.0) for _ in range(JOINT_COUNT)),
-            tuple(Nm(0.0) for _ in range(JOINT_COUNT)),
-            GuardSample.healthy(),
+        return ArmFrame(
+            joint_deg=tuple(Deg(0.0) for _ in range(JOINT_COUNT)),
+            torque_nm=tuple(Nm(0.0) for _ in range(JOINT_COUNT)),
+            velocity_deg_s=tuple(DegPerSec(0.0) for _ in range(JOINT_COUNT)),
+            temp_mos_c=tuple(Celsius(0.0) for _ in range(JOINT_COUNT)),
+            temp_rotor_c=tuple(Celsius(0.0) for _ in range(JOINT_COUNT)),
+            guard=GuardSample.healthy(),
         )
 
 

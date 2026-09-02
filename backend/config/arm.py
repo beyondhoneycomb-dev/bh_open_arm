@@ -30,7 +30,7 @@ behind them is the host's job.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 from backend.actuation.clock import Clock
@@ -41,7 +41,7 @@ from backend.can.lock import LockManager
 from backend.config.store import default_config_directory
 from contracts.plugin.config import Side
 from contracts.prim.schema import ARM_SIDES
-from contracts.units import Deg, Nm
+from contracts.units import Deg, DegPerSec, Nm
 from ops.hw.canbind.binding import ArmRole, BindingError, binding_path, load_binding
 from ops.hw.canbind.discovery import list_can_channels
 from packages.lerobot_robot_openarm.config_oa import BiOaOpenArmFollowerConfig
@@ -77,11 +77,12 @@ REAL_ROBOT_ID = "oa-serve"
 # `canbind_session`, whose identification is the operator physically moving one arm.
 ROLE_BY_SIDE = {Side.LEFT.value: ArmRole.FOLLOWER_LEFT, Side.RIGHT.value: ArmRole.FOLLOWER_RIGHT}
 
-# The observation channel suffixes one arm's board is assembled from. Velocity is in the
-# follower's schema and not on the board: `ArmState` pairs a pose with a torque because a
-# residual is computed across those two, and a channel nothing reads is a field to keep true.
+# The observation channel suffixes one arm's board is assembled from. All three arrive in one
+# poll, so carrying velocity costs no extra read — the same is true on hardware, where the bus
+# answers five channels per refresh and this double answers the three it can honestly model.
 POSITION_SUFFIX = ".pos"
 TORQUE_SUFFIX = ".torque"
+VELOCITY_SUFFIX = ".vel"
 
 
 class DummySideReader:
@@ -106,28 +107,35 @@ class DummySideReader:
         self._robot = robot
         self._side = side
 
+    def _channel(self, observation: Mapping[str, float | int], suffix: str) -> tuple[float, ...]:
+        """Pull one channel for this side out of a poll, in the frozen layout's order."""
+        return tuple(float(observation[f"{self._side}_{motor}{suffix}"]) for motor in MOTOR_ORDER)
+
     def __call__(self) -> ArmFrame:
-        """Poll once and answer this side's pose, torque and guard sample.
+        """Poll once and answer this side's frame.
 
         The guard sample is healthy because every channel the guard judges is a property of a
         bus: a poll that answered, a read with no drops, a lock this process holds. A CAN-free
         follower has none of those to fail, so reporting anything else would be inventing a
         fault the deployment cannot have.
 
+        Temperature is None for the mirror-image reason. The double has no MOSFET and no rotor,
+        so it has nothing to measure — and `Celsius(0.0)` would be a reading of a freezing motor
+        that a screen renders exactly like a real one.
+
         Returns:
-            (ArmFrame) The pose, the torque and the guard sample from this poll.
+            (ArmFrame) The pose, the torque, the velocity and the guard sample from this poll.
         """
         observation = self._robot.get_observation()
-        return (
-            tuple(
-                Deg(float(observation[f"{self._side}_{motor}{POSITION_SUFFIX}"]))
-                for motor in MOTOR_ORDER
+        return ArmFrame(
+            joint_deg=tuple(Deg(value) for value in self._channel(observation, POSITION_SUFFIX)),
+            torque_nm=tuple(Nm(value) for value in self._channel(observation, TORQUE_SUFFIX)),
+            velocity_deg_s=tuple(
+                DegPerSec(value) for value in self._channel(observation, VELOCITY_SUFFIX)
             ),
-            tuple(
-                Nm(float(observation[f"{self._side}_{motor}{TORQUE_SUFFIX}"]))
-                for motor in MOTOR_ORDER
-            ),
-            GuardSample.healthy(),
+            temp_mos_c=None,
+            temp_rotor_c=None,
+            guard=GuardSample.healthy(),
         )
 
 

@@ -148,6 +148,29 @@ LEASE_GENERATION_CANON_FIELD = "generation"
 # The age-filter bound the WS carries so a delayed renewal is discarded, not honoured.
 MAX_LEASE_AGE_FIELD = "max_lease_age"
 
+# The `telemetry` body. Two consumers were already written against this frame before it carried
+# anything, and they want different things: `S-03` reads per-motor diagnostics, and the policy
+# path reads the frozen 48-channel observation vector. Both are on the board — the bus answers
+# five channels in the refresh the pose came in — so the frame carries both rather than making
+# one of the two screens wrong.
+#
+# `sequence` is the session tick, not a per-frame counter: a client that sees it jump knows the
+# gap is the loop's, and one that sees it stand still knows the board stopped advancing. A
+# counter of the sender's own could not say either.
+TELEMETRY_SEQUENCE_FIELD = "sequence"
+# `{"observation.state": [...]}` — the 48 channels of `openarm_observation_features`, in that
+# declaration order. An object rather than a bare list so a second observation key (images,
+# meta) is an added key rather than a reshaped frame.
+TELEMETRY_OBSERVATION_FIELD = "observation"
+# Per-motor rows carrying what the observation vector has no channel for: the two temperatures.
+# Empty when the source has no thermometer, which is what a CAN-free double is — the list says
+# "no motor reported one", never "every motor reads zero".
+TELEMETRY_MOTOR_STATES_FIELD = "motor_states"
+# Per-side liveness: the guard sample and the age of the reading it came from. Without it a
+# client cannot tell a board that stopped advancing from an arm that is holding still, because
+# every value in the two cases is identical.
+TELEMETRY_ARMS_FIELD = "arms"
+
 
 class LeaseRejectReason(StrEnum):
     """The wire reason a renewal was refused or discarded (transports RenewalDecision).
@@ -227,7 +250,12 @@ FRAME_TABLE: dict[WsFrameType, FrameSpec] = {
         payload=FramePayload.TEXT,
         queue=PRIM_QUEUE_PROFILES["telemetry"],
         is_control_frame=False,
-        fields=(),
+        fields=(
+            TELEMETRY_SEQUENCE_FIELD,
+            TELEMETRY_OBSERVATION_FIELD,
+            TELEMETRY_MOTOR_STATES_FIELD,
+            TELEMETRY_ARMS_FIELD,
+        ),
     ),
     WsFrameType.COMMAND: FrameSpec(
         frame_type=WsFrameType.COMMAND,

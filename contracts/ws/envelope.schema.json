@@ -30,7 +30,12 @@
       "queue": "telemetry",
       "priority": 2,
       "control_frame": false,
-      "fields": []
+      "fields": [
+        "sequence",
+        "observation",
+        "motor_states",
+        "arms"
+      ]
     },
     "command": {
       "direction": "client_to_server",

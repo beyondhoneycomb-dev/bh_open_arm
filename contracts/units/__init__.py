@@ -37,6 +37,7 @@ from contracts.units.observation import (
     observation_state_units,
 )
 from contracts.units.tags import (
+    Celsius,
     Deg,
     DegPerSec,
     Nm,
@@ -60,6 +61,7 @@ __all__ = [
     "BoundaryTable",
     "Crossing",
     "Deg",
+    "Celsius",
     "DegPerSec",
     "Nm",
     "ObservationChannel",

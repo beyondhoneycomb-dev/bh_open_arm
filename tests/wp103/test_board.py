@@ -12,7 +12,7 @@ from __future__ import annotations
 from backend.actuation.board import ArmState, ArmStateBoard, ArmStateView
 from backend.actuation.clock import ManualClock
 from backend.actuation.guard import GuardSample
-from contracts.units import Deg, Nm
+from contracts.units import Celsius, Deg, DegPerSec, Nm
 
 # The deadline a driven arm's reading may not exceed. Any value works; it is a parameter of the
 # rule, not of the board.
@@ -22,6 +22,9 @@ MAX_AGE_S = 0.5
 # 16-wide fixture would only make the assertions longer.
 JOINTS = (Deg(10.0), Deg(-20.0))
 TORQUES = (Nm(0.5), Nm(-0.25))
+VELOCITIES = (DegPerSec(1.5), DegPerSec(-0.75))
+TEMPS_MOS = (Celsius(41.0), Celsius(39.5))
+TEMPS_ROTOR = (Celsius(37.0), Celsius(36.5))
 
 
 def _state(read_at: float, tick_index: int = 0) -> ArmState:
@@ -30,6 +33,9 @@ def _state(read_at: float, tick_index: int = 0) -> ArmState:
         read_at=read_at,
         joint_deg=JOINTS,
         torque_nm=TORQUES,
+        velocity_deg_s=VELOCITIES,
+        temp_mos_c=TEMPS_MOS,
+        temp_rotor_c=TEMPS_ROTOR,
         guard=GuardSample.healthy(),
         tick_index=tick_index,
     )

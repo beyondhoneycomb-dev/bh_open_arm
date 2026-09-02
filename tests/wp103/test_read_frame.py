@@ -54,10 +54,10 @@ def follower(
 
 def test_the_frame_carries_the_pose_and_torque_the_bus_answered_with(follower) -> None:
     """Both channels in the frozen layout's order, widened at the slot with no motor behind it."""
-    joint_deg, torque_nm, _ = follower.read_frame()
+    frame = follower.read_frame()
 
-    assert tuple(reading.value for reading in joint_deg) == EXPECTED_POSE_DEG
-    assert tuple(reading.value for reading in torque_nm) == EXPECTED_TORQUE_NM
+    assert tuple(reading.value for reading in frame.joint_deg) == EXPECTED_POSE_DEG
+    assert tuple(reading.value for reading in frame.torque_nm) == EXPECTED_TORQUE_NM
 
 
 def test_one_call_is_one_read(follower) -> None:
@@ -81,14 +81,14 @@ def test_a_drop_reaches_the_frame_rather_than_being_reported_healthy(follower) -
     """
     follower.bus.drop_motors = {FAILING_MOTOR}
 
-    _, _, sample = follower.read_frame()
+    sample = follower.read_frame().guard
 
     assert sample.bus_read_ok is False
 
 
 def test_a_clean_read_reports_the_bus_healthy(follower) -> None:
     """The other direction, so the check above cannot pass by reporting False unconditionally."""
-    _, _, sample = follower.read_frame()
+    sample = follower.read_frame().guard
 
     assert sample.bus_read_ok is True
     assert sample.observation_present is True
